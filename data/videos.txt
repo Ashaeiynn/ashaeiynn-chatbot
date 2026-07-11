@@ -1,0 +1,4 @@
+# Paste your Vimeo links below, one per line.
+# Optionally add a title after a pipe character, e.g.:
+#   https://vimeo.com/123456789 | How to get started
+# Lines starting with # are ignored.

@@ -1,0 +1,13 @@
+# Secrets — never commit
+.env
+
+# Dependencies
+node_modules/
+
+# Bulky/transient pipeline files (re-creatable)
+data/audio/
+data/run-all.log
+
+# NOTE: data/knowledge.db and data/transcripts/ ARE committed on purpose —
+# the deploy needs the knowledge base, and the transcripts are the precious
+# output of ~64h of transcription (the repo doubles as their backup).

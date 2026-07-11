@@ -1,0 +1,29 @@
+{
+  "note": "Quality test set. on-topic questions should retrieve relevant chunks and get grounded answers; off-topic should get the fallback and no sources. Mix of Hindi and English to check cross-language behavior.",
+  "onTopic": [
+    { "q": "How do I protect my aura from negative energy?", "lang": "en" },
+    { "q": "What is the correct way to chant a mantra?", "lang": "en" },
+    { "q": "What happens to the soul after death?", "lang": "en" },
+    { "q": "How does kundalini shakti awaken?", "lang": "en" },
+    { "q": "What is prana urja and how is it created?", "lang": "en" },
+    { "q": "Why do good people suffer according to karma?", "lang": "en" },
+    { "q": "What is the difference between a guru and guru tattva?", "lang": "en" },
+    { "q": "How does meditation relate to samadhi and dimensions?", "lang": "en" },
+    { "q": "मंत्र जाप करते समय सबसे बड़ी गलती क्या है?", "lang": "hi" },
+    { "q": "अपने ऑरा की रक्षा कैसे करें?", "lang": "hi" },
+    { "q": "कुंडलिनी शक्ति कैसे जागृत होती है?", "lang": "hi" },
+    { "q": "मृत्यु के बाद आत्मा का क्या होता है?", "lang": "hi" },
+    { "q": "प्राण ऊर्जा क्या है?", "lang": "hi" },
+    { "q": "वायु और नकारात्मक ऊर्जा का क्या संबंध है?", "lang": "hi" },
+    { "q": "अग्नि तत्व का महत्व क्या है?", "lang": "hi" },
+    { "q": "प्रार्थना का आध्यात्मिक अर्थ क्या है?", "lang": "hi" }
+  ],
+  "offTopic": [
+    { "q": "What is the weather in Mumbai today?", "lang": "en" },
+    { "q": "Write me a Python function to sort a list.", "lang": "en" },
+    { "q": "Who won the last cricket world cup?", "lang": "en" },
+    { "q": "How do I reset my email password?", "lang": "en" },
+    { "q": "आज सोने का भाव क्या है?", "lang": "hi" },
+    { "q": "मुझे पिज़्ज़ा की रेसिपी बताओ।", "lang": "hi" }
+  ]
+}

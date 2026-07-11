@@ -1,0 +1,20 @@
+{
+  "name": "video-chatbot",
+  "version": "1.0.0",
+  "description": "Website chatbot that answers questions from your video library",
+  "type": "module",
+  "scripts": {
+    "process": "node pipeline/run-all.mjs",
+    "ingest": "node pipeline/3-ingest.mjs",
+    "start": "node server/server.mjs",
+    "compare": "node server/compare.mjs",
+    "test:retrieval": "node tests/retrieval-check.mjs",
+    "test:answers": "node tests/answer-check.mjs",
+    "download": "node pipeline/1-download.mjs",
+    "transcribe": "node pipeline/2-transcribe.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.65.0",
+    "@huggingface/transformers": "^4.2.0"
+  }
+}

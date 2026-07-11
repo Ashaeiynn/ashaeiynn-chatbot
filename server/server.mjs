@@ -1,0 +1,202 @@
+// The chatbot backend: serves the widget and answers questions.
+// Usage: npm start   → http://localhost:3111
+import { createServer } from "node:http";
+import { readFileSync, existsSync } from "node:fs";
+import path from "node:path";
+import Anthropic from "@anthropic-ai/sdk";
+import { ROOT } from "./env.mjs";
+import { search, formatTimestamp } from "./retrieve.mjs";
+import { warmup } from "./embed.mjs";
+import { buildSystemPrompt, buildContextBlock } from "./prompt.mjs";
+
+const PORT = Number(process.env.PORT || 3111);
+const MODEL = process.env.CHAT_MODEL || "claude-opus-4-8";
+const FALLBACK =
+  process.env.FALLBACK_MESSAGE ||
+  "I don't have that information in our video library yet. Please contact us directly.";
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
+const MAX_HISTORY_TURNS = 6;
+
+const apiKeyConfigured = Boolean(process.env.ANTHROPIC_API_KEY);
+const client = new Anthropic();
+
+// Simple per-IP rate limit: 20 questions per 5 minutes.
+const RATE_LIMIT = { windowMs: 5 * 60 * 1000, max: 20 };
+const hits = new Map();
+function rateLimited(ip) {
+  const now = Date.now();
+  const list = (hits.get(ip) ?? []).filter((t) => now - t < RATE_LIMIT.windowMs);
+  if (list.length >= RATE_LIMIT.max) return true;
+  list.push(now);
+  hits.set(ip, list);
+  return false;
+}
+
+function json(res, status, body) {
+  res.writeHead(status, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  });
+  res.end(JSON.stringify(body));
+}
+
+async function handleChat(req, res) {
+  const ip = req.socket.remoteAddress ?? "unknown";
+  if (rateLimited(ip)) {
+    return json(res, 429, { error: "Too many messages — please wait a few minutes." });
+  }
+
+  let body = "";
+  for await (const part of req) {
+    body += part;
+    if (body.length > 50_000) return json(res, 413, { error: "Message too long." });
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    return json(res, 400, { error: "Invalid JSON." });
+  }
+
+  const message = String(payload.message ?? "").trim().slice(0, 2000);
+  if (!message) return json(res, 400, { error: "Empty message." });
+
+  // Recent conversation history from the widget (kept short on purpose).
+  const history = Array.isArray(payload.history)
+    ? payload.history
+        .slice(-MAX_HISTORY_TURNS * 2)
+        .filter(
+          (m) =>
+            (m?.role === "user" || m?.role === "assistant") &&
+            typeof m?.content === "string" &&
+            m.content.trim(),
+        )
+        .map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }))
+    : [];
+
+  // Search transcripts for the question (plus a bit of recent context for follow-ups).
+  const lastUserTurns = history
+    .filter((m) => m.role === "user")
+    .slice(-1)
+    .map((m) => m.content);
+  const chunks = await search([...lastUserTurns, message].join(" "), 8);
+
+  // TEST MODE — no API key yet. Instead of an AI-composed answer, return the actual
+  // video passages the search found, so retrieval + sources + UI can be verified free.
+  if (!apiKeyConfigured) {
+    const top = chunks.slice(0, 3);
+    const answer =
+      "🔎 TEST MODE (AI answering not connected yet — no API key).\n" +
+      "These are the video passages the chatbot would base its answer on:\n\n" +
+      (top.length
+        ? top
+            .map(
+              (c, i) =>
+                `${i + 1}. "${c.title}" (${formatTimestamp(c.start_seconds)}):\n“…${c.content.slice(0, 220).trim()}…”`,
+            )
+            .join("\n\n")
+        : "(nothing relevant found)");
+    const sources = top.map((c) => ({
+      title: c.title,
+      timestamp: formatTimestamp(c.start_seconds),
+      url: c.url ? `${c.url}#t=${Math.floor(c.start_seconds)}s` : null,
+    }));
+    return json(res, 200, { answer, sources, testMode: true });
+  }
+
+  try {
+    const response = await client.messages.create({
+      model: MODEL,
+      max_tokens: 1024,
+      system: [
+        {
+          type: "text",
+          text: buildSystemPrompt(FALLBACK),
+          cache_control: { type: "ephemeral" },
+        },
+      ],
+      messages: [
+        ...history,
+        {
+          role: "user",
+          content: `Transcript excerpts for this question:\n\n${buildContextBlock(chunks)}\n\n---\nVisitor question: ${message}`,
+        },
+      ],
+    });
+
+    const answer = response.content
+      .filter((b) => b.type === "text")
+      .map((b) => b.text)
+      .join("")
+      .trim();
+
+    // Top sources so the widget can link to the exact video moments.
+    const seen = new Set();
+    const sources = [];
+    for (const c of chunks) {
+      const key = `${c.title}@${c.start_seconds}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      sources.push({
+        title: c.title,
+        timestamp: formatTimestamp(c.start_seconds),
+        url: c.url ? `${c.url}#t=${Math.floor(c.start_seconds)}s` : null,
+      });
+      if (sources.length >= 3) break;
+    }
+
+    json(res, 200, { answer, sources });
+  } catch (err) {
+    if (err instanceof Anthropic.AuthenticationError) {
+      return json(res, 503, { error: "The chatbot's API key is invalid — check the .env file." });
+    }
+    if (err instanceof Anthropic.RateLimitError) {
+      return json(res, 503, { error: "The chatbot is very busy right now — try again in a minute." });
+    }
+    console.error("chat error:", err);
+    json(res, 500, { error: "Something went wrong — please try again." });
+  }
+}
+
+const server = createServer(async (req, res) => {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+
+  if (req.method === "OPTIONS") return json(res, 204, {});
+  if (req.method === "POST" && url.pathname === "/api/chat") return handleChat(req, res);
+
+  // Health check — for hosting platforms and to confirm a deploy is live.
+  if (req.method === "GET" && url.pathname === "/health") {
+    return json(res, 200, {
+      ok: true,
+      model: MODEL,
+      apiKeyConfigured,
+      knowledgeBase: existsSync(path.join(ROOT, "data", "knowledge.db")) ? "built" : "missing",
+    });
+  }
+
+  if (req.method === "GET" && url.pathname === "/widget.js") {
+    res.writeHead(200, {
+      "Content-Type": "application/javascript; charset=utf-8",
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "public, max-age=300",
+    });
+    return res.end(readFileSync(path.join(ROOT, "widget", "widget.js")));
+  }
+
+  if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/demo")) {
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    return res.end(readFileSync(path.join(ROOT, "widget", "demo.html")));
+  }
+
+  json(res, 404, { error: "Not found" });
+});
+
+server.listen(PORT, () => {
+  console.log(`Chatbot server running:  http://localhost:${PORT}`);
+  console.log(`Model: ${MODEL}   |   API key configured: ${apiKeyConfigured ? "yes" : "NO — edit .env"}`);
+  // Warm the embedding model so the first question isn't slow.
+  warmup().then(() => console.log("Embedding model ready (cross-language search enabled).")).catch(() => {});
+});
