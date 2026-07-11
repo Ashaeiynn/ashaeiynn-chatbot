@@ -966,5 +966,14 @@
     "minutes": 48,
     "link": "https://www.youtube.com/watch?v=LhfQB9lz_9o",
     "dlUrl": "https://www.youtube.com/watch?v=LhfQB9lz_9o"
+  },
+  {
+    "platform": "youtube",
+    "videoId": "yt_QHG7sgZMkbU",
+    "ytId": "QHG7sgZMkbU",
+    "name": "How Mantra Jaap Reduces Planetary Effects | The Hidden Science Explained",
+    "minutes": 36,
+    "link": "https://www.youtube.com/watch?v=QHG7sgZMkbU",
+    "dlUrl": "https://www.youtube.com/watch?v=QHG7sgZMkbU"
   }
 ]
