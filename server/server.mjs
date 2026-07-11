@@ -20,8 +20,8 @@ const MAX_HISTORY_TURNS = 6;
 const apiKeyConfigured = Boolean(process.env.ANTHROPIC_API_KEY);
 const client = new Anthropic();
 
-// Simple per-IP rate limit: 20 questions per 5 minutes.
-const RATE_LIMIT = { windowMs: 5 * 60 * 1000, max: 20 };
+// Simple per-IP rate limit: 20 questions per 5 minutes (override via RATE_LIMIT_MAX).
+const RATE_LIMIT = { windowMs: 5 * 60 * 1000, max: Number(process.env.RATE_LIMIT_MAX || 20) };
 const hits = new Map();
 function rateLimited(ip) {
   const now = Date.now();
