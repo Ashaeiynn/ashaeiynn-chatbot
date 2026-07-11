@@ -7,7 +7,7 @@
 (() => {
   const script = document.currentScript;
   const API = (script?.dataset.api || new URL(script.src).origin).replace(/\/$/, "");
-  const TITLE = script?.dataset.title || "Ask us anything";
+  const TITLE = script?.dataset.title || "Ask Your Guide";
   const COLOR = script?.dataset.color || "#4f46e5";
 
   const history = [];
