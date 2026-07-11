@@ -97,8 +97,10 @@ for (const file of files) {
     buf.push({ text: seg.text, start: seg.start ?? 0 });
     chars += seg.text.length;
     dirty = true;
-    if (chars >= CHUNK_TARGET_CHARS) {
-      flush(true);
+    // Curated docs (e.g. the About entry) index each segment as its own chunk so a
+    // short focused statement isn't diluted inside a large mixed chunk.
+    if (t.chunkPerSegment || chars >= CHUNK_TARGET_CHARS) {
+      flush(!t.chunkPerSegment);
       dirty = false;
     }
   }

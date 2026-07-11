@@ -32,13 +32,26 @@ function load() {
   return chunks;
 }
 
+// Questions naming the organisation itself ("what is Ashaeiynn?", "Aqua Foundation
+// kya hai?") must always see the curated About entry — lectures mention these names
+// constantly, which drowns the About doc in embedding space.
+const BRAND_PATTERN = /ashaeiynn|asha\b|aqua\s*foundation|pathshala|पाठशाला/i;
+const isAboutChunk = (c) => c.title.startsWith("About Ashaeiynn");
+
 export async function search(question, limit = 8) {
   const all = load();
   if (all.length === 0) return [];
   const qv = await embedQuery(question);
   const scored = all.map((c) => ({ chunk: c, score: cosine(qv, c.vec) }));
   scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, limit).map(({ chunk, score }) => ({
+
+  let top = scored.slice(0, limit);
+  if (BRAND_PATTERN.test(question) && !top.some(({ chunk }) => isAboutChunk(chunk))) {
+    const aboutBest = scored.filter(({ chunk }) => isAboutChunk(chunk)).slice(0, 2);
+    if (aboutBest.length) top = [...top.slice(0, limit - aboutBest.length), ...aboutBest];
+  }
+
+  return top.map(({ chunk, score }) => ({
     content: chunk.content,
     title: chunk.title,
     start_seconds: chunk.start_seconds,

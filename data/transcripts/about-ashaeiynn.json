@@ -1,0 +1,51 @@
+{
+  "title": "About Ashaeiynn (from ashaeiynn.com)",
+  "url": "https://ashaeiynn.com",
+  "videoId": "about",
+  "language": "hi",
+  "minutes": 0,
+  "chunkPerSegment": true,
+  "note": "Curated 'about us' entry — identity questions aren't answered inside lecture videos, so this seeds them. Source: ashaeiynn.com (About Us, Programs, Pathshala pages) and the 'Introduction to Aqua Foundation' video. Edit freely, then re-run: npm run ingest",
+  "segments": [
+    {
+      "start": 0,
+      "end": 0,
+      "text": "What is Ashaeiynn? Who is Ashaeiynn? Ashaeiynn is a meditation centre located in Hisar city, Haryana, India, fully dedicated to third eye (3rd eye) activation. Ashaeiynn works remotely for opening the third eye of a spiritual aspirant, and teaches aspirants the activation of mantra jaap and how to use that foundation to open the third eye."
+    },
+    {
+      "start": 0,
+      "end": 0,
+      "text": "Ashaeiynn's programs include: Activate Third Eye — opening the gateway to higher consciousness and access to astral dimensions; Master The Energy — learning to synchronize mantras with chakras to create unshakable spiritual shields; Astral Travel — activating the astral body to explore the multiverse and connect with divine energies; and Awaken Your Past Life Powers — discovering hidden abilities and strengths carried from past lives."
+    },
+    {
+      "start": 0,
+      "end": 0,
+      "text": "The spiritual journey at Ashaeiynn progresses through four stages of spirituality: the Fundamental Stage, the Intermediate Stage, the Advance Stage, and the Ultra Stage — progressive levels of spiritual development that enhance an aspirant's connection with higher energies and abilities."
+    },
+    {
+      "start": 0,
+      "end": 0,
+      "text": "Pathshala is Ashaeiynn's learning platform, born from the founder's experiences and learnings heard on the astral plane as whispers from Gurudev. Pathshala provides knowledge on the mysteries of the astral world in different formats — articles and videos — to make the spiritual journey hassle-free so aspirants can focus on the Bhakti tattva. New articles are published every Sunday on ashaeiynn.com."
+    },
+    {
+      "start": 0,
+      "end": 0,
+      "text": "Aqua Foundation is Ashaeiynn's foundation course — the kadi (link) through which an aspirant learns the vidyas needed on the path of bhakti: sadhana, gudh tattvas, and the methods through which one's drishti (spiritual sight) can be fully awakened. The course is divided into Aqua Basic, Aqua Intermediate, and Aqua Advance."
+    },
+    {
+      "start": 0,
+      "end": 0,
+      "text": "To get started with Ashaeiynn, you can book a screening on the website ashaeiynn.com, where aura checking is also offered. Ashaeiynn has a growing community of members and holds regular live meetings for spiritual aspirants."
+    },
+    {
+      "start": 0,
+      "end": 0,
+      "text": "Ashaeiynn क्या है? Ashaeiynn कौन है? Ashaeiynn हरियाणा के हिसार शहर में स्थित एक मेडिटेशन सेंटर है, जो पूर्ण रूप से थर्ड आई (तीसरी आँख) एक्टिवेशन को समर्पित है। Ashaeiynn साधकों की तीसरी आँख खोलने के लिए रिमोटली कार्य करता है, और मंत्र जाप की एक्टिवेशन सिखाता है जिसके आधार पर तीसरी आँख खोली जाती है।"
+    },
+    {
+      "start": 0,
+      "end": 0,
+      "text": "Ashaeiynn में आध्यात्मिक यात्रा चार चरणों में होती है — Fundamental, Intermediate, Advance और Ultra। पाठशाला (Pathshala) Ashaeiynn का लर्निंग प्लेटफ़ॉर्म है, जिसमें एस्ट्रल जगत के रहस्यों का ज्ञान लेखों और वीडियो के रूप में दिया जाता है, और Aqua Foundation वह फाउंडेशन कोर्स है जिसके माध्यम से साधक भक्ति मार्ग की विद्याएँ सीखते हैं।"
+    }
+  ]
+}
