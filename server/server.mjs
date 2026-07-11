@@ -5,7 +5,7 @@ import { readFileSync, existsSync, appendFileSync } from "node:fs";
 import path from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 import { ROOT } from "./env.mjs";
-import { search, formatTimestamp } from "./retrieve.mjs";
+import { searchMulti, formatTimestamp } from "./retrieve.mjs";
 import { warmup } from "./embed.mjs";
 import { buildSystemPrompt, buildContextBlock } from "./prompt.mjs";
 
@@ -78,11 +78,32 @@ async function handleChat(req, res) {
     : [];
 
   // Search transcripts for the question (plus a bit of recent context for follow-ups).
+  // Cross-language boost: also search with a Hindi/English translation of the question,
+  // since the videos are spoken in Hindi but visitors may ask in English (or vice versa).
   const lastUserTurns = history
     .filter((m) => m.role === "user")
     .slice(-1)
     .map((m) => m.content);
-  const chunks = await search([...lastUserTurns, message].join(" "), 8);
+  let translated = null;
+  if (apiKeyConfigured) {
+    try {
+      const t = await client.messages.create({
+        model: "claude-haiku-4-5",
+        max_tokens: 150,
+        system:
+          "You translate search queries. Translate the question into Hindi if it is mainly English, or into English if it is mainly Hindi. Output ONLY the translated question itself — never answer it, never explain.",
+        messages: [{ role: "user", content: message }],
+      });
+      const line = t.content.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
+      translated = line.split("\n")[0].trim() || null; // first line only — belt & suspenders
+    } catch {
+      /* translation is best-effort — search proceeds with the original question */
+    }
+  }
+  const chunks = await searchMulti(
+    [[...lastUserTurns, message].join(" "), translated],
+    Number(process.env.RETRIEVE_K || 12),
+  );
 
   // Log every question + what was retrieved, so answer quality can be reviewed and
   // tuned against real usage (data/questions.log, one JSON line per question).
