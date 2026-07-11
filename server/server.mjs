@@ -1,7 +1,7 @@
 // The chatbot backend: serves the widget and answers questions.
 // Usage: npm start   → http://localhost:3111
 import { createServer } from "node:http";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, appendFileSync } from "node:fs";
 import path from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 import { ROOT } from "./env.mjs";
@@ -84,13 +84,29 @@ async function handleChat(req, res) {
     .map((m) => m.content);
   const chunks = await search([...lastUserTurns, message].join(" "), 8);
 
+  // Log every question + what was retrieved, so answer quality can be reviewed and
+  // tuned against real usage (data/questions.log, one JSON line per question).
+  try {
+    appendFileSync(
+      path.join(ROOT, "data", "questions.log"),
+      JSON.stringify({
+        at: new Date().toISOString(),
+        q: message,
+        top: chunks.slice(0, 3).map((c) => ({ t: c.title, s: Number(c.score?.toFixed(3)) })),
+      }) + "\n",
+    );
+  } catch {
+    /* logging must never break answering */
+  }
+
   // TEST MODE — no API key yet. Instead of an AI-composed answer, return the actual
   // video passages the search found, so retrieval + sources + UI can be verified free.
   if (!apiKeyConfigured) {
     const top = chunks.slice(0, 3);
     const answer =
-      "🔎 TEST MODE (AI answering not connected yet — no API key).\n" +
-      "These are the video passages the chatbot would base its answer on:\n\n" +
+      "⚠️ TEST MODE — यह असली जवाब नहीं है / this is NOT a real answer.\n" +
+      "The answering AI is not connected yet (API key pending). Until then I can only show " +
+      "the video material your answer would come from:\n\n" +
       (top.length
         ? top
             .map(
