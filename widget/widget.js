@@ -30,10 +30,7 @@
     .vcb-btn::after{content:"";position:absolute;inset:-5px;border-radius:50%;
       border:2px solid #f7c948;opacity:0;animation:vcbPing 3.6s ease-out infinite}
     @keyframes vcbPing{0%{transform:scale(.9);opacity:.5}70%{transform:scale(1.4);opacity:0}100%{opacity:0}}
-    .vcb-om{font-size:31px;line-height:1;font-family:Georgia,'Noto Serif Devanagari',serif;
-      background:linear-gradient(180deg,#ffe9a8 0%,#f7c948 55%,#d99a1e 100%);
-      -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-      text-shadow:0 0 18px rgba(247,201,72,.45);transform:translateY(-1px)}
+    .vcb-eye{width:34px;height:34px;filter:drop-shadow(0 0 8px rgba(247,201,72,.55))}
     .vcb-nudge{position:fixed;bottom:32px;right:94px;z-index:999997;cursor:pointer;
       background:linear-gradient(135deg,#ffe9a8,#f2b93c);color:#241a04;
       border:none;border-radius:999px;padding:10px 16px;
@@ -232,7 +229,21 @@
   const btn = document.createElement("button");
   btn.className = "vcb-btn";
   btn.setAttribute("aria-label", "Open chat");
-  btn.innerHTML = '<span class="vcb-om">ॐ</span>';
+  btn.innerHTML = `
+    <svg class="vcb-eye" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="vcbGold" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ffe9a8"/><stop offset="55%" stop-color="#f7c948"/><stop offset="100%" stop-color="#d99a1e"/>
+        </linearGradient>
+      </defs>
+      <path d="M4 20 Q17 9 30 20 Q17 31 4 20 Z" stroke="url(#vcbGold)" stroke-width="1.8" fill="rgba(247,201,72,.08)"/>
+      <circle cx="17" cy="20" r="5" fill="url(#vcbGold)"/>
+      <circle cx="17" cy="20" r="2" fill="#1c1745"/>
+      <circle cx="15.4" cy="18.4" r="0.9" fill="#fff6d8"/>
+      <path d="M17 7 L17 2.5" stroke="url(#vcbGold)" stroke-width="1.7" stroke-linecap="round"/>
+      <path d="M10.5 9.5 L8 6" stroke="url(#vcbGold)" stroke-width="1.7" stroke-linecap="round"/>
+      <path d="M23.5 9.5 L26 6" stroke="url(#vcbGold)" stroke-width="1.7" stroke-linecap="round"/>
+    </svg>`;
 
   // gentle invitation pill that slides out beside the orb
   const nudge = document.createElement("div");
