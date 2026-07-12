@@ -160,6 +160,15 @@ async function handleChat(req, res) {
     Number(process.env.RETRIEVE_K || 12),
   );
 
+  // Detect the QUESTION's language so the reply language never drifts toward the
+  // (mostly Hindi) excerpts. Romanized-Hindi (Hinglish) counts as Hindi.
+  const isDevanagari = /[ऀ-ॿ]/.test(message);
+  const hinglishHits = (message.toLowerCase().match(/\b(kya|kaun|kaise|kyu|kyon|kab|kahan|batao|bataiye|mujhe|humko|nahi|nahin|hota|hoti|hai|hain|karna|kare|krna|wala|matlab)\b/g) || []).length;
+  const wantsHindi = isDevanagari || hinglishHits >= 1;
+  const langInstruction = wantsHindi
+    ? "उत्तर पूरी तरह हिंदी (देवनागरी) में दीजिए — एक भी वाक्य English में नहीं।"
+    : "Answer entirely in English — every sentence in English (keep Hindi terms like hawan, jaap, drishti in Latin script). Do not write any Devanagari.";
+
   // Log every question + what was retrieved, so answer quality can be reviewed and
   // tuned against real usage (data/questions.log, one JSON line per question).
   try {
@@ -214,7 +223,7 @@ async function handleChat(req, res) {
         ...history,
         {
           role: "user",
-          content: `Transcript excerpts for this question:\n\n${buildContextBlock(chunks)}\n\n---\nVisitor question: ${message}`,
+          content: `Transcript excerpts for this question:\n\n${buildContextBlock(chunks)}\n\n---\nVisitor question: ${message}\n\n[${langInstruction}]`,
         },
       ],
     });
