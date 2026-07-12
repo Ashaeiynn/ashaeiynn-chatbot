@@ -37,14 +37,46 @@
     .vcb-panel.open{display:flex;animation:vcbPanelIn .4s cubic-bezier(.18,.89,.32,1.15)}
     @keyframes vcbPanelIn{from{opacity:0;transform:scale(.86) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
 
-    /* faint star field */
-    .vcb-stars{position:absolute;inset:0;pointer-events:none;opacity:.5;
-      background-image:radial-gradient(1.2px 1.2px at 12% 28%,rgba(255,255,255,.5) 50%,transparent 51%),
-        radial-gradient(1px 1px at 78% 16%,rgba(255,255,255,.35) 50%,transparent 51%),
-        radial-gradient(1.4px 1.4px at 62% 64%,rgba(247,201,72,.4) 50%,transparent 51%),
-        radial-gradient(1px 1px at 30% 82%,rgba(255,255,255,.3) 50%,transparent 51%),
-        radial-gradient(1.1px 1.1px at 88% 52%,rgba(247,201,72,.35) 50%,transparent 51%),
-        radial-gradient(1px 1px at 45% 12%,rgba(255,255,255,.4) 50%,transparent 51%)}
+    /* ——— animated universe (slow motion) ——— */
+    .vcb-cosmos{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+    .vcb-neb{position:absolute;border-radius:50%;filter:blur(26px);will-change:transform}
+    .vcb-neb.n1{width:340px;height:300px;left:-90px;top:6%;
+      background:radial-gradient(ellipse at 40% 45%,rgba(124,58,237,.34) 0%,rgba(79,70,229,.18) 45%,transparent 72%);
+      animation:vcbNeb1 90s ease-in-out infinite alternate}
+    .vcb-neb.n2{width:300px;height:280px;right:-80px;bottom:8%;
+      background:radial-gradient(ellipse at 55% 50%,rgba(247,201,72,.13) 0%,rgba(217,120,50,.09) 40%,transparent 70%);
+      animation:vcbNeb2 110s ease-in-out infinite alternate}
+    .vcb-neb.n3{width:240px;height:220px;left:24%;bottom:-70px;
+      background:radial-gradient(ellipse at 50% 50%,rgba(56,130,246,.16) 0%,transparent 68%);
+      animation:vcbNeb1 130s ease-in-out infinite alternate-reverse}
+    @keyframes vcbNeb1{from{transform:translate(0,0) rotate(0deg) scale(1)}to{transform:translate(46px,30px) rotate(28deg) scale(1.18)}}
+    @keyframes vcbNeb2{from{transform:translate(0,0) rotate(0deg) scale(1.1)}to{transform:translate(-38px,-26px) rotate(-24deg) scale(.95)}}
+    .vcb-starfield{position:absolute;inset:-240px 0 0 0;background-repeat:repeat;will-change:background-position}
+    .vcb-starfield.s1{background-size:240px 240px;opacity:.7;animation:vcbDrift1 210s linear infinite;
+      background-image:radial-gradient(1.1px 1.1px at 22px 34px,rgba(255,255,255,.55) 50%,transparent 51%),
+        radial-gradient(1px 1px at 118px 90px,rgba(255,255,255,.4) 50%,transparent 51%),
+        radial-gradient(1.3px 1.3px at 197px 156px,rgba(247,201,72,.5) 50%,transparent 51%),
+        radial-gradient(1px 1px at 68px 198px,rgba(255,255,255,.35) 50%,transparent 51%),
+        radial-gradient(1.2px 1.2px at 160px 44px,rgba(190,200,255,.45) 50%,transparent 51%)}
+    .vcb-starfield.s2{background-size:320px 320px;opacity:.45;animation:vcbDrift2 340s linear infinite;
+      background-image:radial-gradient(1px 1px at 44px 120px,rgba(255,255,255,.4) 50%,transparent 51%),
+        radial-gradient(.9px .9px at 210px 60px,rgba(255,255,255,.32) 50%,transparent 51%),
+        radial-gradient(1.1px 1.1px at 280px 230px,rgba(247,201,72,.38) 50%,transparent 51%),
+        radial-gradient(.9px .9px at 120px 280px,rgba(190,200,255,.3) 50%,transparent 51%)}
+    @keyframes vcbDrift1{from{background-position:0 0}to{background-position:-240px 240px}}
+    @keyframes vcbDrift2{from{background-position:0 0}to{background-position:320px 320px}}
+    .vcb-twinkle{position:absolute;border-radius:50%;background:#fff;will-change:opacity,transform;
+      animation:vcbTwinkle ease-in-out infinite}
+    @keyframes vcbTwinkle{0%,100%{opacity:.12;transform:scale(.8)}50%{opacity:.85;transform:scale(1.25)}}
+    .vcb-shoot{position:absolute;top:12%;left:-30%;width:110px;height:1.5px;border-radius:2px;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),rgba(247,201,72,.9),transparent);
+      transform:rotate(24deg);opacity:0;animation:vcbShoot 17s linear infinite;animation-delay:6s}
+    .vcb-shoot.sh2{top:58%;left:-35%;width:80px;animation-duration:23s;animation-delay:14s;transform:rotate(18deg)}
+    @keyframes vcbShoot{
+      0%{transform:translate(0,0) rotate(24deg);opacity:0}
+      1.2%{opacity:.9}
+      5%{transform:translate(560px,240px) rotate(24deg);opacity:0}
+      100%{transform:translate(560px,240px) rotate(24deg);opacity:0}}
 
     .vcb-head{position:relative;z-index:2;padding:13px 18px;display:flex;justify-content:space-between;align-items:center;
       background:linear-gradient(135deg,rgba(79,70,229,.55),rgba(124,58,237,.4));
@@ -147,7 +179,8 @@
     @media (prefers-reduced-motion: reduce){
       .vcb-panel.open,.vcb-m,.vcb-splash-hi span,.vcb-splash-en,.vcb-splash-halo,.vcb-splash-line,.vcb-spark{animation:none !important;opacity:1}
       .vcb-btn::after,.vcb-bless span{animation:none}
-      .vcb-spark{display:none}
+      .vcb-spark,.vcb-shoot{display:none}
+      .vcb-neb,.vcb-starfield,.vcb-twinkle{animation:none !important}
     }
   `;
   document.head.appendChild(style);
@@ -161,7 +194,11 @@
   const panel = document.createElement("div");
   panel.className = "vcb-panel";
   panel.innerHTML = `
-    <div class="vcb-stars"></div>
+    <div class="vcb-cosmos">
+      <div class="vcb-neb n1"></div><div class="vcb-neb n2"></div><div class="vcb-neb n3"></div>
+      <div class="vcb-starfield s1"></div><div class="vcb-starfield s2"></div>
+      <span class="vcb-shoot"></span><span class="vcb-shoot sh2"></span>
+    </div>
     <div class="vcb-head">
       <div class="vcb-head-left">
         <div class="vcb-ava">🙏</div>
@@ -177,6 +214,19 @@
     </form>`;
 
   document.body.append(btn, panel);
+
+  // scatter twinkling stars over the cosmos, each with its own rhythm
+  const cosmos = panel.querySelector(".vcb-cosmos");
+  for (let i = 0; i < 16; i++) {
+    const t = document.createElement("i");
+    t.className = "vcb-twinkle";
+    const size = 1 + Math.random() * 1.6;
+    t.style.cssText =
+      `left:${3 + Math.random() * 94}%;top:${3 + Math.random() * 94}%;` +
+      `width:${size}px;height:${size}px;` +
+      `animation-duration:${2.8 + Math.random() * 4.5}s;animation-delay:${Math.random() * 5}s`;
+    cosmos.appendChild(t);
+  }
 
   const msgs = panel.querySelector(".vcb-msgs");
   const form = panel.querySelector(".vcb-form");
