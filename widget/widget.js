@@ -29,7 +29,7 @@
 
     .vcb-panel{position:fixed;bottom:92px;right:20px;width:min(380px,calc(100vw - 32px));
       height:min(580px,calc(100vh - 124px));border-radius:22px;z-index:999999;
-      background:linear-gradient(168deg,#1b1440 0%,#130e30 45%,#0d0a22 100%);
+      background:radial-gradient(135% 100% at 50% 28%,#0b0b14 0%,#040407 55%,#000 100%);
       box-shadow:0 22px 70px rgba(8,5,30,.65),0 0 0 1px rgba(247,201,72,.14);
       display:none;flex-direction:column;overflow:hidden;
       font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
@@ -41,13 +41,13 @@
     .vcb-cosmos{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
     .vcb-neb{position:absolute;border-radius:50%;filter:blur(26px);will-change:transform}
     .vcb-neb.n1{width:340px;height:300px;left:-90px;top:6%;
-      background:radial-gradient(ellipse at 40% 45%,rgba(124,58,237,.34) 0%,rgba(79,70,229,.18) 45%,transparent 72%);
+      background:radial-gradient(ellipse at 40% 45%,rgba(124,58,237,.16) 0%,rgba(79,70,229,.08) 45%,transparent 72%);
       animation:vcbNeb1 90s ease-in-out infinite alternate}
     .vcb-neb.n2{width:300px;height:280px;right:-80px;bottom:8%;
-      background:radial-gradient(ellipse at 55% 50%,rgba(247,201,72,.13) 0%,rgba(217,120,50,.09) 40%,transparent 70%);
+      background:radial-gradient(ellipse at 55% 50%,rgba(247,201,72,.07) 0%,rgba(217,120,50,.05) 40%,transparent 70%);
       animation:vcbNeb2 110s ease-in-out infinite alternate}
     .vcb-neb.n3{width:240px;height:220px;left:24%;bottom:-70px;
-      background:radial-gradient(ellipse at 50% 50%,rgba(56,130,246,.16) 0%,transparent 68%);
+      background:radial-gradient(ellipse at 50% 50%,rgba(56,130,246,.08) 0%,transparent 68%);
       animation:vcbNeb1 130s ease-in-out infinite alternate-reverse}
     @keyframes vcbNeb1{from{transform:translate(0,0) rotate(0deg) scale(1)}to{transform:translate(46px,30px) rotate(28deg) scale(1.18)}}
     @keyframes vcbNeb2{from{transform:translate(0,0) rotate(0deg) scale(1.1)}to{transform:translate(-38px,-26px) rotate(-24deg) scale(.95)}}
@@ -85,7 +85,7 @@
       from{box-shadow:0 0 18px 4px rgba(255,196,84,.55),0 0 60px 18px rgba(242,166,58,.22)}
       to{box-shadow:0 0 26px 7px rgba(255,196,84,.75),0 0 84px 26px rgba(242,166,58,.3)}}
     .vcb-orbit{position:absolute;left:0;top:0;transform:translate(-50%,-50%);
-      border:1px solid rgba(255,255,255,.055);border-radius:50%;
+      border:1px solid rgba(255,255,255,.09);border-radius:50%;
       animation:vcbSpin linear infinite;will-change:transform}
     @keyframes vcbSpin{from{transform:translate(-50%,-50%) rotate(0deg)}to{transform:translate(-50%,-50%) rotate(360deg)}}
     .vcb-planet{position:absolute;left:50%;top:0;transform:translate(-50%,-50%);border-radius:50%}
@@ -145,7 +145,7 @@
     .vcb-src a:hover{text-decoration:underline}
 
     .vcb-form{position:relative;z-index:2;display:flex;gap:8px;padding:12px;
-      border-top:1px solid rgba(247,201,72,.16);background:rgba(13,10,34,.6)}
+      border-top:1px solid rgba(247,201,72,.16);background:rgba(2,2,6,.65)}
     .vcb-input{flex:1;border:1.5px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);
       color:#f2eefe;border-radius:12px;padding:10px 13px;font-size:14px;outline:none;transition:border-color .15s}
     .vcb-input::placeholder{color:#8d86b5}
