@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "process": "node pipeline/run-all.mjs",
+    "articles": "node pipeline/4-articles.mjs",
     "ingest": "node pipeline/3-ingest.mjs",
     "start": "node server/server.mjs",
     "compare": "node server/compare.mjs",
