@@ -35,7 +35,7 @@ function load() {
 // Questions naming the organisation itself ("what is Ashaeiynn?", "Aqua Foundation
 // kya hai?") must always see the curated About entry — lectures mention these names
 // constantly, which drowns the About doc in embedding space.
-const BRAND_PATTERN = /ashaeiynn|asha\b|aqua\s*foundation|pathshala|पाठशाला/i;
+const BRAND_PATTERN = /ashaeiynn|asha\b|aqua\s*foundation|pathshala|पाठशाला|bhaiya|भैया|parikshit|परीक्षित|gurudev|गुरुदेव/i;
 const isAboutChunk = (c) => c.title.startsWith("About Ashaeiynn");
 
 export async function search(question, limit = 8) {
