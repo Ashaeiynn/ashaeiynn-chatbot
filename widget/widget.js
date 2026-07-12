@@ -18,14 +18,34 @@
 
   const style = document.createElement("style");
   style.textContent = `
-    .vcb-btn{position:fixed;bottom:20px;right:20px;width:58px;height:58px;border-radius:50%;
-      background:linear-gradient(135deg,${COLOR},#7c3aed);border:none;cursor:pointer;
-      box-shadow:0 6px 18px rgba(79,70,229,.45);display:flex;align-items:center;justify-content:center;
-      z-index:999998;transition:transform .2s ease}
-    .vcb-btn:hover{transform:scale(1.08)}
-    .vcb-btn::after{content:"";position:absolute;inset:-4px;border-radius:50%;
-      border:2px solid #f7c948;opacity:0;animation:vcbPing 3.2s ease-out infinite}
-    @keyframes vcbPing{0%{transform:scale(.9);opacity:.55}70%{transform:scale(1.35);opacity:0}100%{opacity:0}}
+    .vcb-btn{position:fixed;bottom:20px;right:20px;width:62px;height:62px;border-radius:50%;
+      background:radial-gradient(circle at 34% 28%,#3b2f80 0%,#241b56 45%,#120d33 100%);
+      border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+      z-index:999998;transition:transform .2s ease;
+      box-shadow:0 0 0 1.5px rgba(247,201,72,.6),0 0 22px rgba(247,201,72,.35),0 8px 24px rgba(0,0,0,.5);
+      animation:vcbBreathe 3.6s ease-in-out infinite}
+    .vcb-btn:hover{transform:scale(1.1)}
+    @keyframes vcbBreathe{0%,100%{box-shadow:0 0 0 1.5px rgba(247,201,72,.55),0 0 16px rgba(247,201,72,.28),0 8px 24px rgba(0,0,0,.5)}
+      50%{box-shadow:0 0 0 2px rgba(247,201,72,.85),0 0 34px rgba(247,201,72,.5),0 8px 24px rgba(0,0,0,.5)}}
+    .vcb-btn::after{content:"";position:absolute;inset:-5px;border-radius:50%;
+      border:2px solid #f7c948;opacity:0;animation:vcbPing 3.6s ease-out infinite}
+    @keyframes vcbPing{0%{transform:scale(.9);opacity:.5}70%{transform:scale(1.4);opacity:0}100%{opacity:0}}
+    .vcb-om{font-size:31px;line-height:1;font-family:Georgia,'Noto Serif Devanagari',serif;
+      background:linear-gradient(180deg,#ffe9a8 0%,#f7c948 55%,#d99a1e 100%);
+      -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+      text-shadow:0 0 18px rgba(247,201,72,.45);transform:translateY(-1px)}
+    .vcb-nudge{position:fixed;bottom:32px;right:94px;z-index:999997;cursor:pointer;
+      background:linear-gradient(135deg,#ffe9a8,#f2b93c);color:#241a04;
+      border:none;border-radius:999px;padding:10px 16px;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+      font-size:13.5px;font-weight:700;white-space:nowrap;
+      box-shadow:0 6px 22px rgba(0,0,0,.4),0 0 24px rgba(247,201,72,.45);
+      opacity:0;transform:translateX(12px);pointer-events:none;
+      transition:opacity .5s ease,transform .5s ease}
+    .vcb-nudge.show{opacity:1;transform:translateX(0);pointer-events:auto;animation:vcbNudgeFloat 3s ease-in-out infinite}
+    @keyframes vcbNudgeFloat{0%,100%{transform:translateX(0) translateY(0)}50%{transform:translateX(0) translateY(-4px)}}
+    .vcb-nudge::after{content:"";position:absolute;right:-4px;top:50%;width:10px;height:10px;
+      background:#f2b93c;transform:translateY(-50%) rotate(45deg)}
 
     .vcb-panel{position:fixed;bottom:92px;right:20px;width:min(380px,calc(100vw - 32px));
       height:min(580px,calc(100vh - 124px));border-radius:22px;z-index:999999;
@@ -204,7 +224,7 @@
       .vcb-panel.open,.vcb-m,.vcb-splash-hi span,.vcb-splash-en,.vcb-splash-halo,.vcb-splash-line,.vcb-spark{animation:none !important;opacity:1}
       .vcb-btn::after,.vcb-bless span{animation:none}
       .vcb-spark,.vcb-shoot{display:none}
-      .vcb-neb,.vcb-starfield,.vcb-twinkle,.vcb-galaxy,.vcb-orbit,.vcb-sun,.vcb-moon{animation:none !important}
+      .vcb-neb,.vcb-starfield,.vcb-twinkle,.vcb-galaxy,.vcb-orbit,.vcb-sun,.vcb-moon,.vcb-btn,.vcb-nudge.show{animation:none !important}
     }
   `;
   document.head.appendChild(style);
@@ -212,8 +232,13 @@
   const btn = document.createElement("button");
   btn.className = "vcb-btn";
   btn.setAttribute("aria-label", "Open chat");
-  btn.innerHTML =
-    '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+  btn.innerHTML = '<span class="vcb-om">ॐ</span>';
+
+  // gentle invitation pill that slides out beside the orb
+  const nudge = document.createElement("div");
+  nudge.className = "vcb-nudge";
+  nudge.textContent = "🙏 Ask Your Guide";
+  nudge.setAttribute("role", "button");
 
   const panel = document.createElement("div");
   panel.className = "vcb-panel";
@@ -240,7 +265,18 @@
       <button class="vcb-send" type="submit">Send</button>
     </form>`;
 
-  document.body.append(btn, panel);
+  document.body.append(btn, nudge, panel);
+
+  // invitation timing: appear after 3s, retire after 15s or when the chat opens
+  const hideNudge = () => nudge.classList.remove("show");
+  setTimeout(() => {
+    if (!panel.classList.contains("open")) nudge.classList.add("show");
+    setTimeout(hideNudge, 15000);
+  }, 3000);
+  nudge.addEventListener("click", () => {
+    hideNudge();
+    toggle(true);
+  });
 
   // build the solar system: sun + eight planets on their own orbits and speeds
   const solar = panel.querySelector(".vcb-solar");
@@ -360,6 +396,7 @@
   function toggle(open) {
     panel.classList.toggle("open", open);
     if (open) {
+      hideNudge();
       playSplash();
       if (!greeted) {
         greeted = true;
