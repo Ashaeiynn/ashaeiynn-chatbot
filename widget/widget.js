@@ -194,6 +194,43 @@
     .vcb-typing i:nth-child(3){animation-delay:.3s}
     @keyframes vcbBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px);opacity:1}}
 
+    /* ——— voice-first stage ——— */
+    .vcb-panel[data-mode="voice"] .vcb-msgs,.vcb-panel[data-mode="voice"] .vcb-form{display:none}
+    .vcb-panel[data-mode="text"] .vcb-stage{display:none}
+    .vcb-stage{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;
+      align-items:center;padding:12px 14px 14px;min-height:0}
+    .vcb-cap{flex:1;width:100%;overflow-y:auto;display:flex;flex-direction:column;gap:9px;
+      align-items:center;justify-content:flex-end;padding:2px 2px 8px;min-height:0}
+    .vcb-cap::-webkit-scrollbar{width:6px}
+    .vcb-cap::-webkit-scrollbar-thumb{background:rgba(247,201,72,.25);border-radius:3px}
+    .vcb-you{color:#b9b0e6;font-size:13px;text-align:center;max-width:95%;animation:vcbMsgIn .3s ease both}
+    .vcb-ans{color:#f4f0ff;font-size:14.5px;line-height:1.6;white-space:pre-wrap;word-wrap:break-word;
+      background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);border-radius:14px;
+      padding:12px 14px;width:100%;animation:vcbMsgIn .3s ease both;backdrop-filter:blur(3px)}
+    .vcb-live{color:#ffe9a8;font-size:14.5px;text-align:center;min-height:20px;animation:vcbMsgIn .3s ease both}
+    .vcb-orbbig{position:relative;width:96px;height:96px;border-radius:50%;border:none;cursor:pointer;
+      flex-shrink:0;margin:8px 0 8px;display:flex;align-items:center;justify-content:center;
+      background:radial-gradient(circle at 34% 28%,#3b2f80 0%,#241b56 45%,#120d33 100%);
+      box-shadow:0 0 0 2px rgba(247,201,72,.55),0 0 26px rgba(247,201,72,.3);transition:transform .2s}
+    .vcb-orbbig:hover{transform:scale(1.05)}
+    .vcb-orbbig .vcb-eye{width:52px;height:52px}
+    .vcb-orbbig::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:2.5px solid transparent}
+    .vcb-panel[data-vstate="listening"] .vcb-orbbig{animation:vcbMicPulse 1.1s ease-in-out infinite}
+    .vcb-panel[data-vstate="thinking"] .vcb-orbbig::after{border-top-color:#f7c948;border-right-color:rgba(247,201,72,.35);
+      animation:vcbSpinFast 1s linear infinite}
+    @keyframes vcbSpinFast{to{transform:rotate(360deg)}}
+    .vcb-panel[data-vstate="speaking"] .vcb-orbbig{animation:vcbRippleGlow 1.5s ease-out infinite}
+    @keyframes vcbRippleGlow{0%{box-shadow:0 0 0 2px rgba(247,201,72,.55),0 0 0 0 rgba(247,201,72,.4)}
+      100%{box-shadow:0 0 0 2px rgba(247,201,72,.55),0 0 0 30px rgba(247,201,72,0)}}
+    .vcb-status{color:#cbc3f0;font-size:13px;line-height:1.5;min-height:20px;text-align:center}
+    .vcb-status b{color:#ffe9a8;font-weight:700}
+    .vcb-stagebar{display:flex;gap:14px;align-items:center;margin-top:8px}
+    .vcb-lang{background:rgba(255,255,255,.07);border:1px solid rgba(247,201,72,.45);color:#ffe9a8;
+      border-radius:999px;padding:5px 13px;font-size:12px;font-weight:700;cursor:pointer;transition:background .15s}
+    .vcb-lang:hover{background:rgba(247,201,72,.15)}
+    .vcb-kbd{background:none;border:none;color:#8d86b5;font-size:12.5px;cursor:pointer}
+    .vcb-kbd:hover{color:#cbc3f0}
+
     /* ——— the blessing splash ——— */
     .vcb-splash{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;
       align-items:center;justify-content:center;gap:14px;pointer-events:none;
@@ -238,24 +275,26 @@
   `;
   document.head.appendChild(style);
 
-  const btn = document.createElement("button");
-  btn.className = "vcb-btn";
-  btn.setAttribute("aria-label", "Open chat");
-  btn.innerHTML = `
+  const eyeSvg = (gradId) => `
     <svg class="vcb-eye" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="vcbGold" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="#ffe9a8"/><stop offset="55%" stop-color="#f7c948"/><stop offset="100%" stop-color="#d99a1e"/>
         </linearGradient>
       </defs>
-      <path d="M4 20 Q17 9 30 20 Q17 31 4 20 Z" stroke="url(#vcbGold)" stroke-width="1.8" fill="rgba(247,201,72,.08)"/>
-      <circle cx="17" cy="20" r="5" fill="url(#vcbGold)"/>
+      <path d="M4 20 Q17 9 30 20 Q17 31 4 20 Z" stroke="url(#${gradId})" stroke-width="1.8" fill="rgba(247,201,72,.08)"/>
+      <circle cx="17" cy="20" r="5" fill="url(#${gradId})"/>
       <circle cx="17" cy="20" r="2" fill="#1c1745"/>
       <circle cx="15.4" cy="18.4" r="0.9" fill="#fff6d8"/>
-      <path d="M17 7 L17 2.5" stroke="url(#vcbGold)" stroke-width="1.7" stroke-linecap="round"/>
-      <path d="M10.5 9.5 L8 6" stroke="url(#vcbGold)" stroke-width="1.7" stroke-linecap="round"/>
-      <path d="M23.5 9.5 L26 6" stroke="url(#vcbGold)" stroke-width="1.7" stroke-linecap="round"/>
+      <path d="M17 7 L17 2.5" stroke="url(#${gradId})" stroke-width="1.7" stroke-linecap="round"/>
+      <path d="M10.5 9.5 L8 6" stroke="url(#${gradId})" stroke-width="1.7" stroke-linecap="round"/>
+      <path d="M23.5 9.5 L26 6" stroke="url(#${gradId})" stroke-width="1.7" stroke-linecap="round"/>
     </svg>`;
+
+  const btn = document.createElement("button");
+  btn.className = "vcb-btn";
+  btn.setAttribute("aria-label", "Open chat");
+  btn.innerHTML = eyeSvg("vcbGoldA");
 
   // gentle invitation pill that slides out beside the orb
   const nudge = document.createElement("div");
@@ -282,6 +321,15 @@
       <div><button class="vcb-voice" aria-label="Voice replies" title="Voice replies">🔇</button><button class="vcb-close" aria-label="Close">×</button></div>
     </div>
     <div class="vcb-bless"><span>${SPLASH}</span></div>
+    <div class="vcb-stage">
+      <div class="vcb-cap"></div>
+      <button class="vcb-orbbig" type="button" aria-label="Ask by voice">${eyeSvg("vcbGoldB")}</button>
+      <div class="vcb-status"></div>
+      <div class="vcb-stagebar">
+        <button class="vcb-lang" type="button">भाषा: हिंदी</button>
+        <button class="vcb-kbd" type="button">⌨️ type instead</button>
+      </div>
+    </div>
     <div class="vcb-msgs"></div>
     <form class="vcb-form">
       <button class="vcb-mic" type="button" aria-label="Speak your question" title="Speak your question">
@@ -355,16 +403,24 @@
   const micBtn = panel.querySelector(".vcb-mic");
   const voiceBtn = panel.querySelector(".vcb-voice");
 
-  // ——— voice: speech-in (mic) and speech-out (read answers aloud) ———
+  // ——— voice engine: speech-in (mic) and speech-out (spoken answers) ———
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const VOICE_LANG = script?.dataset.voiceLang || "hi-IN";
-  let voiceReplies = false;
+  let recLang = script?.dataset.voiceLang || "hi-IN";
+  let voiceReplies = true; // voice-first: answers are spoken by default
   let listening = false;
   let rec = null;
 
+  const stage = panel.querySelector(".vcb-stage");
+  const cap = panel.querySelector(".vcb-cap");
+  const orb = panel.querySelector(".vcb-orbbig");
+  const statusEl = panel.querySelector(".vcb-status");
+  const langBtn = panel.querySelector(".vcb-lang");
+  const kbdBtn = panel.querySelector(".vcb-kbd");
+
   const hasDevanagari = (t) => /[ऀ-ॿ]/.test(t);
-  function speak(text) {
-    if (!voiceReplies || !("speechSynthesis" in window)) return;
+  function speak(text, onDone) {
+    const done = () => onDone && onDone();
+    if (!voiceReplies || !("speechSynthesis" in window)) return done();
     speechSynthesis.cancel();
     // strip source lines, links and emoji so only the teaching is spoken
     const clean = text
@@ -374,12 +430,14 @@
       .replace(/https?:\S+/g, "")
       .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "")
       .trim();
-    if (!clean) return;
+    if (!clean) return done();
     const u = new SpeechSynthesisUtterance(clean);
     u.lang = hasDevanagari(clean) ? "hi-IN" : "en-IN";
     const pick = speechSynthesis.getVoices().find((v) => v.lang.replace("_", "-").startsWith(u.lang));
     if (pick) u.voice = pick;
     u.rate = 0.98;
+    u.onend = done;
+    u.onerror = done;
     speechSynthesis.speak(u);
   }
   const stopSpeaking = () => "speechSynthesis" in window && speechSynthesis.cancel();
@@ -390,55 +448,211 @@
     if (!on) stopSpeaking();
   }
   voiceBtn.addEventListener("click", () => setVoiceReplies(!voiceReplies));
+  setVoiceReplies(true);
 
-  if (!SR) {
-    micBtn.style.display = "none"; // browser without speech recognition: text chat still works
-  } else {
-    rec = new SR();
-    rec.lang = VOICE_LANG;
-    rec.interimResults = true;
-    rec.continuous = false;
-    let finalText = "";
+  // ——— shared: ask the backend one question ———
+  async function askServer(text) {
+    let resp, data;
+    try {
+      resp = await fetch(`${API}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, history }),
+      });
+      data = await resp.json();
+    } catch {
+      throw new Error("Sorry, I couldn't reach the server. Please try again.");
+    }
+    if (!resp.ok) throw new Error(data.error || "Sorry, something went wrong. Please try again.");
+    history.push({ role: "user", content: text }, { role: "assistant", content: data.answer });
+    if (history.length > 12) history.splice(0, history.length - 12);
+    return data;
+  }
 
-    const stopListening = () => {
-      listening = false;
-      micBtn.classList.remove("listening");
-      input.placeholder = "Type your question…";
-    };
+  // ——— voice-first stage: state machine (idle → listening → thinking → speaking) ———
+  const STATUS = {
+    idle: 'आँख को दबाइए और <b>बोलिए</b> — हिंदी या English<br>Tap the eye and <b>speak</b> your question',
+    listening: '🎙️ <b>सुन रहे हैं… बोलिए</b> · listening — tap to finish',
+    thinking: '🔎 उत्तर खोज रहे हैं… finding your answer…',
+    speaking: '🔊 <b>उत्तर</b> · tap the eye to stop',
+    error: 'Mic नहीं चला — फिर से दबाइए · mic didn\'t start, tap again',
+  };
+  function setVState(s) {
+    panel.dataset.vstate = s;
+    statusEl.innerHTML = STATUS[s] || "";
+  }
+  function capAdd(el) {
+    cap.appendChild(el);
+    while (cap.children.length > 6) cap.firstChild.remove();
+    cap.scrollTop = cap.scrollHeight;
+  }
+  let liveEl = null;
+  function showLive(text) {
+    if (!liveEl) {
+      liveEl = document.createElement("div");
+      liveEl.className = "vcb-live";
+      capAdd(liveEl);
+    }
+    liveEl.textContent = text || "…";
+    cap.scrollTop = cap.scrollHeight;
+  }
 
-    micBtn.addEventListener("click", () => {
-      if (listening) {
-        rec.stop();
-        return;
+  async function voiceAsk(text) {
+    liveEl = null;
+    setVState("thinking");
+    const you = document.createElement("div");
+    you.className = "vcb-you";
+    you.textContent = `🗣️ ${text}`;
+    capAdd(you);
+    try {
+      const data = await askServer(text);
+      const ans = document.createElement("div");
+      ans.className = "vcb-ans";
+      ans.textContent = data.answer;
+      if (data.sources?.length) {
+        const src = document.createElement("div");
+        src.className = "vcb-src";
+        src.append("Watch: ");
+        data.sources.forEach((s, i) => {
+          if (i > 0) src.append(" · ");
+          if (s.url) {
+            const a = document.createElement("a");
+            a.href = s.url;
+            a.target = "_blank";
+            a.rel = "noopener";
+            a.textContent = `${s.title} (${s.timestamp})`;
+            src.appendChild(a);
+          } else {
+            src.append(`${s.title} (${s.timestamp})`);
+          }
+        });
+        ans.appendChild(src);
       }
-      stopSpeaking();
-      finalText = "";
-      input.value = "";
-      try {
-        rec.start();
-        listening = true;
+      capAdd(ans);
+      setVState("speaking");
+      speak(data.answer, () => setVState("idle"));
+    } catch (err) {
+      const e = document.createElement("div");
+      e.className = "vcb-ans";
+      e.textContent = err.message;
+      capAdd(e);
+      setVState("idle");
+    }
+  }
+
+  function startListening(target) {
+    if (!rec) return;
+    stopSpeaking();
+    try {
+      rec._target = target; // "stage" or "input"
+      rec._final = "";
+      rec.lang = recLang;
+      rec.start();
+      listening = true;
+      if (target === "stage") {
+        setVState("listening");
+        showLive("");
+      } else {
         micBtn.classList.add("listening");
         input.placeholder = "🎙️ बोलिए… (listening)";
-        setVoiceReplies(true); // spoken question → spoken answer
-      } catch {
-        stopListening();
       }
-    });
+    } catch {
+      listening = false;
+      if (target === "stage") setVState("error");
+    }
+  }
+
+  if (!SR) {
+    // no speech recognition (e.g. Firefox): fall back to classic text chat
+    micBtn.style.display = "none";
+    kbdBtn.style.display = "none";
+    stage.dataset.unsupported = "1";
+  } else {
+    rec = new SR();
+    rec.interimResults = true;
+    rec.continuous = false;
 
     rec.onresult = (e) => {
       let interim = "";
-      for (const res of e.results) (res.isFinal ? (finalText += res[0].transcript) : (interim += res[0].transcript));
-      input.value = (finalText + interim).trim();
+      let fin = rec._final || "";
+      for (const res of e.results) (res.isFinal ? (fin += res[0].transcript) : (interim += res[0].transcript));
+      rec._final = fin;
+      const textNow = (fin + interim).trim();
+      if (rec._target === "stage") showLive(textNow ? `🎙️ ${textNow}` : "");
+      else input.value = textNow;
     };
     rec.onend = () => {
-      stopListening();
-      if (input.value.trim()) form.requestSubmit();
+      listening = false;
+      micBtn.classList.remove("listening");
+      input.placeholder = "Type your question…";
+      const fin = (rec._final || "").trim();
+      if (rec._target === "stage") {
+        if (fin) voiceAsk(fin);
+        else {
+          if (liveEl) {
+            liveEl.remove();
+            liveEl = null;
+          }
+          setVState("idle");
+        }
+      } else if (input.value.trim()) {
+        form.requestSubmit();
+      }
     };
     rec.onerror = () => {
-      stopListening();
-      if (!input.value.trim()) input.placeholder = "Mic not available — please type…";
+      listening = false;
+      micBtn.classList.remove("listening");
+      if (rec._target === "stage") {
+        if (liveEl) {
+          liveEl.remove();
+          liveEl = null;
+        }
+        setVState("error");
+      } else if (!input.value.trim()) {
+        input.placeholder = "Mic not available — please type…";
+      }
     };
+
+    // the big eye: idle→listen · listening→finish · speaking→stop
+    orb.addEventListener("click", () => {
+      const s = panel.dataset.vstate;
+      if (listening) rec.stop();
+      else if (s === "speaking") {
+        stopSpeaking();
+        setVState("idle");
+      } else if (s !== "thinking") startListening("stage");
+    });
+
+    // language switch: Hindi ↔ English recognition
+    langBtn.addEventListener("click", () => {
+      recLang = recLang.startsWith("hi") ? "en-IN" : "hi-IN";
+      langBtn.textContent = recLang.startsWith("hi") ? "भाषा: हिंदी" : "Language: English";
+      if (listening) rec.stop();
+    });
   }
+
+  // ——— mode switching: voice stage ⇄ classic typing ———
+  function setMode(m) {
+    panel.dataset.mode = m;
+    if (m === "text") {
+      stopSpeaking();
+      if (listening) rec?.stop();
+      if (!greeted) {
+        greeted = true;
+        addMessage("bot", "Jai Siya Ram 🙏 Ask me anything about the teachings — I'll find the answer from our videos.");
+      }
+      input.focus();
+    } else {
+      setVState("idle");
+    }
+  }
+  kbdBtn.addEventListener("click", () => setMode("text"));
+  micBtn.addEventListener("click", () => {
+    // the mic in the typing bar returns to the voice stage and starts listening
+    setMode("voice");
+    startListening("stage");
+  });
+  panel.dataset.mode = SR ? "voice" : "text";
 
   // ——— opening blessing: splash rises, then docks into the golden strip ———
   let splashTimers = [];
@@ -518,11 +732,8 @@
     if (open) {
       hideNudge();
       playSplash();
-      if (!greeted) {
-        greeted = true;
-        addMessage("bot", "Jai Siya Ram 🙏 Ask me anything about the teachings — I'll find the answer from our videos.");
-      }
-      input.focus();
+      if (panel.dataset.mode === "text") input.focus();
+      else setVState("idle");
     }
   }
   btn.addEventListener("click", () => toggle(!panel.classList.contains("open")));
@@ -543,24 +754,13 @@
     send.disabled = true;
 
     try {
-      const resp = await fetch(`${API}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history }),
-      });
-      const data = await resp.json();
+      const data = await askServer(text);
       typing.remove();
-      if (!resp.ok) {
-        addMessage("bot", data.error || "Sorry, something went wrong. Please try again.");
-      } else {
-        addMessage("bot", data.answer, data.sources);
-        speak(data.answer);
-        history.push({ role: "user", content: text }, { role: "assistant", content: data.answer });
-        if (history.length > 12) history.splice(0, history.length - 12);
-      }
-    } catch {
+      addMessage("bot", data.answer, data.sources);
+      speak(data.answer);
+    } catch (err) {
       typing.remove();
-      addMessage("bot", "Sorry, I couldn't reach the server. Please try again.");
+      addMessage("bot", err.message);
     } finally {
       send.disabled = false;
       input.focus();
