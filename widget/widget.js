@@ -51,6 +51,8 @@
       animation:vcbNeb1 130s ease-in-out infinite alternate-reverse}
     @keyframes vcbNeb1{from{transform:translate(0,0) rotate(0deg) scale(1)}to{transform:translate(46px,30px) rotate(28deg) scale(1.18)}}
     @keyframes vcbNeb2{from{transform:translate(0,0) rotate(0deg) scale(1.1)}to{transform:translate(-38px,-26px) rotate(-24deg) scale(.95)}}
+    .vcb-galaxy{position:absolute;inset:-42%;animation:vcbGalaxy 780s linear infinite;will-change:transform}
+    @keyframes vcbGalaxy{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
     .vcb-starfield{position:absolute;inset:-240px 0 0 0;background-repeat:repeat;will-change:background-position}
     .vcb-starfield.s1{background-size:240px 240px;opacity:.7;animation:vcbDrift1 210s linear infinite;
       background-image:radial-gradient(1.1px 1.1px at 22px 34px,rgba(255,255,255,.55) 50%,transparent 51%),
@@ -72,6 +74,28 @@
       background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),rgba(247,201,72,.9),transparent);
       transform:rotate(24deg);opacity:0;animation:vcbShoot 17s linear infinite;animation-delay:6s}
     .vcb-shoot.sh2{top:58%;left:-35%;width:80px;animation-duration:23s;animation-delay:14s;transform:rotate(18deg)}
+
+    /* ——— the solar system ——— */
+    .vcb-solar{position:absolute;left:50%;top:52%;width:0;height:0}
+    .vcb-sun{position:absolute;left:0;top:0;width:30px;height:30px;border-radius:50%;
+      transform:translate(-50%,-50%);
+      background:radial-gradient(circle at 38% 34%,#fff6d8 0%,#ffd76b 38%,#f2a63a 68%,#c96f1e 100%);
+      animation:vcbSun 7s ease-in-out infinite alternate}
+    @keyframes vcbSun{
+      from{box-shadow:0 0 18px 4px rgba(255,196,84,.55),0 0 60px 18px rgba(242,166,58,.22)}
+      to{box-shadow:0 0 26px 7px rgba(255,196,84,.75),0 0 84px 26px rgba(242,166,58,.3)}}
+    .vcb-orbit{position:absolute;left:0;top:0;transform:translate(-50%,-50%);
+      border:1px solid rgba(255,255,255,.055);border-radius:50%;
+      animation:vcbSpin linear infinite;will-change:transform}
+    @keyframes vcbSpin{from{transform:translate(-50%,-50%) rotate(0deg)}to{transform:translate(-50%,-50%) rotate(360deg)}}
+    .vcb-planet{position:absolute;left:50%;top:0;transform:translate(-50%,-50%);border-radius:50%}
+    .vcb-planet.saturn::after{content:"";position:absolute;left:50%;top:50%;
+      width:210%;height:210%;transform:translate(-50%,-50%) rotate(24deg) scaleY(.32);
+      border:1.6px solid rgba(236,208,142,.65);border-radius:50%}
+    .vcb-moon{position:absolute;left:50%;top:50%;width:15px;height:15px;margin:-7.5px 0 0 -7.5px;
+      animation:vcbSpin 6s linear infinite}
+    .vcb-moon::after{content:"";position:absolute;left:50%;top:0;width:2.2px;height:2.2px;
+      transform:translate(-50%,-50%);border-radius:50%;background:#d8d5cc}
     @keyframes vcbShoot{
       0%{transform:translate(0,0) rotate(24deg);opacity:0}
       1.2%{opacity:.9}
@@ -180,7 +204,7 @@
       .vcb-panel.open,.vcb-m,.vcb-splash-hi span,.vcb-splash-en,.vcb-splash-halo,.vcb-splash-line,.vcb-spark{animation:none !important;opacity:1}
       .vcb-btn::after,.vcb-bless span{animation:none}
       .vcb-spark,.vcb-shoot{display:none}
-      .vcb-neb,.vcb-starfield,.vcb-twinkle{animation:none !important}
+      .vcb-neb,.vcb-starfield,.vcb-twinkle,.vcb-galaxy,.vcb-orbit,.vcb-sun,.vcb-moon{animation:none !important}
     }
   `;
   document.head.appendChild(style);
@@ -195,8 +219,11 @@
   panel.className = "vcb-panel";
   panel.innerHTML = `
     <div class="vcb-cosmos">
+      <div class="vcb-galaxy">
+        <div class="vcb-starfield s1"></div><div class="vcb-starfield s2"></div>
+      </div>
       <div class="vcb-neb n1"></div><div class="vcb-neb n2"></div><div class="vcb-neb n3"></div>
-      <div class="vcb-starfield s1"></div><div class="vcb-starfield s2"></div>
+      <div class="vcb-solar"></div>
       <span class="vcb-shoot"></span><span class="vcb-shoot sh2"></span>
     </div>
     <div class="vcb-head">
@@ -214,6 +241,33 @@
     </form>`;
 
   document.body.append(btn, panel);
+
+  // build the solar system: sun + eight planets on their own orbits and speeds
+  const solar = panel.querySelector(".vcb-solar");
+  solar.innerHTML = '<div class="vcb-sun"></div>';
+  const PLANETS = [
+    { name: "mercury", r: 30, size: 3.5, dur: 26, bg: "#c9b8a8" },
+    { name: "venus", r: 44, size: 5.5, dur: 40, bg: "#eac57e" },
+    { name: "earth", r: 60, size: 6.5, dur: 55, bg: "radial-gradient(circle at 35% 35%,#8fd0ff 0%,#3f8fe0 55%,#1d5fae 100%)", moon: true },
+    { name: "mars", r: 77, size: 5, dur: 74, bg: "#e2694a" },
+    { name: "jupiter", r: 103, size: 13, dur: 105, bg: "radial-gradient(circle at 35% 30%,#e8c49a 0%,#cf9a5e 50%,#a8713c 100%)" },
+    { name: "saturn", r: 132, size: 11, dur: 135, bg: "radial-gradient(circle at 35% 30%,#f2e0b0 0%,#e0be7e 60%,#b8934f 100%)" },
+    { name: "uranus", r: 162, size: 7.5, dur: 170, bg: "#a4dbe2" },
+    { name: "neptune", r: 194, size: 7.5, dur: 205, bg: "#6b83ee" },
+  ];
+  PLANETS.forEach((p, i) => {
+    const orbit = document.createElement("div");
+    orbit.className = "vcb-orbit";
+    orbit.style.cssText = `width:${p.r * 2}px;height:${p.r * 2}px;` +
+      `animation-duration:${p.dur}s;animation-delay:-${(p.dur * (i * 0.37 % 1)).toFixed(1)}s`;
+    const planet = document.createElement("div");
+    planet.className = `vcb-planet ${p.name}`;
+    planet.style.cssText = `width:${p.size}px;height:${p.size}px;background:${p.bg};` +
+      `box-shadow:0 0 ${Math.max(4, p.size)}px rgba(255,255,255,.28)`;
+    if (p.moon) planet.innerHTML = '<span class="vcb-moon"></span>';
+    orbit.appendChild(planet);
+    solar.appendChild(orbit);
+  });
 
   // scatter twinkling stars over the cosmos, each with its own rhythm
   const cosmos = panel.querySelector(".vcb-cosmos");
