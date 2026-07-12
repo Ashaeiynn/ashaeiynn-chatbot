@@ -163,6 +163,18 @@
 
     .vcb-form{position:relative;z-index:2;display:flex;gap:8px;padding:12px;
       border-top:1px solid rgba(247,201,72,.16);background:rgba(2,2,6,.65)}
+    .vcb-mic{width:42px;height:42px;flex-shrink:0;border-radius:12px;cursor:pointer;
+      border:1.5px solid rgba(247,201,72,.45);background:rgba(247,201,72,.08);
+      display:flex;align-items:center;justify-content:center;transition:all .2s}
+    .vcb-mic:hover{background:rgba(247,201,72,.18)}
+    .vcb-mic svg{width:19px;height:19px;stroke:#f7c948}
+    .vcb-mic.listening{background:linear-gradient(135deg,#ffe9a8,#f2b93c);
+      animation:vcbMicPulse 1.1s ease-in-out infinite}
+    .vcb-mic.listening svg{stroke:#241a04}
+    @keyframes vcbMicPulse{0%,100%{box-shadow:0 0 0 0 rgba(247,201,72,.55)}50%{box-shadow:0 0 0 9px rgba(247,201,72,0)}}
+    .vcb-voice{background:none;border:none;cursor:pointer;font-size:16px;line-height:1;
+      opacity:.85;margin-right:10px;padding:2px}
+    .vcb-voice:hover{opacity:1}
     .vcb-input{flex:1;border:1.5px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);
       color:#f2eefe;border-radius:12px;padding:10px 13px;font-size:14px;outline:none;transition:border-color .15s}
     .vcb-input::placeholder{color:#8d86b5}
@@ -267,11 +279,17 @@
         <div class="vcb-ava">🙏</div>
         <div><div class="vcb-title">${TITLE}</div><div class="vcb-sub">Ashaeiynn · answers from the teachings</div></div>
       </div>
-      <button class="vcb-close" aria-label="Close">×</button>
+      <div><button class="vcb-voice" aria-label="Voice replies" title="Voice replies">🔇</button><button class="vcb-close" aria-label="Close">×</button></div>
     </div>
     <div class="vcb-bless"><span>${SPLASH}</span></div>
     <div class="vcb-msgs"></div>
     <form class="vcb-form">
+      <button class="vcb-mic" type="button" aria-label="Speak your question" title="Speak your question">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/>
+        </svg>
+      </button>
       <input class="vcb-input" type="text" placeholder="Type your question…" maxlength="2000" autocomplete="off"/>
       <button class="vcb-send" type="submit">Send</button>
     </form>`;
@@ -334,6 +352,93 @@
   const input = panel.querySelector(".vcb-input");
   const send = panel.querySelector(".vcb-send");
   const bless = panel.querySelector(".vcb-bless");
+  const micBtn = panel.querySelector(".vcb-mic");
+  const voiceBtn = panel.querySelector(".vcb-voice");
+
+  // ——— voice: speech-in (mic) and speech-out (read answers aloud) ———
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const VOICE_LANG = script?.dataset.voiceLang || "hi-IN";
+  let voiceReplies = false;
+  let listening = false;
+  let rec = null;
+
+  const hasDevanagari = (t) => /[ऀ-ॿ]/.test(t);
+  function speak(text) {
+    if (!voiceReplies || !("speechSynthesis" in window)) return;
+    speechSynthesis.cancel();
+    // strip source lines, links and emoji so only the teaching is spoken
+    const clean = text
+      .split("\n")
+      .filter((l) => !/^\s*(source|watch)\s*:/i.test(l))
+      .join("\n")
+      .replace(/https?:\S+/g, "")
+      .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "")
+      .trim();
+    if (!clean) return;
+    const u = new SpeechSynthesisUtterance(clean);
+    u.lang = hasDevanagari(clean) ? "hi-IN" : "en-IN";
+    const pick = speechSynthesis.getVoices().find((v) => v.lang.replace("_", "-").startsWith(u.lang));
+    if (pick) u.voice = pick;
+    u.rate = 0.98;
+    speechSynthesis.speak(u);
+  }
+  const stopSpeaking = () => "speechSynthesis" in window && speechSynthesis.cancel();
+
+  function setVoiceReplies(on) {
+    voiceReplies = on;
+    voiceBtn.textContent = on ? "🔊" : "🔇";
+    if (!on) stopSpeaking();
+  }
+  voiceBtn.addEventListener("click", () => setVoiceReplies(!voiceReplies));
+
+  if (!SR) {
+    micBtn.style.display = "none"; // browser without speech recognition: text chat still works
+  } else {
+    rec = new SR();
+    rec.lang = VOICE_LANG;
+    rec.interimResults = true;
+    rec.continuous = false;
+    let finalText = "";
+
+    const stopListening = () => {
+      listening = false;
+      micBtn.classList.remove("listening");
+      input.placeholder = "Type your question…";
+    };
+
+    micBtn.addEventListener("click", () => {
+      if (listening) {
+        rec.stop();
+        return;
+      }
+      stopSpeaking();
+      finalText = "";
+      input.value = "";
+      try {
+        rec.start();
+        listening = true;
+        micBtn.classList.add("listening");
+        input.placeholder = "🎙️ बोलिए… (listening)";
+        setVoiceReplies(true); // spoken question → spoken answer
+      } catch {
+        stopListening();
+      }
+    });
+
+    rec.onresult = (e) => {
+      let interim = "";
+      for (const res of e.results) (res.isFinal ? (finalText += res[0].transcript) : (interim += res[0].transcript));
+      input.value = (finalText + interim).trim();
+    };
+    rec.onend = () => {
+      stopListening();
+      if (input.value.trim()) form.requestSubmit();
+    };
+    rec.onerror = () => {
+      stopListening();
+      if (!input.value.trim()) input.placeholder = "Mic not available — please type…";
+    };
+  }
 
   // ——— opening blessing: splash rises, then docks into the golden strip ———
   let splashTimers = [];
@@ -406,6 +511,10 @@
   let greeted = false;
   function toggle(open) {
     panel.classList.toggle("open", open);
+    if (!open) {
+      stopSpeaking();
+      if (listening) rec?.stop();
+    }
     if (open) {
       hideNudge();
       playSplash();
@@ -445,6 +554,7 @@
         addMessage("bot", data.error || "Sorry, something went wrong. Please try again.");
       } else {
         addMessage("bot", data.answer, data.sources);
+        speak(data.answer);
         history.push({ role: "user", content: text }, { role: "assistant", content: data.answer });
         if (history.length > 12) history.splice(0, history.length - 12);
       }
