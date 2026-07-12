@@ -418,19 +418,23 @@
   const kbdBtn = panel.querySelector(".vcb-kbd");
 
   const hasDevanagari = (t) => /[ऀ-ॿ]/.test(t);
-  function speak(text, onDone) {
-    const done = () => onDone && onDone();
-    if (!voiceReplies || !("speechSynthesis" in window)) return done();
-    speechSynthesis.cancel();
-    // strip source lines, links and emoji so only the teaching is spoken
-    const clean = text
+  let naturalVoice = false; // does the server offer a human voice? (probed at load)
+  fetch(`${API}/health`).then((r) => r.json()).then((h) => (naturalVoice = !!h.naturalVoice)).catch(() => {});
+  let currentAudio = null;
+
+  const cleanForSpeech = (text) =>
+    text
       .split("\n")
-      .filter((l) => !/^\s*(source|watch)\s*:/i.test(l))
+      .filter((l) => !/^\s*(source|watch)\s*:/i.test(l)) // sources are shown, not spoken
       .join("\n")
       .replace(/https?:\S+/g, "")
+      .replace(/[*_#\`~]+/g, "") // never read formatting symbols aloud
       .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "")
       .trim();
-    if (!clean) return done();
+
+  function browserSpeak(clean, done) {
+    if (!("speechSynthesis" in window)) return done();
+    speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(clean);
     u.lang = hasDevanagari(clean) ? "hi-IN" : "en-IN";
     const pick = speechSynthesis.getVoices().find((v) => v.lang.replace("_", "-").startsWith(u.lang));
@@ -440,7 +444,49 @@
     u.onerror = done;
     speechSynthesis.speak(u);
   }
-  const stopSpeaking = () => "speechSynthesis" in window && speechSynthesis.cancel();
+
+  async function speak(text, onDone) {
+    let doneCalled = false;
+    const done = () => {
+      if (!doneCalled) {
+        doneCalled = true;
+        onDone && onDone();
+      }
+    };
+    if (!voiceReplies) return done();
+    const clean = cleanForSpeech(text);
+    if (!clean) return done();
+
+    // human voice from the server when available, browser voice otherwise
+    if (naturalVoice) {
+      try {
+        const r = await fetch(`${API}/api/tts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: clean }),
+        });
+        if (r.ok) {
+          const blob = await r.blob();
+          const audio = new Audio(URL.createObjectURL(blob));
+          currentAudio = audio;
+          audio.onended = done;
+          audio.onerror = () => browserSpeak(clean, done);
+          await audio.play();
+          return;
+        }
+      } catch {
+        /* fall through to browser voice */
+      }
+    }
+    browserSpeak(clean, done);
+  }
+  const stopSpeaking = () => {
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio = null;
+    }
+    if ("speechSynthesis" in window) speechSynthesis.cancel();
+  };
 
   function setVoiceReplies(on) {
     voiceReplies = on;

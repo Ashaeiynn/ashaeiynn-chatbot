@@ -23,7 +23,12 @@ async function ask(q) {
   return res.json();
 }
 
-const isFallback = (a) => FALLBACK && a.trim().includes(FALLBACK.slice(0, 40));
+// A grounded answer always ends with a "Source:" line (prompt rule); the fallback never
+// carries one (and may be translated into the visitor's language). So the source line is
+// the reliable discriminator.
+const hasSource = (a) => /source\s*:/i.test(a);
+const isFallback = (a) =>
+  !hasSource(a) && (a.trim().length < 300 || (FALLBACK && a.includes(FALLBACK.slice(0, 40))));
 
 let pass = 0;
 let fail = 0;

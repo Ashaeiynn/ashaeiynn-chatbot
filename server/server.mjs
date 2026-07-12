@@ -42,6 +42,61 @@ function json(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+// ——— natural voice (optional): ElevenLabs text-to-speech ———
+// Configure ELEVENLABS_API_KEY in .env to give the bot a human voice; without it
+// the widget falls back to the browser's built-in voice automatically.
+const TTS_KEY = process.env.ELEVENLABS_API_KEY || "";
+const TTS_VOICE = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM"; // multilingual premade voice
+const TTS_MODEL = process.env.ELEVENLABS_MODEL || "eleven_multilingual_v2";
+
+async function handleTts(req, res) {
+  if (!TTS_KEY) return json(res, 501, { error: "tts-not-configured" });
+  const ip = req.socket.remoteAddress ?? "unknown";
+  if (rateLimited(ip)) return json(res, 429, { error: "Too many requests." });
+
+  let body = "";
+  for await (const part of req) {
+    body += part;
+    if (body.length > 20_000) return json(res, 413, { error: "Text too long." });
+  }
+  let text = "";
+  try {
+    text = String(JSON.parse(body).text ?? "").trim().slice(0, 1500);
+  } catch {
+    return json(res, 400, { error: "Invalid JSON." });
+  }
+  if (!text) return json(res, 400, { error: "Empty text." });
+
+  try {
+    const r = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(TTS_VOICE)}?output_format=mp3_44100_64`,
+      {
+        method: "POST",
+        headers: { "xi-api-key": TTS_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text,
+          model_id: TTS_MODEL,
+          voice_settings: { stability: 0.45, similarity_boost: 0.8, style: 0.35 },
+        }),
+      },
+    );
+    if (!r.ok) {
+      console.error("tts error:", r.status, (await r.text()).slice(0, 200));
+      return json(res, 502, { error: "tts-failed" });
+    }
+    res.writeHead(200, {
+      "Content-Type": "audio/mpeg",
+      "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+      "Cache-Control": "no-store",
+    });
+    const buf = Buffer.from(await r.arrayBuffer());
+    res.end(buf);
+  } catch (err) {
+    console.error("tts error:", err?.message);
+    json(res, 502, { error: "tts-failed" });
+  }
+}
+
 async function handleChat(req, res) {
   const ip = req.socket.remoteAddress ?? "unknown";
   if (rateLimited(ip)) {
@@ -203,6 +258,7 @@ const server = createServer(async (req, res) => {
 
   if (req.method === "OPTIONS") return json(res, 204, {});
   if (req.method === "POST" && url.pathname === "/api/chat") return handleChat(req, res);
+  if (req.method === "POST" && url.pathname === "/api/tts") return handleTts(req, res);
 
   // Health check — for hosting platforms and to confirm a deploy is live.
   if (req.method === "GET" && url.pathname === "/health") {
@@ -210,6 +266,7 @@ const server = createServer(async (req, res) => {
       ok: true,
       model: MODEL,
       apiKeyConfigured,
+      naturalVoice: Boolean(TTS_KEY),
       knowledgeBase: existsSync(path.join(ROOT, "data", "knowledge.db")) ? "built" : "missing",
     });
   }
