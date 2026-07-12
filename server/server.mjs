@@ -218,7 +218,7 @@ const server = createServer(async (req, res) => {
     res.writeHead(200, {
       "Content-Type": "application/javascript; charset=utf-8",
       "Access-Control-Allow-Origin": "*",
-      "Cache-Control": "public, max-age=300",
+      "Cache-Control": "no-cache",
     });
     return res.end(readFileSync(path.join(ROOT, "widget", "widget.js")));
   }
