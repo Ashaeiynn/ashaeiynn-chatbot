@@ -141,6 +141,24 @@
   </div>
   <div id="liblist"><div class="empty">loading…</div></div>
 </main>
+<div id="editor" style="position:fixed;inset:0;background:rgba(5,3,18,.85);display:none;align-items:center;justify-content:center;z-index:22;padding:16px">
+  <div class="rbox" style="background:var(--card);border:1px solid var(--gold);border-radius:18px;max-width:720px;width:100%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden">
+    <div class="rhead" style="display:flex;gap:10px;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line)">
+      <h3 style="color:var(--gold);font-size:15px;flex:1">✏️ Edit the answer</h3>
+      <button class="mini" id="ed-cancel">✕ Cancel</button>
+    </div>
+    <div style="padding:16px 18px;overflow-y:auto">
+      <p style="font-size:12px;color:var(--dim);margin-bottom:4px">Question</p>
+      <p id="ed-q" style="font-weight:600;margin-bottom:14px"></p>
+      <p style="font-size:12px;color:var(--dim);margin-bottom:6px">The answer the bot should give (same or similar questions will use this — write it in the language the question was asked in)</p>
+      <textarea id="ed-a" style="width:100%;min-height:220px;background:#0e0a26;border:1px solid var(--line);border-radius:10px;padding:12px 14px;color:var(--ink);font-size:14px;outline:none;resize:vertical;font-family:inherit"></textarea>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button class="gold-btn" id="ed-save" style="flex:1;padding:11px">💾 Save — bot will remember this</button>
+      </div>
+      <p id="ed-err" style="color:#ff9d76;min-height:16px;margin-top:8px;font-size:12.5px"></p>
+    </div>
+  </div>
+</div>
 <div id="reader">
   <div class="rbox">
     <div class="rhead">
@@ -188,6 +206,7 @@
     <button class="chip" data-f="text">⌨️ Typed</button>
     <button class="chip" data-f="hi">हिंदी</button>
     <button class="chip" data-f="en">English</button>
+    <button class="chip" data-f="corrected">✏️ Corrected</button>
     <input id="search" placeholder="Search a question…">
   </div>
   <div id="list"></div>
@@ -197,6 +216,14 @@
 (() => {
   const $ = (s) => document.querySelector(s);
   let entries = [], filter = "all", query = "";
+  let corrections = [];
+  const corrFor = (q) => corrections.find((c) => c.q.trim() === String(q || "").trim());
+  async function loadCorr() {
+    try {
+      const r = await fetch("/api/admin/corrections", { headers: { "x-admin-key": localStorage.getItem("adminKey") || "" } });
+      if (r.ok) corrections = (await r.json()).items || [];
+    } catch { /* best-effort */ }
+  }
 
   const isUnanswered = (e) => e.error || (e.answer && !/Source\s*:/.test(e.answer) && !e.testMode);
   const when = (iso) => new Date(iso).toLocaleString("en-IN",
@@ -212,6 +239,7 @@
       return;
     }
     entries = (await r.json()).entries || [];
+    await loadCorr();
     $("#login").style.display = "none";
     render();
   }
@@ -230,6 +258,35 @@
       <div class="stat warn"><b>${un}</b><span>unanswered</span></div>`;
     $("#sub").textContent = `last ${entries.length} questions · newest first`;
 
+    // "Corrected" filter shows the saved approved answers themselves
+    if (filter === "corrected") {
+      const q2 = query.toLowerCase();
+      const shownC = corrections.filter((c) => !q2 || c.q.toLowerCase().includes(q2) || c.answer.toLowerCase().includes(q2));
+      $("#list").innerHTML = shownC.length ? "" : `<div class="empty">कोई सुधारा हुआ उत्तर नहीं · no edited answers yet — use ✏️ Edit answer on any question</div>`;
+      for (const c of shownC) {
+        const card = document.createElement("div");
+        card.className = "qa";
+        card.innerHTML = `
+          <div class="meta"><span class="badge goldb">✏️ edited ${when(c.at)}</span></div>
+          <div class="q">${esc(c.q)}</div>
+          <div class="a${c.answer.length > 260 ? " long" : ""}">${esc(c.answer)}</div>
+          <div style="margin-top:9px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="mini" data-ed>✏️ Edit again</button>
+            <button class="mini danger" data-rm>🗑️ Remove (bot answers on its own again)</button>
+          </div>`;
+        card.querySelector(".a").addEventListener("click", (ev) => ev.currentTarget.classList.toggle("open"));
+        card.querySelector("[data-ed]").addEventListener("click", () => openEditor(c.q, c.answer));
+        card.querySelector("[data-rm]").addEventListener("click", async () => {
+          if (!confirm("Remove this edited answer? The bot will go back to answering this from the teachings.")) return;
+          await fetch(`/api/admin/correction?id=${encodeURIComponent(c.id)}`, { method: "DELETE", headers: { "x-admin-key": key() } });
+          await loadCorr();
+          render();
+        });
+        $("#list").appendChild(card);
+      }
+      return;
+    }
+
     const q = query.toLowerCase();
     const shown = entries.filter((e) => {
       if (filter === "unanswered" && !isUnanswered(e)) return false;
@@ -245,9 +302,11 @@
     for (const e of shown.slice(0, 300)) {
       const card = document.createElement("div");
       card.className = "qa" + (isUnanswered(e) ? " unanswered" : "");
+      const edited = corrFor(e.q);
       const badges = [
         `<span class="badge">${e.via === "voice" ? "🎙️ voice" : "⌨️ typed"}</span>`,
         `<span class="badge">${e.hi ? "हिंदी" : "English"}</span>`,
+        e.corrected || edited ? `<span class="badge goldb">✏️ corrected</span>` : "",
         e.testMode ? `<span class="badge">test mode</span>` : "",
         e.error ? `<span class="badge red">⚠ ${e.error}</span>` : "",
         isUnanswered(e) && !e.error ? `<span class="badge red">no source — knowledge gap?</span>` : "",
@@ -258,8 +317,11 @@
         <div class="meta"><span class="badge goldb">${when(e.at)}</span>${badges}</div>
         <div class="q">${esc(e.q)}</div>
         <div class="a${aText.length > 260 ? " long" : ""}">${esc(aText)}</div>
-        ${srcs ? `<div class="src">📚 matched: ${esc(srcs)}</div>` : ""}`;
+        ${srcs ? `<div class="src">📚 matched: ${esc(srcs)}</div>` : ""}
+        <div style="margin-top:9px"><button class="mini" data-ed>✏️ Edit answer</button></div>`;
       card.querySelector(".a").addEventListener("click", (ev) => ev.currentTarget.classList.toggle("open"));
+      card.querySelector("[data-ed]").addEventListener("click", () =>
+        openEditor(e.q, (corrFor(e.q)?.answer) || e.answer || ""));
       $("#list").appendChild(card);
     }
   }
@@ -361,6 +423,30 @@
     if (!r.ok) return alert(d.error || "failed");
     $("#note-title").value = ""; $("#note-text").value = "";
     loadJobs();
+  });
+
+  // ——— answer editor ———
+  let editQ = null;
+  function openEditor(q, answer) {
+    editQ = q;
+    $("#ed-q").textContent = q;
+    $("#ed-a").value = answer || "";
+    $("#ed-err").textContent = "";
+    $("#editor").style.display = "flex";
+  }
+  $("#ed-cancel").addEventListener("click", () => ($("#editor").style.display = "none"));
+  $("#editor").addEventListener("click", (e) => { if (e.target === $("#editor")) $("#editor").style.display = "none"; });
+  $("#ed-save").addEventListener("click", async () => {
+    const r = await fetch("/api/admin/correction", {
+      method: "POST",
+      headers: { "x-admin-key": key(), "Content-Type": "application/json" },
+      body: JSON.stringify({ q: editQ, answer: $("#ed-a").value }),
+    });
+    const d = await r.json();
+    if (!r.ok) return ($("#ed-err").textContent = d.error || "failed");
+    $("#editor").style.display = "none";
+    await loadCorr();
+    render();
   });
 
   // ——— Library ———

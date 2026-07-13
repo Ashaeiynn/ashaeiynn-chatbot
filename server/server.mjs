@@ -5,6 +5,7 @@ import { readFileSync, existsSync, appendFileSync, createWriteStream, rmSync, re
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { teachFile, teachLink, teachText, forget, publicJobs, uploadsDir } from "./teach.mjs";
+import { matchCorrection, addCorrection, removeCorrection, listCorrections, DIRECT_MATCH } from "./corrections.mjs";
 import { ROOT } from "./env.mjs";
 import { searchMulti, formatTimestamp } from "./retrieve.mjs";
 import { warmup } from "./embed.mjs";
@@ -232,6 +233,38 @@ async function handleChat(req, res) {
         .map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }))
     : [];
 
+  // Detect the QUESTION's language early — it decides reply language everywhere
+  // below. Romanized-Hindi (Hinglish) counts as Hindi; when SPOKEN, the widget's
+  // mic language wins (speech recognition may write Hindi speech in Latin letters).
+  const spokenHindi =
+    payload.via === "voice" && String(payload.lang || "").toLowerCase().startsWith("hi");
+  const isDevanagari = /[ऀ-ॿ]/.test(message);
+  const hinglishHits = (message.toLowerCase().match(/\b(kya|kaun|kaise|kyu|kyon|kab|kahan|batao|bataiye|mujhe|humko|nahi|nahin|hota|hoti|hai|hain|karna|kare|krna|wala|matlab)\b/g) || []).length;
+  const wantsHindi = spokenHindi || isDevanagari || hinglishHits >= 1;
+
+  // Bhaiya-approved answers: a question meaning the same as an edited one gets
+  // the approved answer verbatim (when its language fits); a similar one will see
+  // it below as the highest-authority excerpt.
+  let approved = null;
+  try {
+    approved = await matchCorrection(message);
+  } catch {
+    /* corrections are best-effort */
+  }
+  if (approved && approved.score >= DIRECT_MATCH && /[ऀ-ॿ]/.test(approved.answer) === wantsHindi) {
+    writeLog({
+      at: new Date().toISOString(),
+      q: message,
+      via: payload.via,
+      lang: payload.lang,
+      hi: wantsHindi,
+      corrected: true,
+      top: [],
+      answer: approved.answer,
+    });
+    return json(res, 200, { answer: approved.answer, sources: [], corrected: true });
+  }
+
   // Search transcripts for the question (plus a bit of recent context for follow-ups).
   // Cross-language boost: also search with a Hindi/English translation of the question,
   // since the videos are spoken in Hindi but visitors may ask in English (or vice versa).
@@ -260,15 +293,18 @@ async function handleChat(req, res) {
     Number(process.env.RETRIEVE_K || 12),
   );
 
-  // Detect the QUESTION's language so the reply language never drifts toward the
-  // (mostly Hindi) excerpts. Romanized-Hindi (Hinglish) counts as Hindi. When the
-  // question was SPOKEN, the widget's mic language wins: speech recognition often
-  // writes Hindi speech in Latin letters, which would otherwise read as English.
-  const spokenHindi =
-    payload.via === "voice" && String(payload.lang || "").toLowerCase().startsWith("hi");
-  const isDevanagari = /[ऀ-ॿ]/.test(message);
-  const hinglishHits = (message.toLowerCase().match(/\b(kya|kaun|kaise|kyu|kyon|kab|kahan|batao|bataiye|mujhe|humko|nahi|nahin|hota|hoti|hai|hain|karna|kare|krna|wala|matlab)\b/g) || []).length;
-  const wantsHindi = spokenHindi || isDevanagari || hinglishHits >= 1;
+  // A similar (but not same-meaning) approved answer joins the excerpts at the
+  // top — the model treats Bhaiya's own edit as the most authoritative teaching.
+  if (approved) {
+    chunks.unshift({
+      title: "Bhaiya's approved answer (admin-edited)",
+      content: `Question it was written for: ${approved.q}\nApproved answer: ${approved.answer}`,
+      start_seconds: 0,
+      url: null,
+      score: approved.score,
+    });
+  }
+
   const langInstruction = wantsHindi
     ? "उत्तर पूरी तरह हिंदी (देवनागरी) में दीजिए — एक भी वाक्य English में नहीं।"
     : "Answer entirely in English — every sentence in English (keep Hindi terms like hawan, jaap, drishti in Latin script). Do not write any Devanagari.";
@@ -440,6 +476,30 @@ const server = createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/admin/jobs") {
     if (!adminOk()) return;
     return json(res, 200, { jobs: publicJobs() });
+  }
+
+  // ——— edited (Bhaiya-approved) answers ———
+  if (req.method === "GET" && url.pathname === "/api/admin/corrections") {
+    if (!adminOk()) return;
+    return json(res, 200, { items: await listCorrections() });
+  }
+  if (req.method === "POST" && url.pathname === "/api/admin/correction") {
+    if (!adminOk()) return;
+    let body = "";
+    for await (const part of req) {
+      body += part;
+      if (body.length > 100_000) return json(res, 413, { error: "Too long." });
+    }
+    try {
+      const p = JSON.parse(body);
+      return json(res, 200, { item: await addCorrection(p.q, p.answer) });
+    } catch (err) {
+      return json(res, 400, { error: String(err?.message || err).slice(0, 200) });
+    }
+  }
+  if (req.method === "DELETE" && url.pathname === "/api/admin/correction") {
+    if (!adminOk()) return;
+    return json(res, 200, { removed: await removeCorrection(url.searchParams.get("id")) });
   }
 
   // ——— library: everything the bot has studied (extra password on top of admin) ———
