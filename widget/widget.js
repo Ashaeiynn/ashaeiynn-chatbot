@@ -537,13 +537,15 @@
   setVoiceReplies(true);
 
   // ——— shared: ask the backend one question ———
-  async function askServer(text) {
+  async function askServer(text, via) {
     let resp, data;
     try {
       resp = await fetch(`${API}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history }),
+        // via+lang let the server answer in the mic's language even when the
+        // recognizer writes Hindi speech down in Latin letters.
+        body: JSON.stringify({ message: text, history, via: via || "text", lang: recLang }),
       });
       data = await resp.json();
     } catch {
@@ -591,7 +593,7 @@
     you.textContent = `🗣️ ${text}`;
     capAdd(you);
     try {
-      const data = await askServer(text);
+      const data = await askServer(text, "voice");
       const ans = document.createElement("div");
       ans.className = "vcb-ans";
       ans.textContent = data.answer;

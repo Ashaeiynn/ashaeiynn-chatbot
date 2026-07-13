@@ -157,10 +157,14 @@ async function handleChat(req, res) {
   );
 
   // Detect the QUESTION's language so the reply language never drifts toward the
-  // (mostly Hindi) excerpts. Romanized-Hindi (Hinglish) counts as Hindi.
+  // (mostly Hindi) excerpts. Romanized-Hindi (Hinglish) counts as Hindi. When the
+  // question was SPOKEN, the widget's mic language wins: speech recognition often
+  // writes Hindi speech in Latin letters, which would otherwise read as English.
+  const spokenHindi =
+    payload.via === "voice" && String(payload.lang || "").toLowerCase().startsWith("hi");
   const isDevanagari = /[ऀ-ॿ]/.test(message);
   const hinglishHits = (message.toLowerCase().match(/\b(kya|kaun|kaise|kyu|kyon|kab|kahan|batao|bataiye|mujhe|humko|nahi|nahin|hota|hoti|hai|hain|karna|kare|krna|wala|matlab)\b/g) || []).length;
-  const wantsHindi = isDevanagari || hinglishHits >= 1;
+  const wantsHindi = spokenHindi || isDevanagari || hinglishHits >= 1;
   const langInstruction = wantsHindi
     ? "उत्तर पूरी तरह हिंदी (देवनागरी) में दीजिए — एक भी वाक्य English में नहीं।"
     : "Answer entirely in English — every sentence in English (keep Hindi terms like hawan, jaap, drishti in Latin script). Do not write any Devanagari.";
@@ -173,6 +177,9 @@ async function handleChat(req, res) {
       JSON.stringify({
         at: new Date().toISOString(),
         q: message,
+        via: payload.via,
+        lang: payload.lang,
+        hi: wantsHindi,
         top: chunks.slice(0, 3).map((c) => ({ t: c.title, s: Number(c.score?.toFixed(3)) })),
       }) + "\n",
     );
