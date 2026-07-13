@@ -30,7 +30,6 @@
     .vcb-btn::after{content:"";position:absolute;inset:-5px;border-radius:50%;
       border:2px solid #f7c948;opacity:0;animation:vcbPing 3.6s ease-out infinite}
     @keyframes vcbPing{0%{transform:scale(.9);opacity:.5}70%{transform:scale(1.4);opacity:0}100%{opacity:0}}
-    .vcb-eye{width:34px;height:34px;filter:drop-shadow(0 0 8px rgba(247,201,72,.55))}
     .vcb-logo{width:38px;height:auto;filter:drop-shadow(0 0 7px rgba(247,201,72,.45))}
     .vcb-ava img{width:22px;height:auto}
     .vcb-nudge{position:fixed;bottom:32px;right:94px;z-index:999997;cursor:pointer;
@@ -215,7 +214,7 @@
       background:radial-gradient(circle at 34% 28%,#3b2f80 0%,#241b56 45%,#120d33 100%);
       box-shadow:0 0 0 2px rgba(247,201,72,.55),0 0 26px rgba(247,201,72,.3);transition:transform .2s}
     .vcb-orbbig:hover{transform:scale(1.05)}
-    .vcb-orbbig .vcb-eye{width:52px;height:52px}
+    .vcb-orbbig .vcb-logo-big{width:54px;height:auto;filter:drop-shadow(0 0 10px rgba(247,201,72,.5))}
     .vcb-orbbig::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:2.5px solid transparent}
     .vcb-panel[data-vstate="listening"] .vcb-orbbig{animation:vcbMicPulse 1.1s ease-in-out infinite}
     .vcb-panel[data-vstate="thinking"] .vcb-orbbig::after{border-top-color:#f7c948;border-right-color:rgba(247,201,72,.35);
@@ -277,22 +276,6 @@
   `;
   document.head.appendChild(style);
 
-  const eyeSvg = (gradId) => `
-    <svg class="vcb-eye" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#ffe9a8"/><stop offset="55%" stop-color="#f7c948"/><stop offset="100%" stop-color="#d99a1e"/>
-        </linearGradient>
-      </defs>
-      <path d="M4 20 Q17 9 30 20 Q17 31 4 20 Z" stroke="url(#${gradId})" stroke-width="1.8" fill="rgba(247,201,72,.08)"/>
-      <circle cx="17" cy="20" r="5" fill="url(#${gradId})"/>
-      <circle cx="17" cy="20" r="2" fill="#1c1745"/>
-      <circle cx="15.4" cy="18.4" r="0.9" fill="#fff6d8"/>
-      <path d="M17 7 L17 2.5" stroke="url(#${gradId})" stroke-width="1.7" stroke-linecap="round"/>
-      <path d="M10.5 9.5 L8 6" stroke="url(#${gradId})" stroke-width="1.7" stroke-linecap="round"/>
-      <path d="M23.5 9.5 L26 6" stroke="url(#${gradId})" stroke-width="1.7" stroke-linecap="round"/>
-    </svg>`;
-
   const btn = document.createElement("button");
   btn.className = "vcb-btn";
   btn.setAttribute("aria-label", "Open chat");
@@ -325,7 +308,7 @@
     <div class="vcb-bless"><span>${SPLASH}</span></div>
     <div class="vcb-stage">
       <div class="vcb-cap"></div>
-      <button class="vcb-orbbig" type="button" aria-label="Ask by voice">${eyeSvg("vcbGoldB")}</button>
+      <button class="vcb-orbbig" type="button" aria-label="Ask by voice"><img class="vcb-logo-big" src="${API}/logo.png?v=2" alt=""/></button>
       <div class="vcb-status"></div>
       <div class="vcb-stagebar">
         <button class="vcb-lang" type="button">भाषा: हिंदी</button>
@@ -562,10 +545,10 @@
 
   // ——— voice-first stage: state machine (idle → listening → thinking → speaking) ———
   const STATUS = {
-    idle: 'आँख को दबाइए और <b>बोलिए</b> — हिंदी या English<br>Tap the eye and <b>speak</b> your question',
+    idle: 'फूल को दबाइए और <b>बोलिए</b> — हिंदी या English<br>Tap the flower and <b>speak</b> your question',
     listening: '🎙️ <b>सुन रहे हैं… बोलिए</b> · listening — tap to finish',
     thinking: '🔎 उत्तर खोज रहे हैं… finding your answer…',
-    speaking: '🔊 <b>उत्तर</b> · tap the eye to stop',
+    speaking: '🔊 <b>उत्तर</b> · tap to stop',
     error: 'Mic नहीं चला — फिर से दबाइए · mic didn\'t start, tap again',
   };
   function setVState(s) {
