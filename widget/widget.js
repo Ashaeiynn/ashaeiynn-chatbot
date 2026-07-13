@@ -432,17 +432,60 @@
       .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "")
       .trim();
 
+  // Choose the most natural free voice the device offers. Chrome's "Google …"
+  // network voices and Apple's downloadable Enhanced/Premium voices sound far
+  // better than the compact defaults, so rank them first.
+  function pickVoice(lang) {
+    const prefix = lang.toLowerCase().startsWith("hi") ? "hi" : "en-in";
+    const norm = (l) => l.replace("_", "-").toLowerCase();
+    let cands = speechSynthesis.getVoices().filter((v) => norm(v.lang).startsWith(prefix));
+    if (!cands.length && prefix === "en-in")
+      cands = speechSynthesis.getVoices().filter((v) => norm(v.lang).startsWith("en"));
+    const score = (v) => {
+      const n = v.name.toLowerCase();
+      return (
+        (n.includes("google") ? 8 : 0) +
+        (n.includes("natural") ? 6 : 0) +
+        (n.includes("premium") ? 6 : 0) +
+        (n.includes("enhanced") ? 4 : 0) +
+        (v.localService === false ? 3 : 0) +
+        (n.includes("siri") ? 2 : 0)
+      );
+    };
+    return cands.sort((a, b) => score(b) - score(a))[0] || null;
+  }
+
+  // Speak sentence by sentence: natural breathing pauses, and it sidesteps the
+  // Chrome bug that silently cuts single long utterances at ~15 seconds.
   function browserSpeak(clean, done) {
     if (!("speechSynthesis" in window)) return done();
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(clean);
-    u.lang = hasDevanagari(clean) ? "hi-IN" : "en-IN";
-    const pick = speechSynthesis.getVoices().find((v) => v.lang.replace("_", "-").startsWith(u.lang));
-    if (pick) u.voice = pick;
-    u.rate = 0.98;
-    u.onend = done;
-    u.onerror = done;
-    speechSynthesis.speak(u);
+    const lang = hasDevanagari(clean) ? "hi-IN" : "en-IN";
+    const voice = pickVoice(lang);
+    const sentences = clean
+      .split(/(?<=[।॥.!?])\s+/)
+      .flatMap((s) => (s.length > 240 ? s.split(/(?<=,)\s+/) : [s]))
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (!sentences.length) return done();
+    let i = 0;
+    let cancelled = false;
+    const next = () => {
+      if (cancelled) return;
+      if (i >= sentences.length) return done();
+      const u = new SpeechSynthesisUtterance(sentences[i++]);
+      u.lang = lang;
+      if (voice) u.voice = voice;
+      u.rate = 0.97;
+      u.pitch = 1.02;
+      u.onend = () => setTimeout(next, 150); // a small breath between sentences
+      u.onerror = () => {
+        cancelled = true;
+        done();
+      };
+      speechSynthesis.speak(u);
+    };
+    next();
   }
 
   async function speak(text, onDone) {
