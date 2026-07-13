@@ -211,10 +211,9 @@
     .vcb-live{color:#ffe9a8;font-size:14.5px;text-align:center;min-height:20px;animation:vcbMsgIn .3s ease both}
     .vcb-orbbig{position:relative;width:96px;height:96px;border-radius:50%;border:none;cursor:pointer;
       flex-shrink:0;margin:8px 0 8px;display:flex;align-items:center;justify-content:center;
-      background:radial-gradient(circle at 34% 28%,#3b2f80 0%,#241b56 45%,#120d33 100%);
-      box-shadow:0 0 0 2px rgba(247,201,72,.55),0 0 26px rgba(247,201,72,.3);transition:transform .2s}
+      background:none;box-shadow:none;transition:transform .2s}
     .vcb-orbbig:hover{transform:scale(1.05)}
-    .vcb-mic-big{width:44px;height:44px;filter:drop-shadow(0 0 10px rgba(247,201,72,.5))}
+    .vcb-mic-big{width:60px;height:60px;filter:drop-shadow(0 0 14px rgba(247,201,72,.55))}
     .vcb-orbbig::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:2.5px solid transparent}
     .vcb-panel[data-vstate="listening"] .vcb-orbbig{animation:vcbMicPulse 1.1s ease-in-out infinite}
     .vcb-panel[data-vstate="thinking"] .vcb-orbbig::after{border-top-color:#f7c948;border-right-color:rgba(247,201,72,.35);
