@@ -501,9 +501,11 @@
     if (!clean) return done();
 
     // Human voice from the server when available, browser voice otherwise.
-    // The free natural-voice quota is small, so it is reserved for the voice
-    // stage (mic conversations) — typed chats use the browser voice.
-    if (naturalVoice && panel.dataset.mode === "voice") {
+    // Mic conversations always get the natural voice; typed chats use the free
+    // device voice — UNLESS the device has no suitable voice (many phones lack
+    // Hindi), in which case silence is worse than spending server-voice quota.
+    const speechLang = hasDevanagari(clean) ? "hi-IN" : "en-IN";
+    if (naturalVoice && (panel.dataset.mode === "voice" || !pickVoice(speechLang))) {
       try {
         // Progressive chunks: a tiny first piece so speech starts fast, then
         // growing pieces — each generates (in parallel) while the previous plays,
@@ -575,6 +577,20 @@
   }
   voiceBtn.addEventListener("click", () => setVoiceReplies(!voiceReplies));
   setVoiceReplies(true);
+
+  // Mobile browsers only allow sound after a user touch — play a moment of
+  // silence on the first tap anywhere in the panel so replies can speak later.
+  panel.addEventListener(
+    "click",
+    () => {
+      try {
+        const a = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=");
+        a.play().catch(() => {});
+        if ("speechSynthesis" in window) speechSynthesis.getVoices(); // warm the voice list
+      } catch { /* best effort */ }
+    },
+    { once: true, capture: true },
+  );
 
   // ——— shared: ask the backend one question ———
   async function askServer(text, via) {
