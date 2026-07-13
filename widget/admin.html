@@ -372,6 +372,8 @@
 
   // the big status banner at the top of the Teach tab
   let uploading = false;
+  let pendingUploads = []; // files chosen but not yet handed to the server
+  let serverJobs = [];
   function showStatus(icon, main, sub, pct) {
     $("#teach-status").style.display = "block";
     $("#ts-icon").textContent = icon;
@@ -385,7 +387,7 @@
     if (uploading) return; // the upload loop owns the banner while files transfer
     const active = jobs.filter((j) => ["queued", "working", "ready", "studying"].includes(j.status));
     const tab = document.querySelector('[data-t="teach"]');
-    tab.textContent = active.length ? "📚 Teach the bot ●" : "📚 Teach the bot";
+    tab.textContent = active.length || pendingUploads.length ? "📚 Teach the bot ●" : "📚 Teach the bot";
     if (active.length) {
       const working = jobs.find((j) => j.status === "working");
       if (jobs.some((j) => j.status === "studying"))
@@ -404,21 +406,43 @@
     }
   }
 
+  // one list showing EVERYTHING: files still uploading/waiting (client-side)
+  // on top, then the server's queue (waiting → processing → studying → learnt)
+  function renderJobs() {
+    const rows = [];
+    for (const p of pendingUploads) {
+      rows.push({
+        icon: "⬆️",
+        title: p.name,
+        detail:
+          p.status === "uploading" ? `uploading — ${p.pct}% done` :
+          p.status === "waiting" ? "waiting for its turn to upload…" :
+          `upload failed — ${p.error}`,
+        cls: p.status === "upload-failed" ? "failed" : p.status === "uploading" ? "working" : "queued",
+        label: p.status === "uploading" ? `⬆️ ${p.pct}%` : p.status === "waiting" ? "pending" : "✗ failed",
+      });
+    }
+    for (const j of serverJobs) {
+      rows.push({ icon: KIND_ICON[j.kind] || "📦", title: j.title, detail: j.detail, cls: j.status, label: ST_LABEL[j.status] || j.status });
+    }
+    $("#jobs").innerHTML = rows.length ? "" : `<div class="empty">nothing yet — add something above</div>`;
+    for (const r of rows) {
+      const el = document.createElement("div");
+      el.className = "job";
+      el.innerHTML = `<span>${r.icon}</span>
+        <div><div>${esc(r.title)}</div>${r.detail ? `<div class="d">${esc(r.detail)}</div>` : ""}</div>
+        <span class="st ${r.cls}">${r.label}</span>`;
+      $("#jobs").appendChild(el);
+    }
+  }
+
   async function loadJobs() {
     const r = await fetch("/api/admin/jobs", { headers: { "x-admin-key": key() } });
     if (!r.ok) return;
-    const { jobs } = await r.json();
-    statusFromJobs(jobs);
-    $("#jobs").innerHTML = jobs.length ? "" : `<div class="empty">nothing yet — add something above</div>`;
-    for (const j of jobs) {
-      const el = document.createElement("div");
-      el.className = "job";
-      el.innerHTML = `<span>${KIND_ICON[j.kind] || "📦"}</span>
-        <div><div>${esc(j.title)}</div>${j.detail ? `<div class="d">${esc(j.detail)}</div>` : ""}</div>
-        <span class="st ${j.status}">${ST_LABEL[j.status] || j.status}</span>`;
-      $("#jobs").appendChild(el);
-    }
-    if (jobs.some((j) => ["queued", "working", "ready", "studying"].includes(j.status))) {
+    serverJobs = (await r.json()).jobs || [];
+    statusFromJobs(serverJobs);
+    renderJobs();
+    if (pendingUploads.length || serverJobs.some((j) => ["queued", "working", "ready", "studying"].includes(j.status))) {
       clearTimeout(loadJobs.t);
       loadJobs.t = setTimeout(loadJobs, 4000);
     }
@@ -482,16 +506,35 @@
     const title = $("#up-title").value.trim();
     const totalMB = files.reduce((n, f) => n + f.size, 0) / 1048576;
     uploading = true;
+    // every chosen file appears in the Progress list immediately — the ones not
+    // yet transferring show as "pending"
+    const entries = files.map((f) => ({ name: f.name, status: "waiting", pct: 0 }));
+    pendingUploads = [...entries, ...pendingUploads.filter((p) => p.status === "upload-failed")];
+    renderJobs();
     const failed = [];
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
+      const p = entries[i];
+      p.status = "uploading";
       const label = `Uploading ${i + 1} of ${files.length}: ${f.name}`;
       const sub = `${(f.size / 1048576).toFixed(1)} MB` + (files.length > 1 ? ` · ${Math.round(totalMB)} MB total` + (skipped ? ` · ${skipped} skipped` : "") : "");
       showStatus("⬆️", label, sub, 0);
+      renderJobs();
       try {
-        await uploadWithProgress(f, files.length === 1 ? title : "", (pct) => showStatus("⬆️", label, sub, pct));
+        await uploadWithProgress(f, files.length === 1 ? title : "", (pct) => {
+          if (pct !== p.pct) {
+            p.pct = pct;
+            showStatus("⬆️", label, sub, pct);
+            renderJobs();
+          }
+        });
+        pendingUploads = pendingUploads.filter((x) => x !== p); // its server job takes over
+        await loadJobs();
       } catch (err) {
+        p.status = "upload-failed";
+        p.error = err.message;
         failed.push(`${f.name} — ${err.message}`);
+        renderJobs();
       }
     }
     uploading = false;
