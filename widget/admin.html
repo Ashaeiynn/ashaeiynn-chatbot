@@ -170,6 +170,18 @@
   </div>
 </div>
 <main id="view-teach" hidden>
+  <div id="teach-status" class="teach-card" style="display:none;border-color:rgba(247,201,72,.55)">
+    <div style="display:flex;gap:12px;align-items:center">
+      <span id="ts-icon" style="font-size:22px">⏳</span>
+      <div style="flex:1;min-width:0">
+        <div id="ts-main" style="font-weight:600"></div>
+        <div id="ts-sub" style="font-size:12.5px;color:var(--dim);margin-top:2px"></div>
+      </div>
+    </div>
+    <div id="ts-barwrap" style="height:6px;background:#0e0a26;border-radius:99px;margin-top:10px;display:none">
+      <div id="ts-bar" style="height:100%;width:0%;background:var(--gold);border-radius:99px;transition:width .3s"></div>
+    </div>
+  </div>
   <div class="teach-card">
     <h3>📁 Upload files</h3>
     <p>Videos &amp; audios are listened to and transcribed (takes a while — roughly 1 min per 5 min of recording). PDF, Word, text files are read directly.</p>
@@ -246,6 +258,7 @@
     await loadCorr();
     $("#login").style.display = "none";
     render();
+    loadJobs(); // pick up any study work still running (shows the ● on the Teach tab)
   }
 
   function render() {
@@ -354,12 +367,48 @@
     if (t.dataset.t === "library") loadLibrary();
   }));
 
-  const KIND_ICON = { media: "🎧", document: "📄", "video-link": "🎬", article: "🌐", note: "✍️" };
+  const KIND_ICON = { media: "🎧", document: "📄", "video-link": "🎬", article: "🌐", note: "✍️", forget: "🗑️" };
   const ST_LABEL = { queued: "waiting", working: "processing…", ready: "processed", studying: "studying…", done: "✓ learnt", failed: "✗ failed" };
+
+  // the big status banner at the top of the Teach tab
+  let uploading = false;
+  function showStatus(icon, main, sub, pct) {
+    $("#teach-status").style.display = "block";
+    $("#ts-icon").textContent = icon;
+    $("#ts-main").textContent = main;
+    $("#ts-sub").textContent = sub || "";
+    $("#ts-barwrap").style.display = pct == null ? "none" : "block";
+    if (pct != null) $("#ts-bar").style.width = pct + "%";
+  }
+
+  function statusFromJobs(jobs) {
+    if (uploading) return; // the upload loop owns the banner while files transfer
+    const active = jobs.filter((j) => ["queued", "working", "ready", "studying"].includes(j.status));
+    const tab = document.querySelector('[data-t="teach"]');
+    tab.textContent = active.length ? "📚 Teach the bot ●" : "📚 Teach the bot";
+    if (active.length) {
+      const working = jobs.find((j) => j.status === "working");
+      if (jobs.some((j) => j.status === "studying"))
+        showStatus("📖", "पढ़ाई चल रही है — studying (building searchable memory)…",
+          "usually ~7 minutes · the bot keeps answering with its old knowledge meanwhile");
+      else if (working)
+        showStatus(working.kind === "media" || working.kind === "video-link" ? "🎧" : "⚙️",
+          `Processing: ${working.title}`,
+          (working.detail || "") + (active.length > 1 ? ` · ${active.length - 1} more waiting in queue` : ""));
+      else showStatus("⏳", `${active.length} item${active.length > 1 ? "s" : ""} waiting in the study queue…`, "");
+    } else if (jobs.length) {
+      const failed = jobs.filter((j) => j.status === "failed").length;
+      const done = jobs.filter((j) => j.status === "done").length;
+      if (failed) showStatus("⚠️", `${done} learnt · ${failed} failed`, "the list below shows what failed and why");
+      else if (done) showStatus("✅", `All done — ${done} item${done > 1 ? "s" : ""} learnt`, "the bot is already answering with this knowledge");
+    }
+  }
+
   async function loadJobs() {
     const r = await fetch("/api/admin/jobs", { headers: { "x-admin-key": key() } });
     if (!r.ok) return;
     const { jobs } = await r.json();
+    statusFromJobs(jobs);
     $("#jobs").innerHTML = jobs.length ? "" : `<div class="empty">nothing yet — add something above</div>`;
     for (const j of jobs) {
       const el = document.createElement("div");
@@ -373,6 +422,26 @@
       clearTimeout(loadJobs.t);
       loadJobs.t = setTimeout(loadJobs, 4000);
     }
+  }
+
+  // upload with a real progress bar (fetch cannot report upload progress; XHR can)
+  function uploadWithProgress(f, title, onPct) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/admin/upload");
+      xhr.setRequestHeader("x-admin-key", key());
+      xhr.setRequestHeader("x-file-name", encodeURIComponent(f.name));
+      xhr.setRequestHeader("x-title", encodeURIComponent(title));
+      xhr.upload.onprogress = (e) => e.lengthComputable && onPct(Math.round((e.loaded / e.total) * 100));
+      xhr.onload = () => {
+        try {
+          const d = JSON.parse(xhr.responseText);
+          xhr.status === 200 ? resolve(d) : reject(new Error(d.error || "upload failed"));
+        } catch { reject(new Error("upload failed")); }
+      };
+      xhr.onerror = () => reject(new Error("network error"));
+      xhr.send(f);
+    });
   }
 
   // what the server can study — anything else in a folder is skipped quietly
@@ -404,32 +473,31 @@
     const files = all.filter((f) => SUPPORTED.test(f.name) && !JUNK.test(f.name));
     const skipped = all.length - files.length;
     if (!files.length)
-      return alert("No supported files found" + (skipped ? ` — ${skipped} item${skipped > 1 ? "s were" : " was"} skipped (unsupported type).` : "."));
+      return showStatus("⚠️", "No supported files found",
+        skipped ? `${skipped} item${skipped > 1 ? "s were" : " was"} skipped — photos and unknown file types can't be studied.` : "");
     if (files.length > 3 &&
       !confirm(`Study ${files.length} files?` + (skipped ? ` (${skipped} unsupported item${skipped > 1 ? "s" : ""} will be skipped)` : "") +
-        "\n\nAudio/video files are transcribed one by one — a big folder can take hours. Progress shows below."))
+        "\n\nAudio/video files are transcribed one by one — a big folder can take hours. The banner on top will show progress."))
       return;
     const title = $("#up-title").value.trim();
-    for (const f of files) {
-      const el = document.createElement("div");
-      el.className = "job";
-      el.innerHTML = `<span>⬆️</span><div>${esc(f.name)}<div class="d">uploading…</div></div>`;
-      $("#jobs").prepend(el);
+    const totalMB = files.reduce((n, f) => n + f.size, 0) / 1048576;
+    uploading = true;
+    const failed = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      const label = `Uploading ${i + 1} of ${files.length}: ${f.name}`;
+      const sub = `${(f.size / 1048576).toFixed(1)} MB` + (files.length > 1 ? ` · ${Math.round(totalMB)} MB total` + (skipped ? ` · ${skipped} skipped` : "") : "");
+      showStatus("⬆️", label, sub, 0);
       try {
-        const r = await fetch("/api/admin/upload", {
-          method: "POST",
-          headers: { "x-admin-key": key(), "x-file-name": encodeURIComponent(f.name),
-            "x-title": encodeURIComponent(files.length === 1 ? title : "") },
-          body: f,
-        });
-        const d = await r.json();
-        if (!r.ok) throw new Error(d.error || "upload failed");
+        await uploadWithProgress(f, files.length === 1 ? title : "", (pct) => showStatus("⬆️", label, sub, pct));
       } catch (err) {
-        alert(`${f.name}: ${err.message}`);
+        failed.push(`${f.name} — ${err.message}`);
       }
-      el.remove();
     }
+    uploading = false;
     $("#up-title").value = "";
+    if (failed.length)
+      showStatus("⚠️", `${files.length - failed.length} uploaded · ${failed.length} failed`, failed.join(" · ").slice(0, 200));
     loadJobs();
   }
   $("#drop").addEventListener("click", () => $("#file").click());
@@ -449,7 +517,8 @@
       headers: { "x-admin-key": key(), "Content-Type": "application/json" },
       body: JSON.stringify({ url, title: $("#link-title").value.trim() }) });
     const d = await r.json();
-    if (!r.ok) return alert(d.error || "failed");
+    if (!r.ok) return showStatus("⚠️", "Could not add this link", d.error || "");
+    showStatus("✅", "Link added to the study queue", d.job?.title || url);
     $("#link-url").value = ""; $("#link-title").value = "";
     loadJobs();
   });
@@ -459,7 +528,8 @@
       headers: { "x-admin-key": key(), "Content-Type": "application/json" },
       body: JSON.stringify({ title: $("#note-title").value.trim(), content: $("#note-text").value }) });
     const d = await r.json();
-    if (!r.ok) return alert(d.error || "failed");
+    if (!r.ok) return showStatus("⚠️", "Could not save this note", d.error || "");
+    showStatus("✅", "Note added to the study queue", d.job?.title || "");
     $("#note-title").value = ""; $("#note-text").value = "";
     loadJobs();
   });
