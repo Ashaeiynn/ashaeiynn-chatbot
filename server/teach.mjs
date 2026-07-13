@@ -197,6 +197,24 @@ try {
   console.error("teach queue resume failed:", err?.message);
 }
 
+// The studio Mac reports its study progress to the live cloud portal every 30s,
+// so the admin can watch the bot studying from anywhere. (Bonus: the steady
+// heartbeat keeps the free cloud instance awake — no cold starts.)
+const SYNC_URL = (process.env.STUDIO_SYNC_URL || "").replace(/\/+$/, "");
+if (SYNC_URL) {
+  setInterval(async () => {
+    try {
+      await fetch(`${SYNC_URL}/api/admin/studio-status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-key": process.env.ADMIN_KEY || "" },
+        body: JSON.stringify({ jobs: publicJobs().slice(0, 150) }),
+      });
+    } catch {
+      /* cloud unreachable — try again next tick */
+    }
+  }, 30_000).unref();
+}
+
 // After every successful study batch, send the new knowledge to GitHub — the
 // live cloud bot redeploys itself with it automatically. Best-effort: on the
 // deployed server there is no git repo, so this quietly does nothing there.

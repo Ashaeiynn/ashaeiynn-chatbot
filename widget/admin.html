@@ -172,7 +172,7 @@
 <main id="view-teach" hidden>
   <div id="cloud-note" class="teach-card" style="display:none;border-color:#7a5c2a">
     <h3>☁️ This is the cloud copy</h3>
-    <p style="margin-bottom:0">Studying of <b>videos, audios, folders and PDFs happens on the studio Mac's portal</b> — its finished knowledge flows here automatically. Progress of the Mac's studying is visible there, not here. (Text notes &amp; article links added here work, but do not survive server restarts — prefer teaching on the Mac.)</p>
+    <p style="margin-bottom:0">Uploading of <b>videos, audios, folders and PDFs happens on the studio Mac's portal</b> — but you can <b>watch its studying live below</b>, and every finished lesson flows to this bot automatically.</p>
   </div>
   <div id="teach-status" class="teach-card" style="display:none;border-color:rgba(247,201,72,.55)">
     <div style="display:flex;gap:12px;align-items:center">
@@ -235,9 +235,13 @@
 <script>
 (() => {
   const $ = (s) => document.querySelector(s);
-  // On the cloud copy (no transcription tools), explain where studying happens.
+  // On the cloud copy (no transcription tools), show the studio Mac's live progress.
+  let isCloud = false;
   fetch("/health").then((r) => r.json()).then((h) => {
-    if (h.teachMedia === false) $("#cloud-note").style.display = "block";
+    if (h.teachMedia === false) {
+      isCloud = true;
+      $("#cloud-note").style.display = "block";
+    }
   }).catch(() => {});
   let entries = [], filter = "all", query = "";
   let corrections = [];
@@ -447,6 +451,24 @@
   }
 
   async function loadJobs() {
+    // Cloud copy: display the studio Mac's live study progress (relayed every ~30s)
+    if (isCloud) {
+      const r = await fetch("/api/admin/studio-status", { headers: { "x-admin-key": key() } });
+      if (!r.ok) return;
+      const d = await r.json();
+      const fresh = d.at && Date.now() - d.at < 150000;
+      serverJobs = d.jobs || [];
+      $("#jobs-sub").textContent = fresh
+        ? "🖥️ studio Mac — LIVE · updates every ~30 seconds"
+        : d.at
+          ? `🖥️ studio Mac is offline — last seen ${Math.round((Date.now() - d.at) / 60000)} min ago`
+          : "🖥️ studio Mac hasn't reported yet — it may be off";
+      statusFromJobs(serverJobs);
+      renderJobs();
+      clearTimeout(loadJobs.t);
+      loadJobs.t = setTimeout(loadJobs, 15000);
+      return;
+    }
     const r = await fetch("/api/admin/jobs", { headers: { "x-admin-key": key() } });
     if (!r.ok) return;
     serverJobs = (await r.json()).jobs || [];
