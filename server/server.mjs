@@ -280,6 +280,15 @@ const server = createServer(async (req, res) => {
     });
   }
 
+  if (req.method === "GET" && url.pathname === "/logo.png") {
+    res.writeHead(200, {
+      "Content-Type": "image/png",
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "public, max-age=86400",
+    });
+    return res.end(readFileSync(path.join(ROOT, "widget", "logo.png")));
+  }
+
   if (req.method === "GET" && url.pathname === "/widget.js") {
     res.writeHead(200, {
       "Content-Type": "application/javascript; charset=utf-8",

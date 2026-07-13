@@ -31,6 +31,8 @@
       border:2px solid #f7c948;opacity:0;animation:vcbPing 3.6s ease-out infinite}
     @keyframes vcbPing{0%{transform:scale(.9);opacity:.5}70%{transform:scale(1.4);opacity:0}100%{opacity:0}}
     .vcb-eye{width:34px;height:34px;filter:drop-shadow(0 0 8px rgba(247,201,72,.55))}
+    .vcb-logo{width:38px;height:auto;filter:drop-shadow(0 0 7px rgba(247,201,72,.45))}
+    .vcb-ava img{width:22px;height:auto}
     .vcb-nudge{position:fixed;bottom:32px;right:94px;z-index:999997;cursor:pointer;
       background:linear-gradient(135deg,#ffe9a8,#f2b93c);color:#241a04;
       border:none;border-radius:999px;padding:10px 16px;
@@ -294,7 +296,7 @@
   const btn = document.createElement("button");
   btn.className = "vcb-btn";
   btn.setAttribute("aria-label", "Open chat");
-  btn.innerHTML = eyeSvg("vcbGoldA");
+  btn.innerHTML = `<img class="vcb-logo" src="${API}/logo.png?v=2" alt="Ashaeiynn"/>`;
 
   // gentle invitation pill that slides out beside the orb
   const nudge = document.createElement("div");
@@ -315,7 +317,7 @@
     </div>
     <div class="vcb-head">
       <div class="vcb-head-left">
-        <div class="vcb-ava">🙏</div>
+        <div class="vcb-ava"><img src="${API}/logo.png?v=2" alt=""/></div>
         <div><div class="vcb-title">${TITLE}</div><div class="vcb-sub">Ashaeiynn · answers from the teachings</div></div>
       </div>
       <div><button class="vcb-voice" aria-label="Voice replies" title="Voice replies">🔇</button><button class="vcb-close" aria-label="Close">×</button></div>
