@@ -27,6 +27,13 @@ const baseName = path.basename(inputPath).replace(/\.[^.]+$/, "");
 const title = (titleArg || baseName).trim();
 const slug = "audio_" + baseName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
 
+// Resume-safe: if this file was already transcribed (e.g. before a restart),
+// don't burn time doing it again.
+if (existsSync(path.join(outDir, `${slug}.json`))) {
+  console.log(`✓ already transcribed — skipping (${slug}.json exists)`);
+  process.exit(0);
+}
+
 const wav = path.join(tmpDir, `${slug}.wav`);
 console.log(`♫ extracting audio → ${slug}.wav`);
 execFileSync(FFMPEG, ["-y", "-i", inputPath, "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", wav], {
