@@ -8,7 +8,9 @@ export const EMBED_DIM = 384;
 
 let extractorPromise = null;
 function getExtractor() {
-  if (!extractorPromise) extractorPromise = pipeline("feature-extraction", MODEL);
+  // q8 (8-bit) weights: ~4× less memory than fp32 with near-identical similarity
+  // rankings — required to fit the 512MB free hosting instance.
+  if (!extractorPromise) extractorPromise = pipeline("feature-extraction", MODEL, { dtype: "q8" });
   return extractorPromise;
 }
 

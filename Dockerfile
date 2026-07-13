@@ -21,6 +21,8 @@ RUN node -e "import('./server/embed.mjs').then(m => m.warmup()).then(() => conso
 # Secrets (GEMINI_API_KEY / ADMIN_KEY / LIBRARY_KEY / CHAT_PROVIDER …) are
 # provided at runtime as environment variables, never baked into the image.
 ENV PORT=3111
+# Keep the JS heap modest so the whole process stays inside a 512MB instance.
+ENV NODE_OPTIONS="--max-old-space-size=384"
 EXPOSE 3111
 
 # Simple container healthcheck against the /health route.
