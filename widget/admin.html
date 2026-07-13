@@ -127,6 +127,13 @@
   <button class="tab" data-t="library">📖 Library</button>
 </nav>
 <main id="view-library" hidden>
+  <div id="liblock" class="teach-card" style="max-width:420px;margin:34px auto;text-align:center" hidden>
+    <h3>🔒 Library locked</h3>
+    <p>पुस्तकालय खोलने के लिए पासवर्ड डालिए · enter the library password</p>
+    <input type="password" id="libpw" placeholder="Library password">
+    <button class="gold-btn" id="libgo" style="width:100%;padding:10px">Unlock</button>
+    <p id="liberr" style="color:#ff9d76;min-height:16px;margin-top:8px"></p>
+  </div>
   <div id="libstats"></div>
   <div id="libbar">
     <input id="libsearch" placeholder="Search the library…">
@@ -363,13 +370,33 @@
     note: ["✍️", "Note"], curated: ["⭐", "Curated"],
   };
   let lib = [], libFilter = "all", libQuery = "";
+  const libHeaders = () => ({ "x-admin-key": key(), "x-library-key": sessionStorage.getItem("libKey") || "" });
+
+  function libLocked(show, err = "") {
+    $("#liblock").hidden = !show;
+    $("#libstats").hidden = $("#libbar").hidden = $("#liblist").hidden = show;
+    $("#liberr").textContent = err;
+    if (show) $("#libpw").focus();
+  }
 
   async function loadLibrary() {
-    const r = await fetch("/api/admin/library", { headers: { "x-admin-key": key() } });
+    if (!sessionStorage.getItem("libKey")) return libLocked(true);
+    const r = await fetch("/api/admin/library", { headers: libHeaders() });
+    if (r.status === 403) {
+      sessionStorage.removeItem("libKey");
+      return libLocked(true, "गलत पासवर्ड — wrong password, try again.");
+    }
     if (!r.ok) return;
     lib = (await r.json()).items || [];
+    libLocked(false);
     renderLibrary();
   }
+  $("#libgo").addEventListener("click", () => {
+    sessionStorage.setItem("libKey", $("#libpw").value.trim());
+    $("#libpw").value = "";
+    loadLibrary();
+  });
+  $("#libpw").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#libgo").click(); });
 
   function renderLibrary() {
     const counts = {};
@@ -410,7 +437,7 @@
       el.querySelector('[data-a="dl"]').addEventListener("click", () => downloadSource(it));
       el.querySelector('[data-a="rm"]').addEventListener("click", async () => {
         if (!confirm(`Forget "${it.title}"?\n\nThe bot will no longer use this source to answer. (A copy stays in the GitHub backup.)`)) return;
-        const r = await fetch(`/api/admin/source?f=${encodeURIComponent(it.file)}`, { method: "DELETE", headers: { "x-admin-key": key() } });
+        const r = await fetch(`/api/admin/source?f=${encodeURIComponent(it.file)}`, { method: "DELETE", headers: libHeaders() });
         if (r.ok) { alert("Removed — the bot is re-studying its memory now (see Teach tab → Progress)."); loadLibrary(); }
       });
       $("#liblist").appendChild(el);
@@ -418,7 +445,7 @@
   }
 
   async function fetchSource(it) {
-    const r = await fetch(`/api/admin/source?f=${encodeURIComponent(it.file)}`, { headers: { "x-admin-key": key() } });
+    const r = await fetch(`/api/admin/source?f=${encodeURIComponent(it.file)}`, { headers: libHeaders() });
     if (!r.ok) throw new Error("could not load");
     return r.json();
   }
@@ -452,7 +479,7 @@
   $("#backup").addEventListener("click", async () => {
     $("#backup").textContent = "⏳ preparing…"; $("#backup").disabled = true;
     try {
-      const r = await fetch("/api/admin/backup", { headers: { "x-admin-key": key() } });
+      const r = await fetch("/api/admin/backup", { headers: libHeaders() });
       if (!r.ok) throw new Error("backup failed");
       const a = document.createElement("a");
       a.href = URL.createObjectURL(await r.blob());

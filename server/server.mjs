@@ -20,6 +20,7 @@ const MAX_HISTORY_TURNS = 6;
 
 const apiKeyConfigured = keyConfigured;
 const ADMIN_KEY = process.env.ADMIN_KEY || "";
+const LIBRARY_KEY = process.env.LIBRARY_KEY || ""; // second lock: the Library tab
 
 // One JSON line per question in data/questions.log (question, answer, retrieval)
 // — reviewed in the admin portal at /admin.
@@ -441,7 +442,15 @@ const server = createServer(async (req, res) => {
     return json(res, 200, { jobs: publicJobs() });
   }
 
-  // ——— library: everything the bot has studied ———
+  // ——— library: everything the bot has studied (extra password on top of admin) ———
+  const libOk = () => {
+    if (!adminOk()) return false;
+    if (LIBRARY_KEY && req.headers["x-library-key"] !== LIBRARY_KEY) {
+      json(res, 403, { error: "library-locked" });
+      return false;
+    }
+    return true;
+  };
   const transcriptsDir = path.join(ROOT, "data", "transcripts");
   const sourceType = (file, d) => {
     if (file.startsWith("about-")) return "curated";
@@ -457,7 +466,7 @@ const server = createServer(async (req, res) => {
     f && /^[A-Za-z0-9._ऀ-ॿ-]+\.json$/.test(f) && !f.includes("..") ? path.join(transcriptsDir, f) : null;
 
   if (req.method === "GET" && url.pathname === "/api/admin/library") {
-    if (!adminOk()) return;
+    if (!libOk()) return;
     const items = [];
     for (const f of readdirSync(transcriptsDir)) {
       if (!f.endsWith(".json") || f.endsWith(".raw.json")) continue;
@@ -481,7 +490,7 @@ const server = createServer(async (req, res) => {
     return json(res, 200, { items });
   }
   if (url.pathname === "/api/admin/source") {
-    if (!adminOk()) return;
+    if (!libOk()) return;
     const full = safeTranscript(url.searchParams.get("f"));
     if (!full || !existsSync(full)) return json(res, 404, { error: "not found" });
     if (req.method === "GET") {
@@ -497,7 +506,7 @@ const server = createServer(async (req, res) => {
     }
   }
   if (req.method === "GET" && url.pathname === "/api/admin/backup") {
-    if (!adminOk()) return;
+    if (!libOk()) return;
     const out = path.join(uploadsDir, `knowledge-backup-${Date.now().toString(36)}.zip`);
     try {
       await new Promise((resolve, reject) => {
