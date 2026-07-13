@@ -143,6 +143,7 @@ async function pump() {
           j.detail = "";
         });
         console.log(`teach: knowledge refreshed (+${batch.length} source${batch.length > 1 ? "s" : ""})`);
+        await autoPushKnowledge(batch.length);
       } catch (err) {
         batch.forEach((j) => {
           j.status = "failed";
@@ -171,6 +172,24 @@ try {
   }
 } catch (err) {
   console.error("teach queue resume failed:", err?.message);
+}
+
+// After every successful study batch, send the new knowledge to GitHub — the
+// live cloud bot redeploys itself with it automatically. Best-effort: on the
+// deployed server there is no git repo, so this quietly does nothing there.
+async function autoPushKnowledge(count) {
+  try {
+    await runProcess("/usr/bin/git", ["add", "data/transcripts", "data/knowledge.db", "data/corrections.json"]);
+    await runProcess("/usr/bin/git", [
+      "commit",
+      "-m",
+      `Knowledge update: ${count} new source${count > 1 ? "s" : ""} taught via the admin portal\n\nCo-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`,
+    ]);
+    await runProcess("/usr/bin/git", ["push"]);
+    console.log("teach: knowledge pushed — the live bot will update itself in ~10 min");
+  } catch (err) {
+    console.error("teach: auto-push skipped —", String(err?.message || err).slice(0, 150));
+  }
 }
 
 function runProcess(cmd, args, job, detail) {
