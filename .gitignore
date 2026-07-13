@@ -14,3 +14,4 @@ data/run-all.log
 data/questions.log
 data/uploads/
 data/teach-queue.json
+models/**/model_quantized.onnx

@@ -1,10 +1,31 @@
 // Shared multilingual embedder (runs locally in Node, no API, no Python at serve time).
 // Model: multilingual-e5-small (384-dim) — handles Hindi↔English cross-lingual matching.
 // e5 models expect "query: " on questions and "passage: " on indexed text.
-import { pipeline } from "@huggingface/transformers";
+// The model weights SHIP IN THE REPO (models/, split into <100MB parts for GitHub)
+// so no environment ever downloads anything — deploys can't be broken by flaky networks.
+import { pipeline, env as hfEnv } from "@huggingface/transformers";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { ROOT } from "./env.mjs";
 
 const MODEL = "Xenova/multilingual-e5-small";
 export const EMBED_DIM = 384;
+
+const modelsDir = path.join(ROOT, "models");
+const onnxDir = path.join(modelsDir, MODEL, "onnx");
+const fullModel = path.join(onnxDir, "model_quantized.onnx");
+// Reassemble the split weights on first run in any fresh environment.
+if (!existsSync(fullModel) && existsSync(onnxDir)) {
+  const parts = readdirSync(onnxDir).filter((f) => f.includes(".onnx.part-")).sort();
+  if (parts.length) {
+    writeFileSync(fullModel, Buffer.concat(parts.map((p) => readFileSync(path.join(onnxDir, p)))));
+    console.log(`embed: assembled ${parts.length} model parts → model_quantized.onnx`);
+  }
+}
+if (existsSync(fullModel)) {
+  hfEnv.localModelPath = modelsDir;
+  hfEnv.allowRemoteModels = false; // fully offline — the repo carries everything
+}
 
 let extractorPromise = null;
 function getExtractor() {

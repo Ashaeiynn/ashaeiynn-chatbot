@@ -7,19 +7,20 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install --omit=dev --no-fund --no-audit
 
-# App code + the prebuilt knowledge base.
+# App code + the prebuilt knowledge base + the embedding model (ships in-repo,
+# split into <100MB parts; reassembled here — NO network downloads at build).
 COPY server ./server
 COPY widget ./widget
 COPY pipeline ./pipeline
+COPY models ./models
 COPY data/knowledge.db ./data/knowledge.db
 COPY data/corrections.json* ./data/
 COPY data/transcripts ./data/transcripts
 
-# Bake the embedding model into the image so it doesn't download on first request.
-# The download can flake on builder networks — retry with backoff before giving up.
-RUN node -e "import('./server/embed.mjs').then(m => m.warmup()).then(() => console.log('model cached'))" \
-  || (echo "retrying model download…" && sleep 20 && node -e "import('./server/embed.mjs').then(m => m.warmup()).then(() => console.log('model cached'))") \
-  || (echo "final retry…" && sleep 60 && node -e "import('./server/embed.mjs').then(m => m.warmup()).then(() => console.log('model cached'))")
+RUN cat models/Xenova/multilingual-e5-small/onnx/model_quantized.onnx.part-* \
+      > models/Xenova/multilingual-e5-small/onnx/model_quantized.onnx \
+  && rm models/Xenova/multilingual-e5-small/onnx/model_quantized.onnx.part-* \
+  && node -e "import('./server/embed.mjs').then(m => m.warmup()).then(() => console.log('model OK (offline)'))"
 
 # Secrets (GEMINI_API_KEY / ADMIN_KEY / LIBRARY_KEY / CHAT_PROVIDER …) are
 # provided at runtime as environment variables, never baked into the image.
