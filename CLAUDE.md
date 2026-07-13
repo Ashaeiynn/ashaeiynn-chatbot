@@ -31,6 +31,15 @@ Owner (Parikshit) is non-technical: explain simply, do the work for him, verify 
   2026-07-13 to save cost) or `"anthropic"` (`CHAT_MODEL=claude-haiku-4-5`, prepaid $5).
   Note: Gemini reports a bad key as HTTP 400; `gemini-2.5-flash` is retired for new accounts.
 
+## Admin portal (`/admin`, password = ADMIN_KEY in .env)
+- Questions tab: every Q&A from `data/questions.log` (answers now logged too) with stats,
+  filters, search, knowledge-gap flags (answer without a Source line).
+- Teach tab: upload audio/video (→ pipeline/6-audio.mjs transcription), PDF (pypdf) /
+  docx/rtf/html (textutil) / txt-md, add YouTube/Vimeo/article links, or paste text.
+  `server/teach.mjs` queues jobs, batches ONE `npm run ingest` per batch (~7 min — full
+  re-embed), then hot-reloads retrieval via `reload()` in retrieve.mjs — no restart.
+  Uploads land in `data/uploads/` (gitignored). Transcription/textutil are Mac-only.
+
 ## Knowledge pipeline (resumable; re-run safe)
 `data/inventory.json` = master video list. `npm run process` (download yt-dlp → ffmpeg →
 mlx_whisper large-v3-turbo hi) → `data/transcripts/*.json` → `npm run ingest` → knowledge.db.

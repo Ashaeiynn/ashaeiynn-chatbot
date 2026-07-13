@@ -46,6 +46,30 @@
     background:linear-gradient(90deg,transparent,var(--card) 30%);padding-left:40px;color:var(--gold);font-size:12px}
   .src{margin-top:8px;font-size:12px;color:var(--dim)}
   .empty{text-align:center;color:var(--dim);padding:50px 0}
+  /* tabs */
+  #tabs{display:flex;gap:8px;max-width:880px;margin:18px auto 0;padding:0 16px}
+  .tab{border-radius:12px 12px 0 0;padding:10px 18px;font-size:14px;border-bottom:none}
+  .tab.on{background:var(--card);border-color:var(--gold);color:var(--gold);font-weight:600}
+  /* teach */
+  .teach-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:14px}
+  .teach-card h3{color:var(--gold);font-size:15px;margin-bottom:4px}
+  .teach-card p{font-size:12.5px;color:var(--dim);margin-bottom:12px}
+  .teach-card input[type=text],.teach-card textarea{width:100%;background:#0e0a26;border:1px solid var(--line);
+    border-radius:10px;padding:10px 13px;color:var(--ink);font-size:14px;outline:none;margin-bottom:10px;
+    font-family:inherit}
+  .teach-card input:focus,.teach-card textarea:focus{border-color:var(--gold)}
+  .teach-card textarea{min-height:110px;resize:vertical}
+  .gold-btn{background:var(--gold);color:#231a04;font-weight:600;border:none}
+  #drop{border:2px dashed var(--line);border-radius:14px;padding:26px;text-align:center;color:var(--dim);
+    cursor:pointer;transition:border-color .2s;margin-bottom:10px}
+  #drop.over{border-color:var(--gold);color:var(--gold)}
+  .job{display:flex;gap:10px;align-items:flex-start;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:10px 14px;margin-bottom:8px;font-size:13.5px}
+  .job .st{margin-left:auto;white-space:nowrap;font-size:12px;border-radius:999px;padding:2px 10px;border:1px solid var(--line)}
+  .st.done{color:#7ee2a0;border-color:#2c5c3f}
+  .st.failed{color:#ff9d76;border-color:#a04a33}
+  .st.working,.st.studying{color:var(--gold);border-color:rgba(247,201,72,.5)}
+  .job .d{color:var(--dim);font-size:12px;margin-top:2px}
   /* login */
   #login{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:10}
   #login .box{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:30px;width:min(90vw,360px);text-align:center}
@@ -78,7 +102,39 @@
   <button id="refresh">⟳ Refresh</button>
   <button id="logout">Logout</button>
 </header>
-<main>
+<nav id="tabs">
+  <button class="tab on" data-t="questions">🗨️ Questions</button>
+  <button class="tab" data-t="teach">📚 Teach the bot</button>
+</nav>
+<main id="view-teach" hidden>
+  <div class="teach-card">
+    <h3>📁 Upload files</h3>
+    <p>Videos &amp; audios are listened to and transcribed (takes a while — roughly 1 min per 5 min of recording). PDF, Word, text files are read directly.</p>
+    <input type="text" id="up-title" placeholder="Title (optional — used when uploading a single file)">
+    <div id="drop">Tap to choose files, or drag &amp; drop here<br><small>mp3 · mp4 · wav · m4a · mov · pdf · docx · txt …</small></div>
+    <input type="file" id="file" multiple hidden>
+  </div>
+  <div class="teach-card">
+    <h3>🔗 Add a link</h3>
+    <p>YouTube / Vimeo links are downloaded and transcribed. Any other web page is read as an article.</p>
+    <input type="text" id="link-url" placeholder="https://…">
+    <input type="text" id="link-title" placeholder="Title (optional)">
+    <button class="gold-btn" id="link-go">Study this link</button>
+  </div>
+  <div class="teach-card">
+    <h3>✍️ Paste text</h3>
+    <p>Any teaching, note or announcement — paste it and the bot knows it within minutes.</p>
+    <input type="text" id="note-title" placeholder="Title (required)">
+    <textarea id="note-text" placeholder="Paste or type the teaching here…"></textarea>
+    <button class="gold-btn" id="note-go">Teach this</button>
+  </div>
+  <div class="teach-card">
+    <h3>⏳ Progress</h3>
+    <p id="jobs-sub">what the bot is studying right now</p>
+    <div id="jobs"><div class="empty">nothing yet — add something above</div></div>
+  </div>
+</main>
+<main id="view-questions">
   <div id="stats"></div>
   <div id="controls">
     <button class="chip on" data-f="all">All</button>
@@ -175,8 +231,93 @@
   }));
   $("#search").addEventListener("input", (e) => { query = e.target.value; render(); });
 
+  // ——— Teach the bot ———
+  const key = () => localStorage.getItem("adminKey") || "";
+  document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach((x) => x.classList.remove("on"));
+    t.classList.add("on");
+    $("#view-questions").hidden = t.dataset.t !== "questions";
+    $("#view-teach").hidden = t.dataset.t !== "teach";
+    if (t.dataset.t === "teach") loadJobs();
+  }));
+
+  const KIND_ICON = { media: "🎧", document: "📄", "video-link": "🎬", article: "🌐", note: "✍️" };
+  const ST_LABEL = { queued: "waiting", working: "processing…", ready: "processed", studying: "studying…", done: "✓ learnt", failed: "✗ failed" };
+  async function loadJobs() {
+    const r = await fetch("/api/admin/jobs", { headers: { "x-admin-key": key() } });
+    if (!r.ok) return;
+    const { jobs } = await r.json();
+    $("#jobs").innerHTML = jobs.length ? "" : `<div class="empty">nothing yet — add something above</div>`;
+    for (const j of jobs) {
+      const el = document.createElement("div");
+      el.className = "job";
+      el.innerHTML = `<span>${KIND_ICON[j.kind] || "📦"}</span>
+        <div><div>${esc(j.title)}</div>${j.detail ? `<div class="d">${esc(j.detail)}</div>` : ""}</div>
+        <span class="st ${j.status}">${ST_LABEL[j.status] || j.status}</span>`;
+      $("#jobs").appendChild(el);
+    }
+    if (jobs.some((j) => ["queued", "working", "ready", "studying"].includes(j.status))) {
+      clearTimeout(loadJobs.t);
+      loadJobs.t = setTimeout(loadJobs, 4000);
+    }
+  }
+
+  async function uploadFiles(files) {
+    const title = $("#up-title").value.trim();
+    for (const f of files) {
+      const el = document.createElement("div");
+      el.className = "job";
+      el.innerHTML = `<span>⬆️</span><div>${esc(f.name)}<div class="d">uploading…</div></div>`;
+      $("#jobs").prepend(el);
+      try {
+        const r = await fetch("/api/admin/upload", {
+          method: "POST",
+          headers: { "x-admin-key": key(), "x-file-name": encodeURIComponent(f.name),
+            "x-title": encodeURIComponent(files.length === 1 ? title : "") },
+          body: f,
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || "upload failed");
+      } catch (err) {
+        alert(`${f.name}: ${err.message}`);
+      }
+      el.remove();
+    }
+    $("#up-title").value = "";
+    loadJobs();
+  }
+  $("#drop").addEventListener("click", () => $("#file").click());
+  $("#file").addEventListener("change", (e) => { if (e.target.files.length) uploadFiles([...e.target.files]); e.target.value = ""; });
+  ["dragover", "dragleave", "drop"].forEach((ev) => $("#drop").addEventListener(ev, (e) => {
+    e.preventDefault();
+    $("#drop").classList.toggle("over", ev === "dragover");
+    if (ev === "drop" && e.dataTransfer.files.length) uploadFiles([...e.dataTransfer.files]);
+  }));
+
+  $("#link-go").addEventListener("click", async () => {
+    const url = $("#link-url").value.trim();
+    if (!url) return;
+    const r = await fetch("/api/admin/link", { method: "POST",
+      headers: { "x-admin-key": key(), "Content-Type": "application/json" },
+      body: JSON.stringify({ url, title: $("#link-title").value.trim() }) });
+    const d = await r.json();
+    if (!r.ok) return alert(d.error || "failed");
+    $("#link-url").value = ""; $("#link-title").value = "";
+    loadJobs();
+  });
+
+  $("#note-go").addEventListener("click", async () => {
+    const r = await fetch("/api/admin/text", { method: "POST",
+      headers: { "x-admin-key": key(), "Content-Type": "application/json" },
+      body: JSON.stringify({ title: $("#note-title").value.trim(), content: $("#note-text").value }) });
+    const d = await r.json();
+    if (!r.ok) return alert(d.error || "failed");
+    $("#note-title").value = ""; $("#note-text").value = "";
+    loadJobs();
+  });
+
   load();
-  setInterval(() => { if ($("#login").style.display === "none") load(); }, 60000);
+  setInterval(() => { if ($("#login").style.display === "none" && !$("#view-questions").hidden) load(); }, 60000);
 })();
 </script>
 </body>

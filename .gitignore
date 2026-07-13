@@ -12,3 +12,4 @@ data/run-all.log
 # the deploy needs the knowledge base, and the transcripts are the precious
 # output of ~64h of transcription (the repo doubles as their backup).
 data/questions.log
+data/uploads/

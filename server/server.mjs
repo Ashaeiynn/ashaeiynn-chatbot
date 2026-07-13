@@ -1,8 +1,9 @@
 // The chatbot backend: serves the widget and answers questions.
 // Usage: npm start   → http://localhost:3111
 import { createServer } from "node:http";
-import { readFileSync, existsSync, appendFileSync } from "node:fs";
+import { readFileSync, existsSync, appendFileSync, createWriteStream, rmSync } from "node:fs";
 import path from "node:path";
+import { teachFile, teachLink, teachText, publicJobs, uploadsDir } from "./teach.mjs";
 import { ROOT } from "./env.mjs";
 import { searchMulti, formatTimestamp } from "./retrieve.mjs";
 import { warmup } from "./embed.mjs";
@@ -376,13 +377,71 @@ const server = createServer(async (req, res) => {
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" });
     return res.end(readFileSync(path.join(ROOT, "widget", "admin.html")));
   }
-  if (req.method === "GET" && url.pathname === "/api/admin/logs") {
-    if (!ADMIN_KEY) return json(res, 501, { error: "admin-not-configured" });
+  // shared guard for every /api/admin/* route
+  const adminOk = () => {
+    if (!ADMIN_KEY) {
+      json(res, 501, { error: "admin-not-configured" });
+      return false;
+    }
     if (req.headers["x-admin-key"] !== ADMIN_KEY) {
       const ip = req.socket.remoteAddress ?? "unknown";
-      if (rateLimited(ip)) return json(res, 429, { error: "Too many attempts." });
-      return json(res, 401, { error: "unauthorized" });
+      json(res, rateLimited(ip) ? 429 : 401, { error: "unauthorized" });
+      return false;
     }
+    return true;
+  };
+
+  // ——— teach the bot: uploads, links, pasted text, job progress ———
+  if (req.method === "POST" && url.pathname === "/api/admin/upload") {
+    if (!adminOk()) return;
+    const name = decodeURIComponent(req.headers["x-file-name"] || "").replace(/[/\\]/g, "_").trim();
+    const title = decodeURIComponent(req.headers["x-title"] || "").trim();
+    if (!name) return json(res, 400, { error: "Missing file name." });
+    const dest = path.join(uploadsDir, `${Date.now().toString(36)}-${name}`);
+    try {
+      const ws = createWriteStream(dest);
+      let size = 0;
+      req.on("data", (d) => {
+        size += d.length;
+        if (size > 3_000_000_000) req.destroy(new Error("too large"));
+      });
+      req.pipe(ws);
+      await new Promise((resolve, reject) => {
+        ws.on("finish", resolve);
+        ws.on("error", reject);
+        req.on("error", reject);
+      });
+      return json(res, 200, { job: teachFile(dest, title) });
+    } catch (err) {
+      rmSync(dest, { force: true });
+      return json(res, 400, { error: String(err?.message || err).slice(0, 200) });
+    }
+  }
+  if (req.method === "POST" && (url.pathname === "/api/admin/link" || url.pathname === "/api/admin/text")) {
+    if (!adminOk()) return;
+    let body = "";
+    for await (const part of req) {
+      body += part;
+      if (body.length > 2_000_000) return json(res, 413, { error: "Too long." });
+    }
+    try {
+      const p = JSON.parse(body);
+      const job =
+        url.pathname === "/api/admin/link"
+          ? teachLink(String(p.url || "").trim(), String(p.title || ""))
+          : teachText(String(p.title || ""), String(p.content || ""));
+      return json(res, 200, { job });
+    } catch (err) {
+      return json(res, 400, { error: String(err?.message || err).slice(0, 200) });
+    }
+  }
+  if (req.method === "GET" && url.pathname === "/api/admin/jobs") {
+    if (!adminOk()) return;
+    return json(res, 200, { jobs: publicJobs() });
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/admin/logs") {
+    if (!adminOk()) return;
     let entries = [];
     try {
       const lines = readFileSync(path.join(ROOT, "data", "questions.log"), "utf8").trim().split("\n");

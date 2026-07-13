@@ -32,6 +32,13 @@ function load() {
   return chunks;
 }
 
+// Re-read knowledge.db after the admin portal teaches the bot something new,
+// so fresh material answers questions without a server restart.
+export function reload() {
+  chunks = null;
+  return load();
+}
+
 // Questions naming the organisation itself ("what is Ashaeiynn?", "Aqua Foundation
 // kya hai?") must always see the curated About entry — lectures mention these names
 // constantly, which drowns the About doc in embedding space.
