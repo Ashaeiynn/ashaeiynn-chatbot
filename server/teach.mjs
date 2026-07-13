@@ -242,3 +242,11 @@ export function teachText(title, content) {
   if (!t) throw new Error("Please give this teaching a title.");
   return addJob("note", t, async () => saveTextTranscript(t, content, "", "note_"));
 }
+
+// Remove one source from the knowledge (the transcript file is deleted, then the
+// batch rebuild forgets it). Git history still holds the file if ever regretted.
+export function forget(file, title) {
+  return addJob("forget", title, async () => {
+    rmSync(path.join(transcriptsDir, file), { force: true });
+  });
+}

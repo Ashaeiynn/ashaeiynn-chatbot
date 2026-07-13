@@ -20,7 +20,7 @@
   button:hover{border-color:var(--gold)}
   main{max-width:880px;margin:0 auto;padding:20px 16px}
   /* stats */
-  #stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px}
+  #stats,.statsgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px}
   .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;text-align:center}
   .stat b{display:block;font-size:22px;color:var(--gold)}
   .stat span{font-size:12px;color:var(--dim)}
@@ -70,6 +70,25 @@
   .st.failed{color:#ff9d76;border-color:#a04a33}
   .st.working,.st.studying{color:var(--gold);border-color:rgba(247,201,72,.5)}
   .job .d{color:var(--dim);font-size:12px;margin-top:2px}
+  /* library */
+  .lib{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:10px 14px;margin-bottom:8px;font-size:13.5px;flex-wrap:wrap}
+  .lib .t{flex:1;min-width:200px}
+  .lib .m{color:var(--dim);font-size:11.5px;margin-top:2px}
+  .mini{padding:5px 10px;font-size:12px;border-radius:8px}
+  .mini.danger:hover{border-color:#a04a33;color:#ff9d76}
+  #libbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center}
+  #libsearch{flex:1;min-width:150px;background:var(--card);border:1px solid var(--line);border-radius:999px;
+    padding:8px 16px;color:var(--ink);font-size:13.5px;outline:none}
+  #libsearch:focus{border-color:var(--gold)}
+  #reader{position:fixed;inset:0;background:rgba(5,3,18,.85);display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
+  #reader.show{display:flex}
+  #reader .rbox{background:var(--card);border:1px solid var(--gold);border-radius:18px;max-width:780px;width:100%;
+    max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
+  #reader .rhead{display:flex;gap:10px;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line)}
+  #reader h3{color:var(--gold);font-size:15px;flex:1}
+  #rbody{padding:16px 20px;overflow-y:auto;white-space:pre-wrap;color:#cfc8e2;font-size:14px}
+  #rbody .ts{color:var(--gold);font-size:11.5px;margin-right:6px}
   /* login */
   #login{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:10}
   #login .box{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:30px;width:min(90vw,360px);text-align:center}
@@ -105,7 +124,26 @@
 <nav id="tabs">
   <button class="tab on" data-t="questions">🗨️ Questions</button>
   <button class="tab" data-t="teach">📚 Teach the bot</button>
+  <button class="tab" data-t="library">📖 Library</button>
 </nav>
+<main id="view-library" hidden>
+  <div id="libstats"></div>
+  <div id="libbar">
+    <input id="libsearch" placeholder="Search the library…">
+    <button id="backup">⬇️ Download all (backup)</button>
+  </div>
+  <div id="liblist"><div class="empty">loading…</div></div>
+</main>
+<div id="reader">
+  <div class="rbox">
+    <div class="rhead">
+      <h3 id="rtitle"></h3>
+      <button class="mini" id="rdl">⬇️ Download</button>
+      <button class="mini" id="rclose">✕ Close</button>
+    </div>
+    <div id="rbody"></div>
+  </div>
+</div>
 <main id="view-teach" hidden>
   <div class="teach-card">
     <h3>📁 Upload files</h3>
@@ -238,7 +276,9 @@
     t.classList.add("on");
     $("#view-questions").hidden = t.dataset.t !== "questions";
     $("#view-teach").hidden = t.dataset.t !== "teach";
+    $("#view-library").hidden = t.dataset.t !== "library";
     if (t.dataset.t === "teach") loadJobs();
+    if (t.dataset.t === "library") loadLibrary();
   }));
 
   const KIND_ICON = { media: "🎧", document: "📄", "video-link": "🎬", article: "🌐", note: "✍️" };
@@ -314,6 +354,113 @@
     if (!r.ok) return alert(d.error || "failed");
     $("#note-title").value = ""; $("#note-text").value = "";
     loadJobs();
+  });
+
+  // ——— Library ———
+  const TYPE_META = {
+    video: ["🎬", "Vimeo video"], youtube: ["▶️", "YouTube video"], recording: ["🎧", "Recording"],
+    article: ["📰", "Article"], website: ["🌐", "Website page"], document: ["📄", "Document"],
+    note: ["✍️", "Note"], curated: ["⭐", "Curated"],
+  };
+  let lib = [], libFilter = "all", libQuery = "";
+
+  async function loadLibrary() {
+    const r = await fetch("/api/admin/library", { headers: { "x-admin-key": key() } });
+    if (!r.ok) return;
+    lib = (await r.json()).items || [];
+    renderLibrary();
+  }
+
+  function renderLibrary() {
+    const counts = {};
+    for (const it of lib) counts[it.type] = (counts[it.type] || 0) + 1;
+    const totalMin = lib.reduce((n, it) => n + (it.minutes || 0), 0);
+    $("#libstats").innerHTML = `<div class="statsgrid">
+      <div class="stat"><b>${lib.length}</b><span>sources studied</span></div>
+      <div class="stat"><b>${Math.round(totalMin / 60)}h</b><span>listened</span></div>
+      ${Object.entries(TYPE_META).filter(([k]) => counts[k]).map(([k, [ic, label]]) =>
+        `<div class="stat lib-chip" data-lf="${k}" style="cursor:pointer"><b>${ic} ${counts[k]}</b><span>${label}${counts[k] > 1 ? "s" : ""}</span></div>`).join("")}
+    </div>`;
+    document.querySelectorAll(".lib-chip").forEach((c) => c.addEventListener("click", () => {
+      libFilter = libFilter === c.dataset.lf ? "all" : c.dataset.lf; renderLibrary();
+    }));
+
+    const q = libQuery.toLowerCase();
+    const shown = lib.filter((it) =>
+      (libFilter === "all" || it.type === libFilter) &&
+      (!q || it.title.toLowerCase().includes(q)));
+    $("#liblist").innerHTML = shown.length ? "" : `<div class="empty">कुछ नहीं मिला · nothing found</div>`;
+    for (const it of shown.slice(0, 400)) {
+      const [ic, label] = TYPE_META[it.type] || ["📦", it.type];
+      const meta = [label,
+        it.minutes ? `${it.minutes} min` : `${Math.round(it.chars / 1000)}k letters`,
+        `${it.parts} parts`,
+        new Date(it.added).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric" }),
+      ].join(" · ");
+      const el = document.createElement("div");
+      el.className = "lib";
+      el.innerHTML = `<span>${ic}</span>
+        <div class="t"><div>${esc(it.title)}</div><div class="m">${esc(meta)}</div></div>
+        <button class="mini" data-a="view">👁️ View</button>
+        ${it.url ? `<button class="mini" data-a="open">🔗 Open</button>` : ""}
+        <button class="mini" data-a="dl">⬇️</button>
+        <button class="mini danger" data-a="rm">🗑️</button>`;
+      el.querySelector('[data-a="view"]').addEventListener("click", () => openReader(it));
+      if (it.url) el.querySelector('[data-a="open"]').addEventListener("click", () => window.open(it.url, "_blank"));
+      el.querySelector('[data-a="dl"]').addEventListener("click", () => downloadSource(it));
+      el.querySelector('[data-a="rm"]').addEventListener("click", async () => {
+        if (!confirm(`Forget "${it.title}"?\n\nThe bot will no longer use this source to answer. (A copy stays in the GitHub backup.)`)) return;
+        const r = await fetch(`/api/admin/source?f=${encodeURIComponent(it.file)}`, { method: "DELETE", headers: { "x-admin-key": key() } });
+        if (r.ok) { alert("Removed — the bot is re-studying its memory now (see Teach tab → Progress)."); loadLibrary(); }
+      });
+      $("#liblist").appendChild(el);
+    }
+  }
+
+  async function fetchSource(it) {
+    const r = await fetch(`/api/admin/source?f=${encodeURIComponent(it.file)}`, { headers: { "x-admin-key": key() } });
+    if (!r.ok) throw new Error("could not load");
+    return r.json();
+  }
+  const fmtTs = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+  async function openReader(it) {
+    const d = await fetchSource(it);
+    $("#rtitle").textContent = d.title;
+    const media = (d.segments || []).some((s) => s.start > 0);
+    $("#rbody").innerHTML = (d.segments || []).map((s) =>
+      media ? `<div><span class="ts">[${fmtTs(s.start)}]</span>${esc(s.text)}</div>` : `<p style="margin-bottom:10px">${esc(s.text)}</p>`).join("");
+    $("#rdl").onclick = () => downloadSource(it, d);
+    $("#reader").classList.add("show");
+  }
+  $("#rclose").addEventListener("click", () => $("#reader").classList.remove("show"));
+  $("#reader").addEventListener("click", (e) => { if (e.target === $("#reader")) $("#reader").classList.remove("show"); });
+
+  async function downloadSource(it, d) {
+    d = d || (await fetchSource(it));
+    const media = (d.segments || []).some((s) => s.start > 0);
+    const text = d.title + (d.url ? `\n${d.url}` : "") + "\n\n" +
+      (d.segments || []).map((s) => (media ? `[${fmtTs(s.start)}] ` : "") + s.text).join(media ? "\n" : "\n\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
+    a.download = d.title.replace(/[\\/:*?"<>|]+/g, "-").slice(0, 80) + ".txt";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  $("#libsearch").addEventListener("input", (e) => { libQuery = e.target.value; renderLibrary(); });
+  $("#backup").addEventListener("click", async () => {
+    $("#backup").textContent = "⏳ preparing…"; $("#backup").disabled = true;
+    try {
+      const r = await fetch("/api/admin/backup", { headers: { "x-admin-key": key() } });
+      if (!r.ok) throw new Error("backup failed");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(await r.blob());
+      a.download = "ashaeiynn-knowledge.zip";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (e) { alert(e.message); }
+    $("#backup").textContent = "⬇️ Download all (backup)"; $("#backup").disabled = false;
   });
 
   load();

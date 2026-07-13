@@ -1,9 +1,10 @@
 // The chatbot backend: serves the widget and answers questions.
 // Usage: npm start   → http://localhost:3111
 import { createServer } from "node:http";
-import { readFileSync, existsSync, appendFileSync, createWriteStream, rmSync } from "node:fs";
+import { readFileSync, existsSync, appendFileSync, createWriteStream, rmSync, readdirSync, statSync } from "node:fs";
+import { spawn } from "node:child_process";
 import path from "node:path";
-import { teachFile, teachLink, teachText, publicJobs, uploadsDir } from "./teach.mjs";
+import { teachFile, teachLink, teachText, forget, publicJobs, uploadsDir } from "./teach.mjs";
 import { ROOT } from "./env.mjs";
 import { searchMulti, formatTimestamp } from "./retrieve.mjs";
 import { warmup } from "./embed.mjs";
@@ -438,6 +439,84 @@ const server = createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/admin/jobs") {
     if (!adminOk()) return;
     return json(res, 200, { jobs: publicJobs() });
+  }
+
+  // ——— library: everything the bot has studied ———
+  const transcriptsDir = path.join(ROOT, "data", "transcripts");
+  const sourceType = (file, d) => {
+    if (file.startsWith("about-")) return "curated";
+    if (file.startsWith("note_")) return "note";
+    if (file.startsWith("doc_")) return "document";
+    if (file.startsWith("web_") || file.startsWith("art_")) return "article";
+    if (file.startsWith("page_")) return "website";
+    if (file.startsWith("audio_")) return "recording";
+    if (file.startsWith("yt_") || /youtu/.test(d.url || "")) return "youtube";
+    return "video";
+  };
+  const safeTranscript = (f) =>
+    f && /^[A-Za-z0-9._ऀ-ॿ-]+\.json$/.test(f) && !f.includes("..") ? path.join(transcriptsDir, f) : null;
+
+  if (req.method === "GET" && url.pathname === "/api/admin/library") {
+    if (!adminOk()) return;
+    const items = [];
+    for (const f of readdirSync(transcriptsDir)) {
+      if (!f.endsWith(".json") || f.endsWith(".raw.json")) continue;
+      try {
+        const d = JSON.parse(readFileSync(path.join(transcriptsDir, f), "utf8"));
+        items.push({
+          file: f,
+          title: d.title || f,
+          url: d.url || "",
+          type: sourceType(f, d),
+          minutes: d.minutes || 0,
+          parts: (d.segments || []).length,
+          chars: (d.segments || []).reduce((n, s) => n + (s.text || "").length, 0),
+          added: statSync(path.join(transcriptsDir, f)).mtimeMs,
+        });
+      } catch {
+        /* skip unreadable file */
+      }
+    }
+    items.sort((a, b) => b.added - a.added);
+    return json(res, 200, { items });
+  }
+  if (url.pathname === "/api/admin/source") {
+    if (!adminOk()) return;
+    const full = safeTranscript(url.searchParams.get("f"));
+    if (!full || !existsSync(full)) return json(res, 404, { error: "not found" });
+    if (req.method === "GET") {
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Access-Control-Allow-Origin": ALLOWED_ORIGIN });
+      return res.end(readFileSync(full));
+    }
+    if (req.method === "DELETE") {
+      let title = path.basename(full);
+      try {
+        title = JSON.parse(readFileSync(full, "utf8")).title || title;
+      } catch { /* keep filename */ }
+      return json(res, 200, { job: forget(path.basename(full), title) });
+    }
+  }
+  if (req.method === "GET" && url.pathname === "/api/admin/backup") {
+    if (!adminOk()) return;
+    const out = path.join(uploadsDir, `knowledge-backup-${Date.now().toString(36)}.zip`);
+    try {
+      await new Promise((resolve, reject) => {
+        const p = spawn("/usr/bin/zip", ["-q", "-r", "-j", out, transcriptsDir]);
+        p.on("error", reject);
+        p.on("exit", (code) => (code === 0 ? resolve() : reject(new Error(`zip exited ${code}`))));
+      });
+      const buf = readFileSync(out);
+      res.writeHead(200, {
+        "Content-Type": "application/zip",
+        "Content-Disposition": 'attachment; filename="ashaeiynn-knowledge.zip"',
+        "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+      });
+      return res.end(buf);
+    } catch (err) {
+      return json(res, 500, { error: String(err?.message || err).slice(0, 200) });
+    } finally {
+      rmSync(out, { force: true });
+    }
   }
 
   if (req.method === "GET" && url.pathname === "/api/admin/logs") {
