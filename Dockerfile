@@ -10,12 +10,16 @@ RUN npm install --omit=dev --no-fund --no-audit
 # App code + the prebuilt knowledge base.
 COPY server ./server
 COPY widget ./widget
+COPY pipeline ./pipeline
 COPY data/knowledge.db ./data/knowledge.db
+COPY data/corrections.json* ./data/
+COPY data/transcripts ./data/transcripts
 
 # Bake the embedding model into the image so it doesn't download on first request.
 RUN node -e "import('./server/embed.mjs').then(m => m.warmup()).then(() => console.log('model cached'))"
 
-# ANTHROPIC_API_KEY / CHAT_MODEL / ALLOWED_ORIGIN are provided at runtime, never baked in.
+# Secrets (GEMINI_API_KEY / ADMIN_KEY / LIBRARY_KEY / CHAT_PROVIDER …) are
+# provided at runtime as environment variables, never baked into the image.
 ENV PORT=3111
 EXPOSE 3111
 
