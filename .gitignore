@@ -13,3 +13,4 @@ data/run-all.log
 # output of ~64h of transcription (the repo doubles as their backup).
 data/questions.log
 data/uploads/
+data/teach-queue.json

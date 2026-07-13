@@ -1,7 +1,9 @@
 // "Teach the bot" — the admin portal hands us videos, audios, links, documents
 // or pasted text; each becomes a transcript JSON via the existing pipeline, then
 // the knowledge base is rebuilt once per batch and hot-reloaded into the server.
-import { mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync } from "node:fs";
+// The queue is PERSISTED (data/teach-queue.json): a server restart or Mac reboot
+// resumes unfinished studying instead of silently dropping it.
+import { mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync, existsSync } from "node:fs";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { ROOT } from "./env.mjs";
@@ -17,26 +19,90 @@ const ENV = {
 
 export const uploadsDir = path.join(ROOT, "data", "uploads");
 const transcriptsDir = path.join(ROOT, "data", "transcripts");
+const queueFile = path.join(ROOT, "data", "teach-queue.json");
 mkdirSync(uploadsDir, { recursive: true });
 
 export const MEDIA_RE = /\.(mp3|wav|m4a|aac|ogg|opus|flac|wma|amr|3gp|mp4|mov|mkv|webm|avi|mts)$/i;
 export const DOC_RE = /\.(pdf|docx|doc|rtf|txt|md|html?)$/i;
 
-// ——— job queue (in-memory; files themselves persist on disk) ———
+// ——— job queue (persisted; jobs are plain data + a runner per kind) ———
 export const jobs = [];
 let seq = 1;
 let pumping = false;
 
-export function publicJobs() {
-  return jobs
-    .map(({ run, ...j }) => j)
-    .sort((a, b) => b.id - a.id)
-    .slice(0, 100);
+const RUNNERS = {
+  media: (job) =>
+    runProcess(
+      process.execPath,
+      [path.join(ROOT, "pipeline", "6-audio.mjs"), job.spec.path, job.title],
+      job,
+      "सुन रहे हैं — transcribing (long recordings take a while)…",
+    ),
+  document: async (job) => {
+    job.detail = "reading the document…";
+    saveTextTranscript(job.title, await extractDocText(job.spec.path), "", "doc_");
+  },
+  note: async (job) => saveTextTranscript(job.title, job.spec.content, "", "note_"),
+  forget: async (job) => rmSync(path.join(transcriptsDir, path.basename(job.spec.file)), { force: true }),
+  article: async (job) => {
+    job.detail = "reading the page…";
+    const r = await fetch(job.spec.url, { headers: { "User-Agent": "Mozilla/5.0 (compatible; AshaeiynnBot)" } });
+    if (!r.ok) throw new Error(`The page returned ${r.status}.`);
+    const html = await r.text();
+    const pageTitle = /<title[^>]*>([^<]*)/i.exec(html)?.[1]?.trim();
+    const t = (job.title || pageTitle || new URL(job.spec.url).hostname).trim();
+    job.title = t;
+    saveTextTranscript("Article: " + t.replace(/^Article:\s*/i, ""), htmlToText(html), job.spec.url, "web_");
+  },
+  "video-link": async (job) => {
+    const base = path.join(uploadsDir, "link-" + Date.now().toString(36));
+    await runProcess(
+      `${HOME}/.local/bin/yt-dlp`,
+      ["-f", "ba/b", "--socket-timeout", "30", "--retries", "3", "--no-part", "-o", `${base}.%(ext)s`, job.spec.url],
+      job,
+      "downloading from the link…",
+    );
+    const dl = readdirSync(uploadsDir).find((f) => f.startsWith(path.basename(base)));
+    if (!dl) throw new Error("Download produced no file.");
+    let t = (job.title || "").trim();
+    if (!t || t === job.spec.url) {
+      try {
+        t = (await captureProcess(`${HOME}/.local/bin/yt-dlp`, ["--get-title", "--socket-timeout", "20", job.spec.url]))
+          .trim().split("\n")[0];
+      } catch { /* fall back */ }
+    }
+    job.title = t || "New recording";
+    await runProcess(
+      process.execPath,
+      [path.join(ROOT, "pipeline", "6-audio.mjs"), path.join(uploadsDir, dl), job.title],
+      job,
+      "सुन रहे हैं — transcribing (long recordings take a while)…",
+    );
+  },
+};
+
+function persistQueue() {
+  try {
+    const pending = jobs
+      .filter((j) => ["queued", "working", "ready", "studying"].includes(j.status))
+      .map(({ id, kind, title, spec, at }) => ({ id, kind, title, spec, at }));
+    writeFileSync(queueFile, JSON.stringify(pending, null, 2));
+  } catch (err) {
+    console.error("teach queue persist failed:", err?.message);
+  }
 }
 
-function addJob(kind, title, run) {
-  const job = { id: seq++, kind, title, status: "queued", detail: "", at: new Date().toISOString(), run };
+export function publicJobs() {
+  return jobs
+    .map(({ spec, ...j }) => j)
+    .sort((a, b) => b.id - a.id)
+    .slice(0, 250);
+}
+
+function addJob(kind, title, spec) {
+  const job = { id: seq++, kind, title, status: "queued", detail: "", at: new Date().toISOString(), spec };
   jobs.push(job);
+  persistQueue();
   setImmediate(pump);
   return { id: job.id, kind: job.kind, title: job.title, status: job.status };
 }
@@ -53,7 +119,7 @@ async function pump() {
       if (!job) break;
       job.status = "working";
       try {
-        await job.run(job);
+        await RUNNERS[job.kind](job);
         job.status = "ready";
         converted = true;
       } catch (err) {
@@ -61,6 +127,7 @@ async function pump() {
         job.detail = String(err?.message || err).slice(0, 300);
         console.error("teach failed:", job.title, "-", job.detail);
       }
+      persistQueue();
     }
     if (converted) {
       const batch = jobs.filter((j) => j.status === "ready");
@@ -82,11 +149,28 @@ async function pump() {
           j.detail = "study step failed: " + String(err?.message || err).slice(0, 200);
         });
       }
+      persistQueue();
     }
   } finally {
     pumping = false;
     if (jobs.some((j) => j.status === "queued")) setImmediate(pump);
   }
+}
+
+// Resume anything that was still pending when the server last stopped.
+try {
+  if (existsSync(queueFile)) {
+    const pending = JSON.parse(readFileSync(queueFile, "utf8"));
+    for (const p of pending) {
+      jobs.push({ ...p, id: seq++, status: "queued", detail: "resumed after restart" });
+    }
+    if (pending.length) {
+      console.log(`teach: resumed ${pending.length} unfinished job(s) from the last run`);
+      setImmediate(pump);
+    }
+  }
+} catch (err) {
+  console.error("teach queue resume failed:", err?.message);
 }
 
 function runProcess(cmd, args, job, detail) {
@@ -173,80 +257,31 @@ function htmlToText(html) {
     .replace(/[ \t]+/g, " ");
 }
 
-// ——— the three ways to teach ———
+// ——— the ways to teach ———
 export function teachFile(filePath, title) {
   const name = path.basename(filePath);
   const t = (title || name.replace(/\.[^.]+$/, "").replace(/^[a-z0-9]+-/, "")).trim();
-  if (MEDIA_RE.test(name)) {
-    return addJob("media", t, (job) =>
-      runProcess(
-        process.execPath,
-        [path.join(ROOT, "pipeline", "6-audio.mjs"), filePath, t],
-        job,
-        "सुन रहे हैं — transcribing (long recordings take a while)…",
-      ),
-    );
-  }
-  if (DOC_RE.test(name)) {
-    return addJob("document", t, async (job) => {
-      job.detail = "reading the document…";
-      saveTextTranscript(t, await extractDocText(filePath), "", "doc_");
-    });
-  }
+  if (MEDIA_RE.test(name)) return addJob("media", t, { path: filePath });
+  if (DOC_RE.test(name)) return addJob("document", t, { path: filePath });
   throw new Error("Unsupported file type: " + name);
 }
 
 export function teachLink(url, title) {
   const u = new URL(url); // throws on invalid
   if (!/^https?:$/.test(u.protocol)) throw new Error("Only http(s) links are supported.");
-  if (/(^|\.)((youtube|vimeo)\.com|youtu\.be)$/i.test(u.hostname)) {
-    return addJob("video-link", (title || url).trim(), async (job) => {
-      const base = path.join(uploadsDir, "link-" + Date.now().toString(36));
-      await runProcess(
-        `${HOME}/.local/bin/yt-dlp`,
-        ["-f", "ba/b", "--socket-timeout", "30", "--retries", "3", "--no-part", "-o", `${base}.%(ext)s`, url],
-        job,
-        "downloading from the link…",
-      );
-      const dl = readdirSync(uploadsDir).find((f) => f.startsWith(path.basename(base)));
-      if (!dl) throw new Error("Download produced no file.");
-      let t = (title || "").trim();
-      if (!t) {
-        try {
-          t = (await captureProcess(`${HOME}/.local/bin/yt-dlp`, ["--get-title", "--socket-timeout", "20", url])).trim().split("\n")[0];
-        } catch { /* fall back to filename */ }
-      }
-      job.title = t || job.title;
-      await runProcess(
-        process.execPath,
-        [path.join(ROOT, "pipeline", "6-audio.mjs"), path.join(uploadsDir, dl), t || "New recording"],
-        job,
-        "सुन रहे हैं — transcribing (long recordings take a while)…",
-      );
-    });
-  }
-  return addJob("article", (title || url).trim(), async (job) => {
-    job.detail = "reading the page…";
-    const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (compatible; AshaeiynnBot)" } });
-    if (!r.ok) throw new Error(`The page returned ${r.status}.`);
-    const html = await r.text();
-    const pageTitle = /<title[^>]*>([^<]*)/i.exec(html)?.[1]?.trim();
-    const t = (title || pageTitle || u.hostname).trim();
-    job.title = t;
-    saveTextTranscript("Article: " + t.replace(/^Article:\s*/i, ""), htmlToText(html), url, "web_");
-  });
+  if (/(^|\.)((youtube|vimeo)\.com|youtu\.be)$/i.test(u.hostname))
+    return addJob("video-link", (title || url).trim(), { url });
+  return addJob("article", (title || url).trim(), { url });
 }
 
 export function teachText(title, content) {
   const t = (title || "").trim();
   if (!t) throw new Error("Please give this teaching a title.");
-  return addJob("note", t, async () => saveTextTranscript(t, content, "", "note_"));
+  return addJob("note", t, { content: String(content) });
 }
 
 // Remove one source from the knowledge (the transcript file is deleted, then the
 // batch rebuild forgets it). Git history still holds the file if ever regretted.
 export function forget(file, title) {
-  return addJob("forget", title, async () => {
-    rmSync(path.join(transcriptsDir, file), { force: true });
-  });
+  return addJob("forget", title, { file });
 }

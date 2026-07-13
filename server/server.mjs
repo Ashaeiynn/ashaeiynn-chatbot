@@ -477,6 +477,25 @@ const server = createServer(async (req, res) => {
     if (!adminOk()) return;
     return json(res, 200, { jobs: publicJobs() });
   }
+  // Queue a file that is ALREADY in data/uploads (no re-copying) — used to
+  // resume/curate big archives without pushing gigabytes through the browser.
+  if (req.method === "POST" && url.pathname === "/api/admin/study-existing") {
+    if (!adminOk()) return;
+    let body = "";
+    for await (const part of req) {
+      body += part;
+      if (body.length > 10_000) return json(res, 413, { error: "Too long." });
+    }
+    try {
+      const p = JSON.parse(body);
+      const f = path.basename(String(p.file || ""));
+      const full = path.join(uploadsDir, f);
+      if (!f || !existsSync(full)) return json(res, 404, { error: "No such uploaded file." });
+      return json(res, 200, { job: teachFile(full, String(p.title || "")) });
+    } catch (err) {
+      return json(res, 400, { error: String(err?.message || err).slice(0, 200) });
+    }
+  }
 
   // ——— edited (Bhaiya-approved) answers ———
   if (req.method === "GET" && url.pathname === "/api/admin/corrections") {
