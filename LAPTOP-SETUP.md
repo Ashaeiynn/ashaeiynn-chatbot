@@ -9,10 +9,11 @@ Golden rule: **pull before you start, push when you stop** (or just ask Claude t
    (Check with: `node --version`)
 2. **Clone the repository** (Claude Code can do all of this for you — just show it this file):
    ```bash
-   git clone https://github.com/<YOUR-GITHUB-USERNAME>/ashaeiynn-chatbot.git
+   git clone https://github.com/Ashaeiynn/ashaeiynn-chatbot.git
    cd ashaeiynn-chatbot
    npm install
    ```
+   (Sign in to GitHub as the user "Ashaeiynn" when prompted — the repo is private.)
 3. **Recreate the secrets file** — `.env` is deliberately NOT in the repository (it holds your
    API key). Copy the `.env` file from the other computer (AirDrop the single file, or retype it).
    It lives in the project root.
