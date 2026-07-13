@@ -10,7 +10,10 @@ You only deploy **after** the knowledge base is built (`npm run ingest` has prod
 
 | Variable | Required | Value |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | ✅ | Your key from console.anthropic.com. **Never commit this.** |
+| `CHAT_PROVIDER` | – | `gemini` (Google, free tier — current choice) or `anthropic` (Claude) |
+| `GEMINI_API_KEY` | if gemini | Your key from aistudio.google.com. **Never commit this.** |
+| `GEMINI_MODEL` | – | `gemini-3.5-flash` (current) |
+| `ANTHROPIC_API_KEY` | if anthropic | Your key from console.anthropic.com. **Never commit this.** |
 | `CHAT_MODEL` | – | `claude-opus-4-8` (best) / `claude-sonnet-5` / `claude-haiku-4-5` (cheapest) |
 | `ALLOWED_ORIGIN` | – | Leave unset/`*` for a native app; set to your web origin if it's a browser app |
 | `PORT` | – | Most hosts set this automatically |

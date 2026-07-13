@@ -18,7 +18,7 @@ Owner (Parikshit) is non-technical: explain simply, do the work for him, verify 
   `server/retrieve.mjs` (in-memory cosine over `data/knowledge.db`; per-video cap 3;
   brand questions — ashaeiynn/bhaiya/parikshit/gurudev/pathshala/aqua — always include the
   curated About doc). Bilingual query expansion: each question is also translated
-  (claude-haiku-4-5) and both texts searched.
+  (by the active provider) and both texts searched.
 - `server/prompt.mjs` — persona: warm elder-brother guide; speaks OF Bhaiya (Parikshit
   Bhaiya, founder) with reverence, never AS him; voice-style prose, no markdown; answers
   only from excerpts; translated fallback; Source line (stripped from speech).
@@ -26,7 +26,10 @@ Owner (Parikshit) is non-technical: explain simply, do the work for him, verify 
   nudge; जय सिया राम splash → docks to blessing strip; animated solar system background;
   tap-to-speak stage (SpeechRecognition hi-IN/en-IN toggle), answers spoken (server TTS →
   browser fallback); "⌨️ type instead" fallback. Served no-cache.
-- Model: `claude-haiku-4-5` (`CHAT_MODEL` in `.env`; owner compared Haiku vs Opus, chose Haiku).
+- Answering AI is switchable via `server/llm.mjs`: `CHAT_PROVIDER` in `.env` — `"gemini"`
+  (`GEMINI_API_KEY` + `GEMINI_MODEL`, currently `gemini-3.5-flash`, free tier; owner switched
+  2026-07-13 to save cost) or `"anthropic"` (`CHAT_MODEL=claude-haiku-4-5`, prepaid $5).
+  Note: Gemini reports a bad key as HTTP 400; `gemini-2.5-flash` is retired for new accounts.
 
 ## Knowledge pipeline (resumable; re-run safe)
 `data/inventory.json` = master video list. `npm run process` (download yt-dlp → ffmpeg →

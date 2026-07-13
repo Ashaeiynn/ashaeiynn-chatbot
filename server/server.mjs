@@ -3,22 +3,20 @@
 import { createServer } from "node:http";
 import { readFileSync, existsSync, appendFileSync } from "node:fs";
 import path from "node:path";
-import Anthropic from "@anthropic-ai/sdk";
 import { ROOT } from "./env.mjs";
 import { searchMulti, formatTimestamp } from "./retrieve.mjs";
 import { warmup } from "./embed.mjs";
 import { buildSystemPrompt, buildContextBlock } from "./prompt.mjs";
+import { complete, PROVIDER, ACTIVE_MODEL, keyConfigured, LlmAuthError, LlmRateLimitError } from "./llm.mjs";
 
 const PORT = Number(process.env.PORT || 3111);
-const MODEL = process.env.CHAT_MODEL || "claude-opus-4-8";
 const FALLBACK =
   process.env.FALLBACK_MESSAGE ||
   "I don't have that information in our video library yet. Please contact us directly.";
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 const MAX_HISTORY_TURNS = 6;
 
-const apiKeyConfigured = Boolean(process.env.ANTHROPIC_API_KEY);
-const client = new Anthropic();
+const apiKeyConfigured = keyConfigured;
 
 // Simple per-IP rate limit: 20 questions per 5 minutes (override via RATE_LIMIT_MAX).
 const RATE_LIMIT = { windowMs: 5 * 60 * 1000, max: Number(process.env.RATE_LIMIT_MAX || 20) };
@@ -142,14 +140,12 @@ async function handleChat(req, res) {
   let translated = null;
   if (apiKeyConfigured) {
     try {
-      const t = await client.messages.create({
-        model: "claude-haiku-4-5",
-        max_tokens: 150,
+      const line = await complete({
         system:
           "You translate search queries. Translate the question into Hindi if it is mainly English, or into English if it is mainly Hindi. Output ONLY the translated question itself — never answer it, never explain.",
         messages: [{ role: "user", content: message }],
+        maxTokens: 150,
       });
-      const line = t.content.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
       translated = line.split("\n")[0].trim() || null; // first line only — belt & suspenders
     } catch {
       /* translation is best-effort — search proceeds with the original question */
@@ -209,16 +205,10 @@ async function handleChat(req, res) {
   }
 
   try {
-    const response = await client.messages.create({
-      model: MODEL,
-      max_tokens: 1024,
-      system: [
-        {
-          type: "text",
-          text: buildSystemPrompt(FALLBACK),
-          cache_control: { type: "ephemeral" },
-        },
-      ],
+    const answer = await complete({
+      system: buildSystemPrompt(FALLBACK),
+      cacheSystem: true,
+      maxTokens: 1024,
       messages: [
         ...history,
         {
@@ -227,12 +217,6 @@ async function handleChat(req, res) {
         },
       ],
     });
-
-    const answer = response.content
-      .filter((b) => b.type === "text")
-      .map((b) => b.text)
-      .join("")
-      .trim();
 
     // Top sources so the widget can link to the exact video moments.
     const seen = new Set();
@@ -251,10 +235,10 @@ async function handleChat(req, res) {
 
     json(res, 200, { answer, sources });
   } catch (err) {
-    if (err instanceof Anthropic.AuthenticationError) {
+    if (err instanceof LlmAuthError) {
       return json(res, 503, { error: "The chatbot's API key is invalid — check the .env file." });
     }
-    if (err instanceof Anthropic.RateLimitError) {
+    if (err instanceof LlmRateLimitError) {
       return json(res, 503, { error: "The chatbot is very busy right now — try again in a minute." });
     }
     console.error("chat error:", err);
@@ -273,7 +257,8 @@ const server = createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/health") {
     return json(res, 200, {
       ok: true,
-      model: MODEL,
+      provider: PROVIDER,
+      model: ACTIVE_MODEL,
       apiKeyConfigured,
       naturalVoice: Boolean(TTS_KEY),
       knowledgeBase: existsSync(path.join(ROOT, "data", "knowledge.db")) ? "built" : "missing",
@@ -308,7 +293,7 @@ const server = createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`Chatbot server running:  http://localhost:${PORT}`);
-  console.log(`Model: ${MODEL}   |   API key configured: ${apiKeyConfigured ? "yes" : "NO — edit .env"}`);
+  console.log(`Provider: ${PROVIDER} (${ACTIVE_MODEL})   |   API key configured: ${apiKeyConfigured ? "yes" : "NO — edit .env"}`);
   // Warm the embedding model so the first question isn't slow.
   warmup().then(() => console.log("Embedding model ready (cross-language search enabled).")).catch(() => {});
 });
