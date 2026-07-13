@@ -170,6 +170,10 @@
   </div>
 </div>
 <main id="view-teach" hidden>
+  <div id="cloud-note" class="teach-card" style="display:none;border-color:#7a5c2a">
+    <h3>☁️ This is the cloud copy</h3>
+    <p style="margin-bottom:0">Studying of <b>videos, audios, folders and PDFs happens on the studio Mac's portal</b> — its finished knowledge flows here automatically. Progress of the Mac's studying is visible there, not here. (Text notes &amp; article links added here work, but do not survive server restarts — prefer teaching on the Mac.)</p>
+  </div>
   <div id="teach-status" class="teach-card" style="display:none;border-color:rgba(247,201,72,.55)">
     <div style="display:flex;gap:12px;align-items:center">
       <span id="ts-icon" style="font-size:22px">⏳</span>
@@ -231,6 +235,10 @@
 <script>
 (() => {
   const $ = (s) => document.querySelector(s);
+  // On the cloud copy (no transcription tools), explain where studying happens.
+  fetch("/health").then((r) => r.json()).then((h) => {
+    if (h.teachMedia === false) $("#cloud-note").style.display = "block";
+  }).catch(() => {});
   let entries = [], filter = "all", query = "";
   let corrections = [];
   const corrFor = (q) => corrections.find((c) => c.q.trim() === String(q || "").trim());
@@ -393,10 +401,12 @@
       if (jobs.some((j) => j.status === "studying"))
         showStatus("📖", "पढ़ाई चल रही है — studying (building searchable memory)…",
           "usually ~7 minutes · the bot keeps answering with its old knowledge meanwhile");
-      else if (working)
+      else if (working) {
+        const doneN = jobs.filter((j) => j.status === "done" || j.status === "ready").length;
         showStatus(working.kind === "media" || working.kind === "video-link" ? "🎧" : "⚙️",
-          `Processing: ${working.title}`,
+          `Studying ${doneN + 1} of ${jobs.length}: ${working.title}`,
           (working.detail || "") + (active.length > 1 ? ` · ${active.length - 1} more waiting in queue` : ""));
+      }
       else showStatus("⏳", `${active.length} item${active.length > 1 ? "s" : ""} waiting in the study queue…`, "");
     } else if (jobs.length) {
       const failed = jobs.filter((j) => j.status === "failed").length;

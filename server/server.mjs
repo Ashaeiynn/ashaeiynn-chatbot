@@ -404,6 +404,8 @@ const server = createServer(async (req, res) => {
       ok: true,
       provider: PROVIDER,
       model: ACTIVE_MODEL,
+      // true only on the studio Mac, where whisper transcription is installed
+      teachMedia: existsSync(`${process.env.HOME}/Library/Python/3.9/bin/mlx_whisper`),
       apiKeyConfigured,
       naturalVoice: TTS_KEY ? "elevenlabs" : GEMINI_TTS_KEY ? "gemini" : false,
       knowledgeBase: existsSync(path.join(ROOT, "data", "knowledge.db")) ? "built" : "missing",

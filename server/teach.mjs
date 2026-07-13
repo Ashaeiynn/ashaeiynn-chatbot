@@ -31,13 +31,36 @@ let seq = 1;
 let pumping = false;
 
 const RUNNERS = {
-  media: (job) =>
-    runProcess(
-      process.execPath,
-      [path.join(ROOT, "pipeline", "6-audio.mjs"), job.spec.path, job.title],
-      job,
-      "सुन रहे हैं — transcribing (long recordings take a while)…",
-    ),
+  media: async (job) => {
+    // Live progress: we know the recording's length and transcription runs at
+    // roughly 5× realtime on this Mac, so elapsed time gives an honest live %.
+    let estMs = null;
+    try {
+      const out = await captureProcess(`${HOME}/.local/bin/ffprobe`, [
+        "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", job.spec.path,
+      ]);
+      const durSec = parseFloat(out.trim());
+      if (durSec > 0) estMs = (durSec / 5 + 45) * 1000;
+    } catch { /* no estimate — show elapsed time instead */ }
+    const started = Date.now();
+    const tick = setInterval(() => {
+      const el = Date.now() - started;
+      const mins = Math.max(1, Math.round(el / 60000));
+      job.detail = estMs
+        ? `सुन रहे हैं — transcribing… ~${Math.min(95, Math.round((el / estMs) * 100))}% (${mins} min of ~${Math.max(1, Math.round(estMs / 60000))} min)`
+        : `सुन रहे हैं — transcribing… ${mins} min elapsed`;
+    }, 10000);
+    try {
+      await runProcess(
+        process.execPath,
+        [path.join(ROOT, "pipeline", "6-audio.mjs"), job.spec.path, job.title],
+        job,
+        "सुन रहे हैं — transcribing…",
+      );
+    } finally {
+      clearInterval(tick);
+    }
+  },
   document: async (job) => {
     job.detail = "reading the document…";
     saveTextTranscript(job.title, await extractDocText(job.spec.path), "", "doc_");
