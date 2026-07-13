@@ -214,7 +214,7 @@
       background:radial-gradient(circle at 34% 28%,#3b2f80 0%,#241b56 45%,#120d33 100%);
       box-shadow:0 0 0 2px rgba(247,201,72,.55),0 0 26px rgba(247,201,72,.3);transition:transform .2s}
     .vcb-orbbig:hover{transform:scale(1.05)}
-    .vcb-orbbig .vcb-logo-big{width:54px;height:auto;filter:drop-shadow(0 0 10px rgba(247,201,72,.5))}
+    .vcb-mic-big{width:44px;height:44px;filter:drop-shadow(0 0 10px rgba(247,201,72,.5))}
     .vcb-orbbig::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:2.5px solid transparent}
     .vcb-panel[data-vstate="listening"] .vcb-orbbig{animation:vcbMicPulse 1.1s ease-in-out infinite}
     .vcb-panel[data-vstate="thinking"] .vcb-orbbig::after{border-top-color:#f7c948;border-right-color:rgba(247,201,72,.35);
@@ -226,6 +226,7 @@
     .vcb-status{color:#cbc3f0;font-size:13px;line-height:1.5;min-height:20px;text-align:center}
     .vcb-status b{color:#ffe9a8;font-weight:700}
     .vcb-stagebar{display:flex;gap:14px;align-items:center;margin-top:8px}
+    .vcb-spacer{flex:1}
     .vcb-lang{background:rgba(255,255,255,.07);border:1px solid rgba(247,201,72,.45);color:#ffe9a8;
       border-radius:999px;padding:5px 13px;font-size:12px;font-weight:700;cursor:pointer;transition:background .15s}
     .vcb-lang:hover{background:rgba(247,201,72,.15)}
@@ -308,12 +309,23 @@
     <div class="vcb-bless"><span>${SPLASH}</span></div>
     <div class="vcb-stage">
       <div class="vcb-cap"></div>
-      <button class="vcb-orbbig" type="button" aria-label="Ask by voice"><img class="vcb-logo-big" src="${API}/logo.png?v=2" alt=""/></button>
+      <button class="vcb-orbbig" type="button" aria-label="Ask by voice">
+        <svg class="vcb-mic-big" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="vcbMicGold" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#ffe9a8"/><stop offset="55%" stop-color="#f7c948"/><stop offset="100%" stop-color="#d99a1e"/>
+          </linearGradient></defs>
+          <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" stroke="url(#vcbMicGold)" stroke-width="1.8" fill="rgba(247,201,72,.12)"/>
+          <path d="M19 10v1a7 7 0 0 1-14 0v-1" stroke="url(#vcbMicGold)" stroke-width="1.8" stroke-linecap="round"/>
+          <line x1="12" y1="18" x2="12" y2="22" stroke="url(#vcbMicGold)" stroke-width="1.8" stroke-linecap="round"/>
+          <line x1="8.5" y1="22" x2="15.5" y2="22" stroke="url(#vcbMicGold)" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </button>
       <div class="vcb-status"></div>
       <div class="vcb-stagebar">
         <button class="vcb-lang" type="button">भाषा: हिंदी</button>
         <button class="vcb-kbd" type="button">⌨️ type instead</button>
       </div>
+      <div class="vcb-spacer"></div>
     </div>
     <div class="vcb-msgs"></div>
     <form class="vcb-form">
@@ -545,7 +557,7 @@
 
   // ——— voice-first stage: state machine (idle → listening → thinking → speaking) ———
   const STATUS = {
-    idle: 'फूल को दबाइए और <b>बोलिए</b> — हिंदी या English<br>Tap the flower and <b>speak</b> your question',
+    idle: 'माइक को दबाइए और <b>बोलिए</b> — हिंदी या English<br>Tap the mic and <b>speak</b> your question',
     listening: '🎙️ <b>सुन रहे हैं… बोलिए</b> · listening — tap to finish',
     thinking: '🔎 उत्तर खोज रहे हैं… finding your answer…',
     speaking: '🔊 <b>उत्तर</b> · tap to stop',
