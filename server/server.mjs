@@ -40,15 +40,68 @@ function json(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
-// ——— natural voice (optional): ElevenLabs text-to-speech ———
-// Configure ELEVENLABS_API_KEY in .env to give the bot a human voice; without it
-// the widget falls back to the browser's built-in voice automatically.
+// ——— natural voice (optional) ———
+// Best: ELEVENLABS_API_KEY (can be Bhaiya's cloned voice). Otherwise Gemini's
+// natural TTS voices ride on the same free GEMINI_API_KEY. Without either, the
+// widget falls back to the browser's built-in voice automatically.
 const TTS_KEY = process.env.ELEVENLABS_API_KEY || "";
 const TTS_VOICE = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM"; // multilingual premade voice
 const TTS_MODEL = process.env.ELEVENLABS_MODEL || "eleven_multilingual_v2";
+const GEMINI_TTS_KEY = process.env.GEMINI_API_KEY || "";
+const GEMINI_TTS_MODEL = process.env.GEMINI_TTS_MODEL || "gemini-2.5-flash-preview-tts";
+const GEMINI_TTS_VOICE = process.env.GEMINI_TTS_VOICE || "Charon"; // deep, warm male
+
+// Gemini TTS returns headerless PCM; browsers need a WAV (RIFF) header in front.
+function pcmToWav(pcm, rate) {
+  const h = Buffer.alloc(44);
+  h.write("RIFF", 0);
+  h.writeUInt32LE(36 + pcm.length, 4);
+  h.write("WAVEfmt ", 8);
+  h.writeUInt32LE(16, 16); // fmt chunk size
+  h.writeUInt16LE(1, 20); // PCM
+  h.writeUInt16LE(1, 22); // mono
+  h.writeUInt32LE(rate, 24);
+  h.writeUInt32LE(rate * 2, 28); // byte rate (16-bit mono)
+  h.writeUInt16LE(2, 32); // block align
+  h.writeUInt16LE(16, 34); // bits per sample
+  h.write("data", 36);
+  h.writeUInt32LE(pcm.length, 40);
+  return Buffer.concat([h, pcm]);
+}
+
+async function geminiTts(text) {
+  const r = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_TTS_MODEL)}:generateContent`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_TTS_KEY },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: `Say warmly and gently, like a caring elder brother guiding an aspirant (Hindi text is spoken in natural conversational Hindi): ${text}`,
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          responseModalities: ["AUDIO"],
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: GEMINI_TTS_VOICE } } },
+        },
+      }),
+    },
+  );
+  if (!r.ok) throw new Error(`gemini tts ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  const data = await r.json();
+  const inline = data.candidates?.[0]?.content?.parts?.find((p) => p.inlineData)?.inlineData;
+  if (!inline?.data) throw new Error("gemini tts: no audio in response");
+  const rate = Number(/rate=(\d+)/.exec(inline.mimeType || "")?.[1] || 24000);
+  return pcmToWav(Buffer.from(inline.data, "base64"), rate);
+}
 
 async function handleTts(req, res) {
-  if (!TTS_KEY) return json(res, 501, { error: "tts-not-configured" });
+  if (!TTS_KEY && !GEMINI_TTS_KEY) return json(res, 501, { error: "tts-not-configured" });
   const ip = req.socket.remoteAddress ?? "unknown";
   if (rateLimited(ip)) return json(res, 429, { error: "Too many requests." });
 
@@ -64,6 +117,22 @@ async function handleTts(req, res) {
     return json(res, 400, { error: "Invalid JSON." });
   }
   if (!text) return json(res, 400, { error: "Empty text." });
+
+  // No ElevenLabs key → Gemini's natural voice (same free key as the answers).
+  if (!TTS_KEY) {
+    try {
+      const wav = await geminiTts(text);
+      res.writeHead(200, {
+        "Content-Type": "audio/wav",
+        "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+        "Cache-Control": "no-store",
+      });
+      return res.end(wav);
+    } catch (err) {
+      console.error("tts error:", err?.message);
+      return json(res, 502, { error: "tts-failed" }); // widget falls back to browser voice
+    }
+  }
 
   try {
     const r = await fetch(
@@ -145,6 +214,7 @@ async function handleChat(req, res) {
           "You translate search queries. Translate the question into Hindi if it is mainly English, or into English if it is mainly Hindi. Output ONLY the translated question itself — never answer it, never explain.",
         messages: [{ role: "user", content: message }],
         maxTokens: 150,
+        light: true,
       });
       translated = line.split("\n")[0].trim() || null; // first line only — belt & suspenders
     } catch {
@@ -243,9 +313,11 @@ async function handleChat(req, res) {
     json(res, 200, { answer, sources });
   } catch (err) {
     if (err instanceof LlmAuthError) {
+      console.error("chat auth error:", err.message);
       return json(res, 503, { error: "The chatbot's API key is invalid — check the .env file." });
     }
     if (err instanceof LlmRateLimitError) {
+      console.error("chat rate-limited (free tier per-minute cap)");
       return json(res, 503, { error: "The chatbot is very busy right now — try again in a minute." });
     }
     console.error("chat error:", err);
@@ -267,7 +339,7 @@ const server = createServer(async (req, res) => {
       provider: PROVIDER,
       model: ACTIVE_MODEL,
       apiKeyConfigured,
-      naturalVoice: Boolean(TTS_KEY),
+      naturalVoice: TTS_KEY ? "elevenlabs" : GEMINI_TTS_KEY ? "gemini" : false,
       knowledgeBase: existsSync(path.join(ROOT, "data", "knowledge.db")) ? "built" : "missing",
     });
   }

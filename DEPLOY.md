@@ -12,7 +12,9 @@ You only deploy **after** the knowledge base is built (`npm run ingest` has prod
 |---|---|---|
 | `CHAT_PROVIDER` | – | `gemini` (Google, free tier — current choice) or `anthropic` (Claude) |
 | `GEMINI_API_KEY` | if gemini | Your key from aistudio.google.com. **Never commit this.** |
-| `GEMINI_MODEL` | – | `gemini-3.5-flash` (current) |
+| `GEMINI_MODEL` | – | `gemini-3.1-flash-lite` (current — high free-tier quota; 3.5-flash is only 20 req/day free) |
+| `GEMINI_LIGHT_MODEL` | – | `gemini-2.0-flash-lite` — query translation (separate quota bucket) |
+| `GEMINI_TTS_MODEL` / `GEMINI_TTS_VOICE` | – | natural voice: `gemini-2.5-flash-preview-tts` / `Charon` (browser voice is the automatic fallback) |
 | `ANTHROPIC_API_KEY` | if anthropic | Your key from console.anthropic.com. **Never commit this.** |
 | `CHAT_MODEL` | – | `claude-opus-4-8` (best) / `claude-sonnet-5` / `claude-haiku-4-5` (cheapest) |
 | `ALLOWED_ORIGIN` | – | Leave unset/`*` for a native app; set to your web origin if it's a browser app |
