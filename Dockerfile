@@ -16,7 +16,10 @@ COPY data/corrections.json* ./data/
 COPY data/transcripts ./data/transcripts
 
 # Bake the embedding model into the image so it doesn't download on first request.
-RUN node -e "import('./server/embed.mjs').then(m => m.warmup()).then(() => console.log('model cached'))"
+# The download can flake on builder networks — retry with backoff before giving up.
+RUN node -e "import('./server/embed.mjs').then(m => m.warmup()).then(() => console.log('model cached'))" \
+  || (echo "retrying model download…" && sleep 20 && node -e "import('./server/embed.mjs').then(m => m.warmup()).then(() => console.log('model cached'))") \
+  || (echo "final retry…" && sleep 60 && node -e "import('./server/embed.mjs').then(m => m.warmup()).then(() => console.log('model cached'))")
 
 # Secrets (GEMINI_API_KEY / ADMIN_KEY / LIBRARY_KEY / CHAT_PROVIDER …) are
 # provided at runtime as environment variables, never baked into the image.

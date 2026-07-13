@@ -1,14 +1,4 @@
 {
   "version": "0.0.1",
-  "configurations": [
-    {
-      "name": "chatbot",
-      "runtimeExecutable": "/Users/ashaeiynfoundation/.local/node/bin/node",
-      "runtimeArgs": ["server/server.mjs"],
-      "port": 3111,
-      "env": {
-        "PATH": "/Users/ashaeiynfoundation/.local/node/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-      }
-    }
-  ]
+  "configurations": []
 }

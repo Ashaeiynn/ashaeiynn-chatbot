@@ -10,7 +10,12 @@ let extractorPromise = null;
 function getExtractor() {
   // q8 (8-bit) weights: ~4× less memory than fp32 with near-identical similarity
   // rankings — required to fit the 512MB free hosting instance.
-  if (!extractorPromise) extractorPromise = pipeline("feature-extraction", MODEL, { dtype: "q8" });
+  if (!extractorPromise) {
+    extractorPromise = pipeline("feature-extraction", MODEL, { dtype: "q8" }).catch((err) => {
+      extractorPromise = null; // e.g. transient download failure — retry on next request
+      throw err;
+    });
+  }
   return extractorPromise;
 }
 
