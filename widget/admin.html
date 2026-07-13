@@ -174,8 +174,12 @@
     <h3>📁 Upload files</h3>
     <p>Videos &amp; audios are listened to and transcribed (takes a while — roughly 1 min per 5 min of recording). PDF, Word, text files are read directly.</p>
     <input type="text" id="up-title" placeholder="Title (optional — used when uploading a single file)">
-    <div id="drop">Tap to choose files, or drag &amp; drop here<br><small>mp3 · mp4 · wav · m4a · mov · pdf · docx · txt …</small></div>
+    <div id="drop">Tap to choose files, or drag &amp; drop files <b>or a whole folder</b> here<br>
+      <small>mp3 · mp4 · wav · m4a · mov · pdf · docx · txt … — folders are studied file by file, sub-folders included</small><br>
+      <button class="mini" id="pick-folder" style="margin-top:10px">📂 Choose a whole folder</button>
+    </div>
     <input type="file" id="file" multiple hidden>
+    <input type="file" id="folder" webkitdirectory hidden>
   </div>
   <div class="teach-card">
     <h3>🔗 Add a link</h3>
@@ -371,7 +375,40 @@
     }
   }
 
-  async function uploadFiles(files) {
+  // what the server can study — anything else in a folder is skipped quietly
+  const SUPPORTED = /\.(mp3|wav|m4a|aac|ogg|opus|flac|wma|amr|3gp|mp4|mov|mkv|webm|avi|mts|pdf|docx|doc|rtf|txt|md|html?)$/i;
+  const JUNK = /^(\.|~\$|thumbs\.db$)/i;
+
+  // walk a dropped folder tree (sub-folders included) and collect its files
+  async function filesFromDrop(dt) {
+    const entries = [...dt.items].map((i) => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+    if (!entries.length) return [...dt.files];
+    const out = [];
+    async function walk(entry) {
+      if (entry.isFile) {
+        out.push(await new Promise((res, rej) => entry.file(res, rej)));
+      } else if (entry.isDirectory) {
+        const reader = entry.createReader();
+        for (;;) {
+          const batch = await new Promise((res, rej) => reader.readEntries(res, rej));
+          if (!batch.length) break;
+          for (const e of batch) await walk(e);
+        }
+      }
+    }
+    for (const e of entries) await walk(e);
+    return out;
+  }
+
+  async function uploadFiles(all) {
+    const files = all.filter((f) => SUPPORTED.test(f.name) && !JUNK.test(f.name));
+    const skipped = all.length - files.length;
+    if (!files.length)
+      return alert("No supported files found" + (skipped ? ` — ${skipped} item${skipped > 1 ? "s were" : " was"} skipped (unsupported type).` : "."));
+    if (files.length > 3 &&
+      !confirm(`Study ${files.length} files?` + (skipped ? ` (${skipped} unsupported item${skipped > 1 ? "s" : ""} will be skipped)` : "") +
+        "\n\nAudio/video files are transcribed one by one — a big folder can take hours. Progress shows below."))
+      return;
     const title = $("#up-title").value.trim();
     for (const f of files) {
       const el = document.createElement("div");
@@ -396,11 +433,13 @@
     loadJobs();
   }
   $("#drop").addEventListener("click", () => $("#file").click());
+  $("#pick-folder").addEventListener("click", (e) => { e.stopPropagation(); $("#folder").click(); });
   $("#file").addEventListener("change", (e) => { if (e.target.files.length) uploadFiles([...e.target.files]); e.target.value = ""; });
+  $("#folder").addEventListener("change", (e) => { if (e.target.files.length) uploadFiles([...e.target.files]); e.target.value = ""; });
   ["dragover", "dragleave", "drop"].forEach((ev) => $("#drop").addEventListener(ev, (e) => {
     e.preventDefault();
     $("#drop").classList.toggle("over", ev === "dragover");
-    if (ev === "drop" && e.dataTransfer.files.length) uploadFiles([...e.dataTransfer.files]);
+    if (ev === "drop") filesFromDrop(e.dataTransfer).then((fs) => fs.length && uploadFiles(fs));
   }));
 
   $("#link-go").addEventListener("click", async () => {
