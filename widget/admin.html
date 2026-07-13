@@ -68,6 +68,7 @@
   .job .st{margin-left:auto;white-space:nowrap;font-size:12px;border-radius:999px;padding:2px 10px;border:1px solid var(--line)}
   .st.done{color:#7ee2a0;border-color:#2c5c3f}
   .st.failed{color:#ff9d76;border-color:#a04a33}
+  .st.dup{color:var(--dim)}
   .st.working,.st.studying{color:var(--gold);border-color:rgba(247,201,72,.5)}
   .job .d{color:var(--dim);font-size:12px;margin-top:2px}
   /* library */
@@ -426,14 +427,15 @@
     const rows = [];
     for (const p of pendingUploads) {
       rows.push({
-        icon: "⬆️",
+        icon: p.status === "duplicate" ? "⏭" : "⬆️",
         title: p.name,
         detail:
           p.status === "uploading" ? `uploading — ${p.pct}% done` :
           p.status === "waiting" ? "waiting for its turn to upload…" :
+          p.status === "duplicate" ? "same file name already studied — skipped (rename the file to teach it again)" :
           `upload failed — ${p.error}`,
-        cls: p.status === "upload-failed" ? "failed" : p.status === "uploading" ? "working" : "queued",
-        label: p.status === "uploading" ? `⬆️ ${p.pct}%` : p.status === "waiting" ? "pending" : "✗ failed",
+        cls: p.status === "upload-failed" ? "failed" : p.status === "uploading" ? "working" : p.status === "duplicate" ? "dup" : "queued",
+        label: p.status === "uploading" ? `⬆️ ${p.pct}%` : p.status === "waiting" ? "pending" : p.status === "duplicate" ? "duplicate" : "✗ failed",
       });
     }
     for (const j of serverJobs) {
@@ -526,10 +528,26 @@
   }
 
   async function uploadFiles(all) {
-    const files = all.filter((f) => SUPPORTED.test(f.name) && !JUNK.test(f.name));
+    let files = all.filter((f) => SUPPORTED.test(f.name) && !JUNK.test(f.name));
     const skipped = all.length - files.length;
+    // spot same-name duplicates BEFORE transferring anything
+    let dupes = [];
+    try {
+      const r = await fetch("/api/admin/uploaded-names", { headers: { "x-admin-key": key() } });
+      if (r.ok) {
+        const known = new Set((await r.json()).names || []);
+        dupes = files.filter((f) => known.has(f.name.toLowerCase()));
+        files = files.filter((f) => !known.has(f.name.toLowerCase()));
+      }
+    } catch { /* server decides on upload instead */ }
+    if (dupes.length) {
+      pendingUploads = [...dupes.map((f) => ({ name: f.name, status: "duplicate" })), ...pendingUploads];
+      renderJobs();
+    }
     if (!files.length)
-      return showStatus("⚠️", "No supported files found",
+      return showStatus(dupes.length ? "⏭" : "⚠️",
+        dupes.length ? `${dupes.length} duplicate${dupes.length > 1 ? "s" : ""} skipped — nothing new to study` : "No supported files found",
+        dupes.length ? "these file names were already studied (rename a file to teach it again)" :
         skipped ? `${skipped} item${skipped > 1 ? "s were" : " was"} skipped — photos and unknown file types can't be studied.` : "");
     if (files.length > 3 &&
       !confirm(`Study ${files.length} files?` + (skipped ? ` (${skipped} unsupported item${skipped > 1 ? "s" : ""} will be skipped)` : "") +
@@ -541,7 +559,7 @@
     // every chosen file appears in the Progress list immediately — the ones not
     // yet transferring show as "pending"
     const entries = files.map((f) => ({ name: f.name, status: "waiting", pct: 0 }));
-    pendingUploads = [...entries, ...pendingUploads.filter((p) => p.status === "upload-failed")];
+    pendingUploads = [...entries, ...pendingUploads.filter((p) => p.status === "upload-failed" || p.status === "duplicate")];
     renderJobs();
     const failed = [];
     for (let i = 0; i < files.length; i++) {
@@ -563,9 +581,13 @@
         pendingUploads = pendingUploads.filter((x) => x !== p); // its server job takes over
         await loadJobs();
       } catch (err) {
-        p.status = "upload-failed";
-        p.error = err.message;
-        failed.push(`${f.name} — ${err.message}`);
+        if (/duplicate/i.test(err.message)) {
+          p.status = "duplicate";
+        } else {
+          p.status = "upload-failed";
+          p.error = err.message;
+          failed.push(`${f.name} — ${err.message}`);
+        }
         renderJobs();
       }
     }
@@ -573,6 +595,8 @@
     $("#up-title").value = "";
     if (failed.length)
       showStatus("⚠️", `${files.length - failed.length} uploaded · ${failed.length} failed`, failed.join(" · ").slice(0, 200));
+    else if (dupes.length)
+      showStatus("✅", `${files.length} uploaded · ${dupes.length} duplicate${dupes.length > 1 ? "s" : ""} skipped`, "");
     loadJobs();
   }
   $("#drop").addEventListener("click", () => $("#file").click());

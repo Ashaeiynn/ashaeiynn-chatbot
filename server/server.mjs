@@ -432,11 +432,24 @@ const server = createServer(async (req, res) => {
   };
 
   // ——— teach the bot: uploads, links, pasted text, job progress ———
+  // Original names of everything ever uploaded (upload files are kept and are
+  // saved as "<id>-<original name>") — used to skip same-name duplicates.
+  const uploadedNames = () =>
+    readdirSync(uploadsDir).map((f) => f.replace(/^[a-z0-9]+-/, "").toLowerCase());
+
+  if (req.method === "GET" && url.pathname === "/api/admin/uploaded-names") {
+    if (!adminOk()) return;
+    return json(res, 200, { names: uploadedNames() });
+  }
   if (req.method === "POST" && url.pathname === "/api/admin/upload") {
     if (!adminOk()) return;
     const name = decodeURIComponent(req.headers["x-file-name"] || "").replace(/[/\\]/g, "_").trim();
     const title = decodeURIComponent(req.headers["x-title"] || "").trim();
     if (!name) return json(res, 400, { error: "Missing file name." });
+    if (uploadedNames().includes(name.toLowerCase())) {
+      req.resume(); // drain the body so the connection closes cleanly
+      return json(res, 409, { error: "duplicate", duplicate: true });
+    }
     const dest = path.join(uploadsDir, `${Date.now().toString(36)}-${name}`);
     try {
       const ws = createWriteStream(dest);
