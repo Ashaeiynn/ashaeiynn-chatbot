@@ -30,8 +30,23 @@ export const jobs = [];
 let seq = 1;
 let pumping = false;
 
+// Has a recording with this original file name already been studied? (Compares
+// the name minus the per-upload id prefix against existing transcript slugs.)
+function alreadyStudied(filePath) {
+  const base = path.basename(filePath).replace(/^[a-z0-9]+-/, "");
+  const core = base.replace(/\.[^.]+$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+  return readdirSync(transcriptsDir).some((f) => {
+    if (!f.startsWith("audio_") || !f.endsWith(".json")) return false;
+    return f.slice(6, -5).replace(/^[a-z0-9]{8}-/, "") === core;
+  });
+}
+
 const RUNNERS = {
   media: async (job) => {
+    if (alreadyStudied(job.spec.path)) {
+      job.detail = "same recording already studied earlier — skipped";
+      return;
+    }
     // Live progress: we know the recording's length and transcription runs at
     // roughly 5× realtime on this Mac, so elapsed time gives an honest live %.
     let estMs = null;
