@@ -427,15 +427,14 @@
     const rows = [];
     for (const p of pendingUploads) {
       rows.push({
-        icon: p.status === "duplicate" ? "⏭" : "⬆️",
+        icon: "⬆️",
         title: p.name,
         detail:
           p.status === "uploading" ? `uploading — ${p.pct}% done` :
           p.status === "waiting" ? "waiting for its turn to upload…" :
-          p.status === "duplicate" ? "same file name already studied — skipped (rename the file to teach it again)" :
           `upload failed — ${p.error}`,
-        cls: p.status === "upload-failed" ? "failed" : p.status === "uploading" ? "working" : p.status === "duplicate" ? "dup" : "queued",
-        label: p.status === "uploading" ? `⬆️ ${p.pct}%` : p.status === "waiting" ? "pending" : p.status === "duplicate" ? "duplicate" : "✗ failed",
+        cls: p.status === "upload-failed" ? "failed" : p.status === "uploading" ? "working" : "queued",
+        label: p.status === "uploading" ? `⬆️ ${p.pct}%` : p.status === "waiting" ? "pending" : "✗ failed",
       });
     }
     for (const j of serverJobs) {
@@ -541,10 +540,6 @@
         files = files.filter((f) => !known.has(f.name.toLowerCase()));
       }
     } catch { /* server decides on upload instead */ }
-    if (dupes.length) {
-      pendingUploads = [...dupes.map((f) => ({ name: f.name, status: "duplicate" })), ...pendingUploads];
-      renderJobs();
-    }
     if (!files.length)
       return showStatus(dupes.length ? "⏭" : "⚠️",
         dupes.length ? `${dupes.length} duplicate${dupes.length > 1 ? "s" : ""} skipped — nothing new to study` : "No supported files found",
@@ -560,7 +555,7 @@
     // every chosen file appears in the Progress list immediately — the ones not
     // yet transferring show as "pending"
     const entries = files.map((f) => ({ name: f.name, status: "waiting", pct: 0 }));
-    pendingUploads = [...entries, ...pendingUploads.filter((p) => p.status === "upload-failed" || p.status === "duplicate")];
+    pendingUploads = [...entries, ...pendingUploads.filter((p) => p.status === "upload-failed")];
     renderJobs();
     const failed = [];
     for (let i = 0; i < files.length; i++) {
@@ -583,7 +578,8 @@
         await loadJobs();
       } catch (err) {
         if (/duplicate/i.test(err.message)) {
-          p.status = "duplicate";
+          dupes.push(f); // count it in the banner, don't clutter the list
+          pendingUploads = pendingUploads.filter((x) => x !== p);
         } else {
           p.status = "upload-failed";
           p.error = err.message;
