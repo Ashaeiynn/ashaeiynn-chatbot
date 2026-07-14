@@ -497,22 +497,59 @@
     const clean = cleanForSpeech(text);
     if (!clean) return done();
 
-    // human voice from the server when available, browser voice otherwise
-    if (naturalVoice) {
+    // Human voice from the server when available, browser voice otherwise.
+    // The free natural-voice quota is small, so it is reserved for the voice
+    // stage (mic conversations) — typed chats use the browser voice.
+    if (naturalVoice && panel.dataset.mode === "voice") {
       try {
-        const r = await fetch(`${API}/api/tts`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: clean }),
-        });
-        if (r.ok) {
-          const blob = await r.blob();
-          const audio = new Audio(URL.createObjectURL(blob));
-          currentAudio = audio;
-          audio.onended = done;
-          audio.onerror = () => browserSpeak(clean, done);
-          await audio.play();
-          return;
+        // Progressive chunks: a tiny first piece so speech starts fast, then
+        // growing pieces — each generates (in parallel) while the previous plays,
+        // so the voice flows without gaps.
+        // Chunk sizes double (1, 2, 4… sentences): generation runs at roughly the
+        // speed of the audio itself, so each chunk must be ready while ALL the
+        // previous ones are still playing — doubling keeps that inequality true.
+        const sentences = clean.split(/(?<=[।॥.!?])\s+/).filter(Boolean);
+        const chunks = [];
+        if (sentences.length === 0) chunks.push(clean);
+        else {
+          chunks.push(sentences.shift());
+          for (let take = 2; sentences.length; take *= 2) {
+            chunks.push(sentences.splice(0, take).join(" "));
+          }
+        }
+        const fetches = chunks.map((t) =>
+          fetch(`${API}/api/tts`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: t }),
+          })
+            .then((r) => (r.ok ? r.blob() : null))
+            .catch(() => null),
+        );
+        const firstBlob = await fetches[0];
+        if (firstBlob) {
+          const playBlob = (blob) =>
+            new Promise((resolve, reject) => {
+              const audio = new Audio(URL.createObjectURL(blob));
+              currentAudio = audio;
+              audio.onended = resolve;
+              audio.onerror = reject;
+              audio.play().catch(reject);
+            });
+          try {
+            await playBlob(firstBlob);
+            for (let i = 1; i < fetches.length; i++) {
+              if (!currentAudio) return; // user tapped stop mid-answer
+              const blob = await fetches[i];
+              // chunk failed (voice quota) — finish ALL remaining text in browser voice
+              if (!blob) return browserSpeak(chunks.slice(i).join(" "), done);
+              await playBlob(blob);
+            }
+            return done();
+          } catch {
+            if (!currentAudio) return; // stopped, not an error
+            return browserSpeak(clean, done);
+          }
         }
       } catch {
         /* fall through to browser voice */

@@ -23,7 +23,7 @@ export class LlmRateLimitError extends Error {}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-export async function complete({ system, messages, maxTokens = 1024, cacheSystem = false, light = false }) {
+export async function complete({ system, messages, maxTokens = 1024, cacheSystem = false, light = false, retry = true }) {
   if (PROVIDER === "gemini") {
     const model = light ? GEMINI_LIGHT_MODEL : GEMINI_MODEL;
     const body = {
@@ -46,7 +46,7 @@ export async function complete({ system, messages, maxTokens = 1024, cacheSystem
           body: JSON.stringify(body),
         },
       );
-      if ((r.status === 429 || r.status === 503) && attempt < 2) {
+      if ((r.status === 429 || r.status === 503) && retry && attempt < 2) {
         await sleep(attempt === 0 ? 2500 : 7000);
         continue;
       }

@@ -48,7 +48,14 @@ const TTS_KEY = process.env.ELEVENLABS_API_KEY || "";
 const TTS_VOICE = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM"; // multilingual premade voice
 const TTS_MODEL = process.env.ELEVENLABS_MODEL || "eleven_multilingual_v2";
 const GEMINI_TTS_KEY = process.env.GEMINI_API_KEY || "";
-const GEMINI_TTS_MODEL = process.env.GEMINI_TTS_MODEL || "gemini-2.5-flash-preview-tts";
+// Each TTS model has its own tiny free-tier daily quota (10/day) — chain two so
+// the natural voice lasts twice as long before the browser voice takes over.
+const GEMINI_TTS_MODELS = (
+  process.env.GEMINI_TTS_MODEL || "gemini-2.5-flash-preview-tts,gemini-3.1-flash-tts-preview"
+)
+  .split(",")
+  .map((m) => m.trim())
+  .filter(Boolean);
 const GEMINI_TTS_VOICE = process.env.GEMINI_TTS_VOICE || "Charon"; // deep, warm male
 
 // Gemini TTS returns headerless PCM; browsers need a WAV (RIFF) header in front.
@@ -70,8 +77,20 @@ function pcmToWav(pcm, rate) {
 }
 
 async function geminiTts(text) {
+  let lastErr;
+  for (const model of GEMINI_TTS_MODELS) {
+    try {
+      return await geminiTtsModel(model, text);
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr;
+}
+
+async function geminiTtsModel(model, text) {
   const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_TTS_MODEL)}:generateContent`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_TTS_KEY },
@@ -215,6 +234,7 @@ async function handleChat(req, res) {
         messages: [{ role: "user", content: message }],
         maxTokens: 150,
         light: true,
+        retry: false, // best-effort helper — never make the visitor wait on retries
       });
       translated = line.split("\n")[0].trim() || null; // first line only — belt & suspenders
     } catch {
