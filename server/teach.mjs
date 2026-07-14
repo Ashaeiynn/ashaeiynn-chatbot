@@ -115,11 +115,20 @@ function persistQueue() {
   }
 }
 
+// Active work first (what's happening now, then what's next in line), then the
+// history — so the working file is always visible even with a huge queue.
 export function publicJobs() {
+  const order = { working: 0, studying: 1, ready: 2, queued: 3, failed: 4, done: 5 };
   return jobs
     .map(({ spec, ...j }) => j)
-    .sort((a, b) => b.id - a.id)
+    .sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || a.id - b.id)
     .slice(0, 250);
+}
+
+export function jobTotals() {
+  const t = { total: jobs.length };
+  for (const j of jobs) t[j.status] = (t[j.status] || 0) + 1;
+  return t;
 }
 
 function addJob(kind, title, spec) {
@@ -207,7 +216,7 @@ if (SYNC_URL) {
       await fetch(`${SYNC_URL}/api/admin/studio-status`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-admin-key": process.env.ADMIN_KEY || "" },
-        body: JSON.stringify({ jobs: publicJobs().slice(0, 150) }),
+        body: JSON.stringify({ jobs: publicJobs().slice(0, 150), totals: jobTotals() }),
       });
     } catch {
       /* cloud unreachable — try again next tick */

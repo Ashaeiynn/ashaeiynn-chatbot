@@ -396,28 +396,28 @@
     if (pct != null) $("#ts-bar").style.width = pct + "%";
   }
 
-  function statusFromJobs(jobs) {
+  function statusFromJobs(jobs, totals) {
     if (uploading) return; // the upload loop owns the banner while files transfer
-    const active = jobs.filter((j) => ["queued", "working", "ready", "studying"].includes(j.status));
+    // with very large queues the list is trimmed — totals carry the real numbers
+    const t = totals || { total: jobs.length };
+    for (const st of ["queued", "working", "ready", "studying", "done", "failed"])
+      if (!(st in t)) t[st] = jobs.filter((j) => j.status === st).length;
+    const activeN = (t.queued || 0) + (t.working || 0) + (t.ready || 0) + (t.studying || 0);
     const tab = document.querySelector('[data-t="teach"]');
-    tab.textContent = active.length || pendingUploads.length ? "📚 Teach the bot ●" : "📚 Teach the bot";
-    if (active.length) {
+    tab.textContent = activeN || pendingUploads.length ? "📚 Teach the bot ●" : "📚 Teach the bot";
+    if (activeN) {
       const working = jobs.find((j) => j.status === "working");
-      if (jobs.some((j) => j.status === "studying"))
+      if (t.studying)
         showStatus("📖", "पढ़ाई चल रही है — studying (building searchable memory)…",
           "usually ~7 minutes · the bot keeps answering with its old knowledge meanwhile");
-      else if (working) {
-        const doneN = jobs.filter((j) => j.status === "done" || j.status === "ready").length;
+      else if (working)
         showStatus(working.kind === "media" || working.kind === "video-link" ? "🎧" : "⚙️",
-          `Studying ${doneN + 1} of ${jobs.length}: ${working.title}`,
-          (working.detail || "") + (active.length > 1 ? ` · ${active.length - 1} more waiting in queue` : ""));
-      }
-      else showStatus("⏳", `${active.length} item${active.length > 1 ? "s" : ""} waiting in the study queue…`, "");
-    } else if (jobs.length) {
-      const failed = jobs.filter((j) => j.status === "failed").length;
-      const done = jobs.filter((j) => j.status === "done").length;
-      if (failed) showStatus("⚠️", `${done} learnt · ${failed} failed`, "the list below shows what failed and why");
-      else if (done) showStatus("✅", `All done — ${done} item${done > 1 ? "s" : ""} learnt`, "the bot is already answering with this knowledge");
+          `Studying ${(t.done || 0) + (t.ready || 0) + 1} of ${t.total}: ${working.title}`,
+          (working.detail || "") + (activeN > 1 ? ` · ${activeN - 1} more waiting in queue` : ""));
+      else showStatus("⏳", `${activeN} item${activeN > 1 ? "s" : ""} waiting in the study queue…`, "");
+    } else if (t.total) {
+      if (t.failed) showStatus("⚠️", `${t.done || 0} learnt · ${t.failed} failed`, "the list below shows what failed and why");
+      else if (t.done) showStatus("✅", `All done — ${t.done} item${t.done > 1 ? "s" : ""} learnt`, "the bot is already answering with this knowledge");
     }
   }
 
@@ -465,7 +465,7 @@
         : d.at
           ? `🖥️ studio Mac is offline — last seen ${Math.round((Date.now() - d.at) / 60000)} min ago`
           : "🖥️ studio Mac hasn't reported yet — it may be off";
-      statusFromJobs(serverJobs);
+      statusFromJobs(serverJobs, d.totals);
       renderJobs();
       clearTimeout(loadJobs.t);
       loadJobs.t = setTimeout(loadJobs, 15000);
@@ -473,8 +473,9 @@
     }
     const r = await fetch("/api/admin/jobs", { headers: { "x-admin-key": key() } });
     if (!r.ok) return;
-    serverJobs = (await r.json()).jobs || [];
-    statusFromJobs(serverJobs);
+    const d = await r.json();
+    serverJobs = d.jobs || [];
+    statusFromJobs(serverJobs, d.totals);
     renderJobs();
     if (pendingUploads.length || serverJobs.some((j) => ["queued", "working", "ready", "studying"].includes(j.status))) {
       clearTimeout(loadJobs.t);
