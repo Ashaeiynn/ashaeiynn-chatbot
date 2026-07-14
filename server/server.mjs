@@ -20,6 +20,16 @@ const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 const MAX_HISTORY_TURNS = 6;
 
 const apiKeyConfigured = keyConfigured;
+
+// On the studio Mac: hold off sleep for as long as this server runs, so long
+// study batches never pause. (No effect anywhere else.)
+if (process.platform === "darwin" && existsSync("/usr/bin/caffeinate")) {
+  try {
+    spawn("/usr/bin/caffeinate", ["-is", "-w", String(process.pid)], { stdio: "ignore", detached: true }).unref();
+  } catch {
+    /* best effort */
+  }
+}
 const ADMIN_KEY = process.env.ADMIN_KEY || "";
 const LIBRARY_KEY = process.env.LIBRARY_KEY || ""; // second lock: the Library tab
 
