@@ -17,6 +17,17 @@ const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 const MAX_HISTORY_TURNS = 6;
 
 const apiKeyConfigured = keyConfigured;
+const ADMIN_KEY = process.env.ADMIN_KEY || "";
+
+// One JSON line per question in data/questions.log (question, answer, retrieval)
+// — reviewed in the admin portal at /admin.
+function writeLog(entry) {
+  try {
+    appendFileSync(path.join(ROOT, "data", "questions.log"), JSON.stringify(entry) + "\n");
+  } catch {
+    /* logging must never break answering */
+  }
+}
 
 // Simple per-IP rate limit: 20 questions per 5 minutes (override via RATE_LIMIT_MAX).
 const RATE_LIMIT = { windowMs: 5 * 60 * 1000, max: Number(process.env.RATE_LIMIT_MAX || 20) };
@@ -259,23 +270,14 @@ async function handleChat(req, res) {
     ? "उत्तर पूरी तरह हिंदी (देवनागरी) में दीजिए — एक भी वाक्य English में नहीं।"
     : "Answer entirely in English — every sentence in English (keep Hindi terms like hawan, jaap, drishti in Latin script). Do not write any Devanagari.";
 
-  // Log every question + what was retrieved, so answer quality can be reviewed and
-  // tuned against real usage (data/questions.log, one JSON line per question).
-  try {
-    appendFileSync(
-      path.join(ROOT, "data", "questions.log"),
-      JSON.stringify({
-        at: new Date().toISOString(),
-        q: message,
-        via: payload.via,
-        lang: payload.lang,
-        hi: wantsHindi,
-        top: chunks.slice(0, 3).map((c) => ({ t: c.title, s: Number(c.score?.toFixed(3)) })),
-      }) + "\n",
-    );
-  } catch {
-    /* logging must never break answering */
-  }
+  const logEntry = {
+    at: new Date().toISOString(),
+    q: message,
+    via: payload.via,
+    lang: payload.lang,
+    hi: wantsHindi,
+    top: chunks.slice(0, 3).map((c) => ({ t: c.title, s: Number(c.score?.toFixed(3)) })),
+  };
 
   // TEST MODE — no API key yet. Instead of an AI-composed answer, return the actual
   // video passages the search found, so retrieval + sources + UI can be verified free.
@@ -298,6 +300,7 @@ async function handleChat(req, res) {
       timestamp: formatTimestamp(c.start_seconds),
       url: c.url ? `${c.url}#t=${Math.floor(c.start_seconds)}s` : null,
     }));
+    writeLog({ ...logEntry, answer, testMode: true });
     return json(res, 200, { answer, sources, testMode: true });
   }
 
@@ -330,17 +333,21 @@ async function handleChat(req, res) {
       if (sources.length >= 3) break;
     }
 
+    writeLog({ ...logEntry, answer });
     json(res, 200, { answer, sources });
   } catch (err) {
     if (err instanceof LlmAuthError) {
       console.error("chat auth error:", err.message);
+      writeLog({ ...logEntry, error: "auth" });
       return json(res, 503, { error: "The chatbot's API key is invalid — check the .env file." });
     }
     if (err instanceof LlmRateLimitError) {
       console.error("chat rate-limited (free tier per-minute cap)");
+      writeLog({ ...logEntry, error: "rate-limited" });
       return json(res, 503, { error: "The chatbot is very busy right now — try again in a minute." });
     }
     console.error("chat error:", err);
+    writeLog({ ...logEntry, error: "failed" });
     json(res, 500, { error: "Something went wrong — please try again." });
   }
 }
@@ -362,6 +369,38 @@ const server = createServer(async (req, res) => {
       naturalVoice: TTS_KEY ? "elevenlabs" : GEMINI_TTS_KEY ? "gemini" : false,
       knowledgeBase: existsSync(path.join(ROOT, "data", "knowledge.db")) ? "built" : "missing",
     });
+  }
+
+  // Admin portal: review every question the bot was asked and how it answered.
+  if (req.method === "GET" && url.pathname === "/admin") {
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" });
+    return res.end(readFileSync(path.join(ROOT, "widget", "admin.html")));
+  }
+  if (req.method === "GET" && url.pathname === "/api/admin/logs") {
+    if (!ADMIN_KEY) return json(res, 501, { error: "admin-not-configured" });
+    if (req.headers["x-admin-key"] !== ADMIN_KEY) {
+      const ip = req.socket.remoteAddress ?? "unknown";
+      if (rateLimited(ip)) return json(res, 429, { error: "Too many attempts." });
+      return json(res, 401, { error: "unauthorized" });
+    }
+    let entries = [];
+    try {
+      const lines = readFileSync(path.join(ROOT, "data", "questions.log"), "utf8").trim().split("\n");
+      entries = lines
+        .slice(-1000)
+        .map((l) => {
+          try {
+            return JSON.parse(l);
+          } catch {
+            return null;
+          }
+        })
+        .filter(Boolean)
+        .reverse();
+    } catch {
+      /* no log file yet — empty portal */
+    }
+    return json(res, 200, { entries });
   }
 
   if (req.method === "GET" && url.pathname === "/logo.png") {
