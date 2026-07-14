@@ -160,15 +160,17 @@ async function pump() {
   if (pumping) return;
   pumping = true;
   try {
-    let converted = false;
-    for (;;) {
+    let converted = 0;
+    // Absorb knowledge every 25 conversions rather than only at the very end —
+    // huge queues then feed the live bot steadily instead of days later.
+    while (converted < 25) {
       const job = jobs.find((j) => j.status === "queued");
       if (!job) break;
       job.status = "working";
       try {
         await RUNNERS[job.kind](job);
         job.status = "ready";
-        converted = true;
+        converted++;
       } catch (err) {
         job.status = "failed";
         job.detail = String(err?.message || err).slice(0, 300);
