@@ -441,6 +441,9 @@
     const score = (v) => {
       const n = v.name.toLowerCase();
       return (
+        // prefer a MALE voice when the device offers one (Madhur/Hemant/Arjun
+        // are the common Hindi male neural voices; \bmale\b won't match "female")
+        (/madhur|hemant|arjun|prabhat|neel|ravi|\bmale\b/i.test(n) ? 9 : 0) +
         (n.includes("google") ? 8 : 0) +
         (n.includes("natural") ? 6 : 0) +
         (n.includes("premium") ? 6 : 0) +
