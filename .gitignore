@@ -15,3 +15,5 @@ data/questions.log
 data/uploads/
 data/teach-queue.json
 models/**/model_quantized.onnx
+data/server-agent.log
+data/titling.log
