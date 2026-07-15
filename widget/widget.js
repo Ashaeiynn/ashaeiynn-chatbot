@@ -3,14 +3,14 @@
 // Optional attributes:
 //   data-api="https://YOUR-CHATBOT-DOMAIN"  (defaults to where the script came from)
 //   data-title="Ask Your Guide"
-//   data-color="#4f46e5"
+//   data-color="#0b0b0f"
 //   data-splash="जय सिया राम"          (the blessing shown when the chat opens)
 //   data-splash-sub="JAI SIYA RAM"
 (() => {
   const script = document.currentScript;
   const API = (script?.dataset.api || new URL(script.src).origin).replace(/\/$/, "");
   const TITLE = script?.dataset.title || "Ask Your Guide";
-  const COLOR = script?.dataset.color || "#4f46e5";
+  const COLOR = script?.dataset.color || "#0b0b0f";
   const SPLASH = script?.dataset.splash || "जय सिया राम";
   const SPLASH_SUB = script?.dataset.splashSub || "JAI SIYA RAM";
 
@@ -19,7 +19,7 @@
   const style = document.createElement("style");
   style.textContent = `
     .vcb-btn{position:fixed;bottom:20px;right:20px;width:62px;height:62px;border-radius:50%;
-      background:radial-gradient(circle at 34% 28%,#3b2f80 0%,#241b56 45%,#120d33 100%);
+      background:radial-gradient(circle at 34% 28%,#20202a 0%,#0d0d13 45%,#000 100%);
       border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
       z-index:999998;transition:transform .2s ease;
       box-shadow:0 0 0 1.5px rgba(52,211,153,.6),0 0 22px rgba(52,211,153,.35),0 8px 24px rgba(0,0,0,.5);
@@ -59,13 +59,13 @@
     .vcb-cosmos{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
     .vcb-neb{position:absolute;border-radius:50%;filter:blur(26px);will-change:transform}
     .vcb-neb.n1{width:340px;height:300px;left:-90px;top:6%;
-      background:radial-gradient(ellipse at 40% 45%,rgba(124,58,237,.16) 0%,rgba(79,70,229,.08) 45%,transparent 72%);
+      background:radial-gradient(ellipse at 40% 45%,rgba(52,211,153,.08) 0%,rgba(255,255,255,.03) 45%,transparent 72%);
       animation:vcbNeb1 90s ease-in-out infinite alternate}
     .vcb-neb.n2{width:300px;height:280px;right:-80px;bottom:8%;
       background:radial-gradient(ellipse at 55% 50%,rgba(52,211,153,.07) 0%,rgba(217,120,50,.05) 40%,transparent 70%);
       animation:vcbNeb2 110s ease-in-out infinite alternate}
     .vcb-neb.n3{width:240px;height:220px;left:24%;bottom:-70px;
-      background:radial-gradient(ellipse at 50% 50%,rgba(56,130,246,.08) 0%,transparent 68%);
+      background:radial-gradient(ellipse at 50% 50%,rgba(255,255,255,.04) 0%,transparent 68%);
       animation:vcbNeb1 130s ease-in-out infinite alternate-reverse}
     @keyframes vcbNeb1{from{transform:translate(0,0) rotate(0deg) scale(1)}to{transform:translate(46px,30px) rotate(28deg) scale(1.18)}}
     @keyframes vcbNeb2{from{transform:translate(0,0) rotate(0deg) scale(1.1)}to{transform:translate(-38px,-26px) rotate(-24deg) scale(.95)}}
@@ -121,12 +121,12 @@
       100%{transform:translate(560px,240px) rotate(24deg);opacity:0}}
 
     .vcb-head{position:relative;z-index:2;padding:13px 18px;display:flex;justify-content:space-between;align-items:center;
-      background:linear-gradient(135deg,rgba(79,70,229,.55),rgba(124,58,237,.4));
+      background:linear-gradient(135deg,rgba(10,10,14,.92),rgba(0,0,0,.85));
       backdrop-filter:blur(6px);border-bottom:1px solid rgba(52,211,153,.22)}
     .vcb-head-left{display:flex;align-items:center;gap:11px}
     .vcb-ava{width:36px;height:36px;border-radius:50%;flex-shrink:0;font-size:17px;
       display:flex;align-items:center;justify-content:center;color:#b8f5dc;
-      background:radial-gradient(circle at 35% 30%,#3a2f7d,#241b56);
+      background:radial-gradient(circle at 35% 30%,#1c1c26,#0a0a10);
       box-shadow:0 0 0 1.5px rgba(52,211,153,.55),0 0 14px rgba(52,211,153,.25)}
     .vcb-title{font-weight:700;font-size:15px;line-height:1.2;color:#fff}
     .vcb-sub{font-size:11.5px;color:rgba(255,236,182,.75);font-weight:400;margin-top:1px}
@@ -178,7 +178,7 @@
     .vcb-voice:hover{opacity:1}
     .vcb-input{flex:1;border:1.5px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);
       color:#f2eefe;border-radius:12px;padding:10px 13px;font-size:14px;outline:none;transition:border-color .15s}
-    .vcb-input::placeholder{color:#8d86b5}
+    .vcb-input::placeholder{color:#9aa0ab}
     .vcb-input:focus{border-color:#34d399}
     .vcb-send{background:linear-gradient(135deg,#b8f5dc,#2bbd85);color:#04231a;border:none;border-radius:12px;
       padding:0 17px;font-size:14px;font-weight:700;cursor:pointer;transition:filter .15s;
@@ -211,7 +211,7 @@
     .vcb-live{color:#b8f5dc;font-size:14.5px;text-align:center;min-height:20px;animation:vcbMsgIn .3s ease both}
     .vcb-orbbig{position:relative;width:96px;height:96px;border-radius:50%;border:none;cursor:pointer;
       flex-shrink:0;margin:8px 0 8px;display:flex;align-items:center;justify-content:center;
-      background:radial-gradient(circle at 34% 28%,#3b2f80 0%,#241b56 45%,#120d33 100%);
+      background:radial-gradient(circle at 34% 28%,#20202a 0%,#0d0d13 45%,#000 100%);
       box-shadow:0 0 0 2px rgba(52,211,153,.55),0 0 26px rgba(52,211,153,.3);transition:transform .2s}
     .vcb-orbbig:hover{transform:scale(1.05)}
     .vcb-mic-big{width:44px;height:44px;filter:drop-shadow(0 0 10px rgba(52,211,153,.5))}
@@ -223,15 +223,15 @@
     .vcb-panel[data-vstate="speaking"] .vcb-orbbig{animation:vcbRippleGlow 1.5s ease-out infinite}
     @keyframes vcbRippleGlow{0%{box-shadow:0 0 0 2px rgba(52,211,153,.55),0 0 0 0 rgba(52,211,153,.4)}
       100%{box-shadow:0 0 0 2px rgba(52,211,153,.55),0 0 0 30px rgba(52,211,153,0)}}
-    .vcb-status{color:#cbc3f0;font-size:13px;line-height:1.5;min-height:20px;text-align:center}
+    .vcb-status{color:#c9ccd6;font-size:13px;line-height:1.5;min-height:20px;text-align:center}
     .vcb-status b{color:#b8f5dc;font-weight:700}
     .vcb-stagebar{display:flex;gap:14px;align-items:center;margin-top:8px}
     .vcb-spacer{flex:1}
     .vcb-lang{background:rgba(255,255,255,.07);border:1px solid rgba(52,211,153,.45);color:#b8f5dc;
       border-radius:999px;padding:5px 13px;font-size:12px;font-weight:700;cursor:pointer;transition:background .15s}
     .vcb-lang:hover{background:rgba(52,211,153,.15)}
-    .vcb-kbd{background:none;border:none;color:#8d86b5;font-size:12.5px;cursor:pointer}
-    .vcb-kbd:hover{color:#cbc3f0}
+    .vcb-kbd{background:none;border:none;color:#9aa0ab;font-size:12.5px;cursor:pointer}
+    .vcb-kbd:hover{color:#c9ccd6}
 
     /* ——— the blessing splash ——— */
     .vcb-splash{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;
