@@ -1,13 +1,13 @@
 // The chatbot backend: serves the widget and answers questions.
 // Usage: npm start   → http://localhost:3111
 import { createServer } from "node:http";
-import { readFileSync, existsSync, appendFileSync, createWriteStream, rmSync, readdirSync, statSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, appendFileSync, createWriteStream, rmSync, readdirSync, statSync, mkdirSync } from "node:fs";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { teachFile, teachLink, teachText, forget, publicJobs, jobTotals, uploadsDir } from "./teach.mjs";
 import { matchCorrection, addCorrection, removeCorrection, listCorrections, DIRECT_MATCH } from "./corrections.mjs";
 import { ROOT } from "./env.mjs";
-import { searchMulti, formatTimestamp } from "./retrieve.mjs";
+import { searchMulti, formatTimestamp, thoughtCandidate } from "./retrieve.mjs";
 import { warmup } from "./embed.mjs";
 import { buildSystemPrompt, buildContextBlock } from "./prompt.mjs";
 import { complete, PROVIDER, ACTIVE_MODEL, keyConfigured, LlmAuthError, LlmRateLimitError } from "./llm.mjs";
@@ -611,6 +611,62 @@ async function handleStt(req, res) {
   }
 }
 
+// ——— आज का विचार: one thought per day from the teachings, same for everyone ———
+// The passage is picked deterministically by the date; a single light model
+// call per day trims it into a clean 2–3 line thought (cached in memory AND
+// on disk, so restarts don't re-spend the call). data/thought.json is
+// gitignored — it regenerates anywhere.
+let thoughtCache = { date: "", data: null };
+const THOUGHT_FILE = path.join(ROOT, "data", "thought.json");
+async function handleThought(req, res) {
+  const date = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  if (thoughtCache.date === date && thoughtCache.data) return json(res, 200, thoughtCache.data);
+  try {
+    const saved = JSON.parse(readFileSync(THOUGHT_FILE, "utf8"));
+    if (saved.date === date && saved.text) {
+      thoughtCache = { date, data: saved };
+      return json(res, 200, saved);
+    }
+  } catch {
+    /* no saved thought yet */
+  }
+  const c = thoughtCandidate(date);
+  if (!c) return json(res, 200, {});
+  let text = "";
+  if (apiKeyConfigured) {
+    try {
+      text = (
+        await complete({
+          system:
+            "From the given passage of a guru's spoken teaching, extract ONE short self-contained thought — 2 to 3 sentences, at most 60 words — in the passage's OWN words and language (Hindi stays Hindi in Devanagari), only lightly cleaned of filler for reading. It must stand alone beautifully, like a daily thought. Output ONLY the thought.",
+          messages: [{ role: "user", content: c.content.slice(0, 1500) }],
+          maxTokens: 160,
+          light: true,
+          retry: false,
+        })
+      )
+        .trim()
+        .slice(0, 400);
+    } catch {
+      /* fall back to a raw excerpt */
+    }
+  }
+  if (!text) text = c.content.slice(0, 220).trim() + "…";
+  const data = {
+    date,
+    text,
+    title: c.title,
+    url: c.url ? `${c.url}#t=${Math.floor(c.start_seconds || 0)}s` : null,
+  };
+  try {
+    writeFileSync(THOUGHT_FILE, JSON.stringify(data, null, 2));
+  } catch {
+    /* disk cache is best-effort */
+  }
+  thoughtCache = { date, data };
+  return json(res, 200, data);
+}
+
 // ——— personal-guide helpers (stateless: the seeker's diary lives on their device) ———
 
 // Distill the seeker's recent questions into a one-line journey summary the
@@ -702,6 +758,7 @@ const server = createServer(async (req, res) => {
   if (req.method === "POST" && url.pathname === "/api/distill") return handleDistill(req, res);
   if (req.method === "POST" && url.pathname === "/api/next-step") return handleNextStep(req, res);
   if (req.method === "POST" && url.pathname === "/api/stt") return handleStt(req, res);
+  if (req.method === "GET" && url.pathname === "/api/thought") return handleThought(req, res);
 
   // Health check — for hosting platforms and to confirm a deploy is live.
   if (req.method === "GET" && url.pathname === "/health") {

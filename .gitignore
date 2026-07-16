@@ -17,6 +17,7 @@ data/run-all.log
 # the deploy needs the knowledge base, and the transcripts are the precious
 # output of ~64h of transcription (the repo doubles as their backup).
 data/questions.log
+data/thought.json
 data/uploads/
 data/teach-queue.json
 models/**/model_quantized.onnx

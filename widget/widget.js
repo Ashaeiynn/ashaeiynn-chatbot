@@ -1303,6 +1303,7 @@
       hideNudge();
       playSplash();
       maybeAskName();
+      fetchThought();
       if (panel.dataset.mode === "text") input.focus();
       else {
         setVState("idle");
@@ -1361,6 +1362,42 @@
     skip.addEventListener("click", () => card.remove());
     card.append(h, p, inp, go, skip);
     panel.appendChild(card);
+  }
+
+  // आज का विचार — the daily प्रसाद: one thought from the teachings, shown
+  // once per day when the app opens (same thought for every seeker that day)
+  function fetchThought() {
+    fetch(`${API}/api/thought`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((t) => {
+        if (!t?.text || journey.thoughtSeen === t.date) return;
+        journey.thoughtSeen = t.date;
+        saveJourney();
+        if (panel.dataset.mode === "text") {
+          addMessage("bot", `🙏 आज का विचार — ${t.text}`, t.url ? [{ title: t.title, timestamp: "", url: t.url }] : undefined);
+        } else {
+          const box = document.createElement("div");
+          box.className = "vcb-ans";
+          const head = document.createElement("div");
+          head.style.cssText = "color:#e8c987;font-weight:700;margin-bottom:6px;font-size:13px";
+          head.textContent = "🙏 आज का विचार";
+          box.appendChild(head);
+          box.appendChild(document.createTextNode(t.text));
+          if (t.url) {
+            const src = document.createElement("div");
+            src.className = "vcb-src";
+            const a = document.createElement("a");
+            a.href = t.url;
+            a.target = "_blank";
+            a.rel = "noopener";
+            a.textContent = t.title;
+            src.appendChild(a);
+            box.appendChild(src);
+          }
+          capAdd(box);
+        }
+      })
+      .catch(() => {});
   }
 
   // returning seeker: fetch one fresh pick matched to their whole journey

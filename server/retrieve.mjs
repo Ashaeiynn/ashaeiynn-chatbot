@@ -93,6 +93,17 @@ export async function searchMulti(questions, limit = 8) {
   }));
 }
 
+// आज का विचार: one substantive passage per day, the SAME for everyone —
+// picked deterministically from the whole knowledge by the date key.
+export function thoughtCandidate(dayKey) {
+  const good = load().filter((c) => c.content.length >= 250 && c.content.length <= 900);
+  if (!good.length) return null;
+  let h = 0;
+  for (const ch of dayKey) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const c = good[h % good.length];
+  return { content: c.content, title: c.title, url: c.url, start_seconds: c.start_seconds };
+}
+
 export function formatTimestamp(seconds) {
   const s = Math.max(0, Math.floor(Number(seconds) || 0));
   const h = Math.floor(s / 3600);
