@@ -299,6 +299,10 @@ async function handleChat(req, res) {
   const profile = payload.profile && typeof payload.profile === "object" ? payload.profile : null;
   const seekerName = typeof profile?.name === "string" ? profile.name.trim().slice(0, 40) : "";
   const seekerSummary = typeof profile?.summary === "string" ? profile.summary.trim().slice(0, 300) : "";
+  const seekerSadhana =
+    profile?.sadhana && typeof profile.sadhana.name === "string"
+      ? { name: profile.sadhana.name.trim().slice(0, 120), since: String(profile.sadhana.since || "").slice(0, 20) }
+      : null;
   const recentTopics = (Array.isArray(profile?.topics) ? profile.topics : [])
     .filter((t) => typeof t === "string" && t.trim())
     .slice(-8)
@@ -434,6 +438,8 @@ async function handleChat(req, res) {
               ? `\n[Seeker${seekerName ? ` named "${seekerName}"` : ""}${
                   recentTopics.length ? ` — recent questions (from their own device): ${recentTopics.join(" | ")}.` : "."
                 }${seekerSummary ? ` Journey so far: ${seekerSummary}` : ""}${
+                  seekerSadhana ? ` Their ongoing practice (self-declared${seekerSadhana.since ? `, since ${seekerSadhana.since}` : ""}): "${seekerSadhana.name}".` : ""
+                }${
                   seekerName ? ` Address them by name ONCE, naturally ("${seekerName} जी" in Hindi / "${seekerName} ji" in English).` : ""
                 } Where it fits naturally, connect the answer to their ongoing journey in one warm phrase; never list their history back to them.]`
               : ""
@@ -451,7 +457,9 @@ async function handleChat(req, res) {
     // Strip both regardless of order — never shown as text, never spoken.
     let followups = [];
     let checkin = "";
-    for (let pass = 0; pass < 2; pass++) {
+    let sadhana = null; // seeker declared/changed a practice ("-" = stopped)
+    let help = ""; // "screening" | "contact" — this needs a human, attach links
+    for (let pass = 0; pass < 3; pass++) {
       const fu = answer.match(/\n\s*(?:सुझाव|suggestions?)\s*[:：]\s*([^\n]+)\s*$/i);
       if (fu) {
         followups = fu[1].split("|").map((s) => s.trim()).filter(Boolean).slice(0, 3);
@@ -461,6 +469,16 @@ async function handleChat(req, res) {
       if (ci) {
         checkin = ci[1].trim().slice(0, 200);
         answer = answer.slice(0, ci.index).trimEnd();
+      }
+      const sa = answer.match(/\n\s*(?:साधना|sadhana)\s*[:：]\s*([^\n]+)\s*$/i);
+      if (sa) {
+        sadhana = sa[1].trim().slice(0, 120);
+        answer = answer.slice(0, sa.index).trimEnd();
+      }
+      const he = answer.match(/\n\s*(?:सहायता|help)\s*[:：]\s*(screening|contact)\s*$/i);
+      if (he) {
+        help = he[1].toLowerCase();
+        answer = answer.slice(0, he.index).trimEnd();
       }
     }
 
@@ -487,6 +505,13 @@ async function handleChat(req, res) {
         sources.push({ title: l.title, timestamp: "", url: l.url });
       }
     }
+    // This needs a human — attach the way to reach one.
+    if (help) {
+      const wanted = help === "screening" ? ["Book a screening", "Contact Ashaeiynn"] : ["Contact Ashaeiynn"];
+      for (const l of linkDirectory().filter((l) => wanted.includes(l.title))) {
+        if (!sources.some((s) => s.url === l.url)) sources.push({ title: l.title, timestamp: "", url: l.url });
+      }
+    }
 
     // A gentle "watch next" the seeker hasn't seen yet (their device tells us
     // what they've seen; nothing tracked here) — the next-best relevant source.
@@ -511,6 +536,7 @@ async function handleChat(req, res) {
       ...(suggest && profile ? { suggest } : {}),
       ...(followups.length ? { followups } : {}),
       ...(checkin ? { checkin } : {}),
+      ...(sadhana ? { sadhana } : {}),
     });
   } catch (err) {
     if (err instanceof LlmAuthError) {

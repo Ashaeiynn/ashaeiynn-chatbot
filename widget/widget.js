@@ -741,6 +741,7 @@
             summary: journey.summary || "",
             topics: journey.asked.slice(-8).map((a) => a.q),
             seen: journey.seen,
+            sadhana: journey.sadhana || undefined,
           },
         }),
       });
@@ -754,6 +755,10 @@
     journey.convo = history.slice(-12);
     if (data.followups?.length) journey.lastFollowups = data.followups.slice(0, 3);
     if (data.checkin) journey.checkin = data.checkin;
+    if (data.sadhana) {
+      // the guide noticed the seeker declared (or stopped) a regular practice
+      journey.sadhana = data.sadhana === "-" ? null : { name: data.sadhana, since: new Date().toISOString().slice(0, 10) };
+    }
     recordAsk(text);
     if (data.sources?.length) recordSeen(data.sources.map((s) => s.title));
     if (data.suggest) recordSeen([data.suggest.title]);
