@@ -5,14 +5,17 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ask Your Guide — Admin</title>
 <style>
-  :root{--gold:#34d399;--ink:#e8eaee;--dim:#9aa0ab;--bg:#050507;--card:rgba(16,16,24,.82);--line:#23232c}
+  :root{--gold:#d9a94f;--gold2:#f3d795;--ink:#f0e9d8;--dim:#a89b7d;--bg:#070b08;--card:rgba(18,26,19,.82);--line:#2b2e21}
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);min-height:100vh;
     font:15px/1.55 -apple-system,"Segoe UI",Roboto,"Noto Sans Devanagari",sans-serif;color:var(--ink);padding-bottom:60px}
   header{display:flex;align-items:center;gap:14px;padding:18px 22px;border-bottom:1px solid var(--line);
     position:sticky;top:0;background:rgba(5,5,7,.92);backdrop-filter:blur(8px);z-index:5}
-  header img{width:40px;height:40px;filter:drop-shadow(0 0 8px rgba(52,211,153,.5))}
-  header h1{font-size:19px;color:var(--gold);font-weight:600}
+  header img{width:40px;height:40px;
+    filter:sepia(1) saturate(2.1) hue-rotate(-10deg) brightness(1.15) drop-shadow(0 0 8px rgba(243,215,149,.5))}
+  header h1{font-size:19px;font-weight:600;font-family:Georgia,'Kohinoor Devanagari','Devanagari MT',serif;
+    background:linear-gradient(180deg,var(--gold2) 20%,var(--gold) 85%);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
   header p{font-size:12.5px;color:var(--dim)}
   .spacer{flex:1}
   button{cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);
@@ -22,7 +25,7 @@
   #refresh .ico{display:inline-block}
   #refresh.busy .ico{animation:refSpin .7s linear infinite}
   @keyframes refSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-  #refresh.done{border-color:rgba(52,211,153,.65);color:#7ee6b8}
+  #refresh.done{border-color:rgba(227,183,102,.65);color:var(--gold2)}
   main{max-width:880px;margin:0 auto;padding:20px 16px;transition:opacity .22s}
   main.refreshing{opacity:.4}
   /* stats */
@@ -34,7 +37,7 @@
   /* controls */
   #controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center}
   .chip{border-radius:999px;padding:6px 14px;font-size:13px}
-  .chip.on{background:var(--gold);color:#04231a;border-color:var(--gold);font-weight:600}
+  .chip.on{background:linear-gradient(140deg,var(--gold2),var(--gold) 70%);color:#231a04;border-color:var(--gold);font-weight:600}
   #search{flex:1;min-width:160px;background:var(--card);border:1px solid var(--line);border-radius:999px;
     padding:8px 16px;color:var(--ink);font-size:13.5px;outline:none}
   #search:focus{border-color:var(--gold)}
@@ -44,7 +47,7 @@
   .meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11.5px;color:var(--dim);margin-bottom:8px}
   .badge{border:1px solid var(--line);border-radius:999px;padding:1px 9px}
   .badge.red{border-color:#a04a33;color:#ff9d76}
-  .badge.goldb{border-color:rgba(52,211,153,.5);color:var(--gold)}
+  .badge.goldb{border-color:rgba(227,183,102,.5);color:var(--gold2)}
   .q{font-weight:600;margin-bottom:6px}
   .a{color:#c9ccd6;white-space:pre-wrap;max-height:110px;overflow:hidden;position:relative;cursor:pointer}
   .a.open{max-height:none}
@@ -65,17 +68,17 @@
     font-family:inherit}
   .teach-card input:focus,.teach-card textarea:focus{border-color:var(--gold)}
   .teach-card textarea{min-height:110px;resize:vertical}
-  .gold-btn{background:var(--gold);color:#04231a;font-weight:600;border:none}
+  .gold-btn{background:linear-gradient(140deg,var(--gold2),var(--gold) 70%);color:#231a04;font-weight:600;border:none}
   #drop{border:2px dashed var(--line);border-radius:14px;padding:26px;text-align:center;color:var(--dim);
     cursor:pointer;transition:border-color .2s;margin-bottom:10px}
   #drop.over{border-color:var(--gold);color:var(--gold)}
   .job{display:flex;gap:10px;align-items:flex-start;background:var(--card);border:1px solid var(--line);
     border-radius:12px;padding:10px 14px;margin-bottom:8px;font-size:13.5px}
   .job .st{margin-left:auto;white-space:nowrap;font-size:12px;border-radius:999px;padding:2px 10px;border:1px solid var(--line)}
-  .st.done{color:#7ee2a0;border-color:#2c5c3f}
+  .st.done{color:#9adcb4;border-color:#2c5c3f}
   .st.failed{color:#ff9d76;border-color:#a04a33}
   .st.dup{color:var(--dim)}
-  .st.working,.st.studying{color:var(--gold);border-color:rgba(52,211,153,.5)}
+  .st.working,.st.studying{color:var(--gold2);border-color:rgba(227,183,102,.5)}
   .job .d{color:var(--dim);font-size:12px;margin-top:2px}
   /* library */
   .lib{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);
@@ -99,40 +102,43 @@
   /* login */
   #login{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:10}
   #login .box{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:30px;width:min(90vw,360px);text-align:center}
-  #login img{width:52px;margin-bottom:10px;filter:drop-shadow(0 0 10px rgba(52,211,153,.5))}
-  #login h2{color:var(--gold);font-size:18px;margin-bottom:4px}
+  #login img{width:52px;margin-bottom:10px;
+    filter:sepia(1) saturate(2.1) hue-rotate(-10deg) brightness(1.15) drop-shadow(0 0 10px rgba(243,215,149,.5))}
+  #login h2{font-size:18px;margin-bottom:4px;font-family:Georgia,'Kohinoor Devanagari','Devanagari MT',serif;
+    background:linear-gradient(180deg,var(--gold2) 20%,var(--gold) 85%);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
   #login p{font-size:13px;color:var(--dim);margin-bottom:16px}
   #pw{width:100%;background:#0b0b10;border:1px solid var(--line);border-radius:10px;padding:11px 14px;
     color:var(--ink);font-size:15px;outline:none;margin-bottom:12px;text-align:center}
   #pw:focus{border-color:var(--gold)}
-  #go{width:100%;background:var(--gold);color:#04231a;font-weight:600;border:none;padding:11px}
+  #go{width:100%;background:linear-gradient(140deg,var(--gold2),var(--gold) 70%);color:#231a04;font-weight:600;border:none;padding:11px}
   #lerr{color:#ff9d76;font-size:12.5px;margin-top:10px;min-height:16px}
 
   /* ——— the chatbot's living cosmos, behind everything ——— */
   .acosmos{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;
-    background:radial-gradient(135% 100% at 50% 0%,#0b0b12 0%,#050507 55%,#000 100%)}
+    background:radial-gradient(135% 100% at 50% 0%,#0a110b 0%,#070b08 55%,#050704 100%)}
   .acosmos .neb{position:absolute;border-radius:50%;filter:blur(30px)}
   .acosmos .neb.a{width:420px;height:360px;left:-120px;top:4%;
-    background:radial-gradient(ellipse at 40% 45%,rgba(52,211,153,.07) 0%,rgba(255,255,255,.02) 45%,transparent 72%);
+    background:radial-gradient(ellipse at 40% 45%,rgba(217,169,79,.08) 0%,rgba(255,255,255,.02) 45%,transparent 72%);
     animation:aNeb 100s ease-in-out infinite alternate}
   .acosmos .neb.b{width:360px;height:320px;right:-100px;bottom:6%;
-    background:radial-gradient(ellipse at 55% 50%,rgba(52,211,153,.05) 0%,rgba(217,120,50,.04) 40%,transparent 70%);
+    background:radial-gradient(ellipse at 55% 50%,rgba(217,169,79,.06) 0%,rgba(154,220,180,.04) 40%,transparent 70%);
     animation:aNeb 130s ease-in-out infinite alternate-reverse}
   @keyframes aNeb{from{transform:translate(0,0) scale(1)}to{transform:translate(40px,26px) scale(1.15)}}
   .acosmos .stars{position:absolute;inset:-260px 0 0 0;background-repeat:repeat}
   .acosmos .stars.s1{background-size:260px 260px;opacity:.55;animation:aDrift1 240s linear infinite;
     background-image:radial-gradient(1.1px 1.1px at 24px 36px,rgba(255,255,255,.5) 50%,transparent 51%),
       radial-gradient(1px 1px at 128px 96px,rgba(255,255,255,.35) 50%,transparent 51%),
-      radial-gradient(1.3px 1.3px at 207px 166px,rgba(52,211,153,.45) 50%,transparent 51%),
+      radial-gradient(1.3px 1.3px at 207px 166px,rgba(243,215,149,.45) 50%,transparent 51%),
       radial-gradient(1px 1px at 72px 208px,rgba(255,255,255,.3) 50%,transparent 51%)}
   .acosmos .stars.s2{background-size:340px 340px;opacity:.35;animation:aDrift2 380s linear infinite;
     background-image:radial-gradient(1px 1px at 48px 128px,rgba(255,255,255,.35) 50%,transparent 51%),
       radial-gradient(.9px .9px at 224px 64px,rgba(255,255,255,.28) 50%,transparent 51%),
-      radial-gradient(1.1px 1.1px at 296px 244px,rgba(52,211,153,.32) 50%,transparent 51%)}
+      radial-gradient(1.1px 1.1px at 296px 244px,rgba(243,215,149,.32) 50%,transparent 51%)}
   @keyframes aDrift1{from{background-position:0 0}to{background-position:-260px 260px}}
   @keyframes aDrift2{from{background-position:0 0}to{background-position:340px 340px}}
   .acosmos .shoot{position:absolute;top:14%;left:-30%;width:110px;height:1.5px;border-radius:2px;
-    background:linear-gradient(90deg,transparent,rgba(255,255,255,.8),rgba(52,211,153,.85),transparent);
+    background:linear-gradient(90deg,transparent,rgba(255,244,214,.85),rgba(217,169,79,.9),transparent);
     transform:rotate(22deg);opacity:0;animation:aShoot 21s linear infinite;animation-delay:7s}
   @keyframes aShoot{0%,88%{opacity:0;transform:rotate(22deg) translateX(0)}90%{opacity:1}
     100%{opacity:0;transform:rotate(22deg) translateX(140vw)}}
@@ -211,7 +217,7 @@
     <h3>☁️ This is the live cloud bot</h3>
     <p style="margin-bottom:0">It studies <b>PDFs, Word files, text files, links and pasted text right here</b> — teach away. Only <b>videos &amp; audios</b> are transcribed on the studio Mac's portal; those lessons flow to this bot automatically (watch the studying live below when it runs).</p>
   </div>
-  <div id="teach-status" class="teach-card" style="display:none;border-color:rgba(52,211,153,.55)">
+  <div id="teach-status" class="teach-card" style="display:none;border-color:rgba(227,183,102,.55)">
     <div style="display:flex;gap:12px;align-items:center">
       <span id="ts-icon" style="font-size:22px">⏳</span>
       <div style="flex:1;min-width:0">
