@@ -67,8 +67,14 @@ mlx_whisper large-v3-turbo hi) → `data/transcripts/*.json` → `npm run ingest
 
 ## Testing
 - `npm run test:retrieval` — search quality, free
-- `npm run test:answers` — 22-question answer suite (needs server running; ~$0.15). Passing
-  bar is 22/22; a grounded answer must end with a `Source:` line, fallbacks must not.
+- `npm run test:answers` — 22-question answer suite (needs server running; self-paced
+  ~9s/question ≈ 7 min). Passing bar 22/22. Contract: grounded answers end with a
+  `Source:` line + sources[]; off-topic gets NO source line, NO sources[] (either the
+  canonical fallback or a short in-character refusal — both valid). The server strips
+  sources/chips off any sourceless answer deterministically.
+- ⚠️ QUOTA: local testing and the LIVE bot share ONE Gemini free-tier key — heavy
+  test runs throttle real members ("chatbot is very busy"). Test in off-hours, pace
+  calls ≥9s apart, and never loop the suite back-to-back.
 - Mac quirks: PATH needs `~/.local/node/bin`, `~/.local/bin`, `~/Library/Python/3.9/bin`
   (no Homebrew, no profile edits). Kill stale servers: `lsof -ti :3111 | xargs kill -9`.
   The owner's second Mac is Intel (x86_64): `onnxruntime-node` is pinned to 1.23.0 in
