@@ -220,6 +220,12 @@
     .vcb-src{font-size:12px;margin-top:8px;padding-top:8px;border-top:1px dashed rgba(52,211,153,.3);color:#9d96c4}
     .vcb-src a,.vcb-ans a{color:#34d399;text-decoration:none;font-weight:500}
     .vcb-src a:hover,.vcb-ans a:hover{text-decoration:underline}
+    .vcb-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%;
+      animation:vcbMsgIn .3s ease both}
+    .vcb-chip{background:rgba(52,211,153,.09);border:1px solid rgba(52,211,153,.4);color:#b8f5dc;
+      border-radius:999px;padding:10px 15px;font-size:13.5px;cursor:pointer;text-align:left;
+      line-height:1.35;font-family:inherit;max-width:100%}
+    .vcb-chip:hover{background:rgba(52,211,153,.18)}
 
     .vcb-form{position:relative;z-index:2;display:flex;gap:8px;padding:12px;
       border-top:1px solid rgba(52,211,153,.16);background:rgba(2,2,6,.65)}
@@ -352,6 +358,7 @@
       /* finger-sized touch targets (≥44px) for the stage controls */
       .vcb-kbd{font-size:15px;padding:12px 16px;min-height:44px}
       .vcb-lang{font-size:15px;padding:12px 18px;min-height:44px}
+      .vcb-chip{min-height:42px;font-size:14px}
       /* once an answer is on screen, reading wins: compact mic, no solar
          clutter behind the text, the answer area runs down to the controls */
       .vcb-ans{font-size:16px}
@@ -726,6 +733,7 @@
     history.push({ role: "user", content: text }, { role: "assistant", content: data.answer });
     if (history.length > 12) history.splice(0, history.length - 12);
     journey.convo = history.slice(-12);
+    if (data.followups?.length) journey.lastFollowups = data.followups.slice(0, 3);
     recordAsk(text);
     if (data.sources?.length) recordSeen(data.sources.map((s) => s.title));
     if (data.suggest) recordSeen([data.suggest.title]);
@@ -808,6 +816,7 @@
         ans.appendChild(sug);
       }
       capAdd(ans);
+      if (data.followups?.length) capAdd(chipsEl(data.followups));
       panel.dataset.hasAns = "1";
       // long answers: read from the beginning, not scrolled to the end
       cap.scrollTop += ans.getBoundingClientRect().top - cap.getBoundingClientRect().top - 4;
@@ -1109,9 +1118,10 @@
         addMessage(
           "bot",
           cameBack
-            ? `Jai Siya Ram${journey.name ? `, ${journey.name} जी` : ""} 🙏 वापसी पर स्वागत! पिछली बार आपने पूछा था: “${journey.asked[journey.asked.length - 1].q.slice(0, 80)}” — आगे जो मन में हो, पूछिए।`
+            ? `${todGreet()}${journey.name ? `, ${journey.name} जी` : ""} 🙏 वापसी पर स्वागत! पिछली बार आपने पूछा था: “${journey.asked[journey.asked.length - 1].q.slice(0, 80)}” — आगे जो मन में हो, पूछिए।`
             : `Jai Siya Ram${journey.name ? `, ${journey.name} जी` : ""} 🙏 Ask me anything about the teachings — I'll find the answer from our videos.`,
         );
+        if (cameBack && journey.lastFollowups?.length) msgs.appendChild(chipsEl(journey.lastFollowups));
       }
       input.focus();
     } else {
@@ -1165,6 +1175,36 @@
         splashTimers.push(setTimeout(() => s.remove(), 800));
       }, 2100),
     );
+  }
+
+  // ——— guide touches: time-of-day greeting + tappable follow-up questions ———
+  const todGreet = () => {
+    const h = new Date().getHours();
+    return h < 12 ? "सुप्रभात" : h < 17 ? "नमस्ते" : "शुभ संध्या";
+  };
+  function askChip(q) {
+    if (panel.dataset.mode === "text") {
+      input.value = q;
+      form.requestSubmit();
+    } else {
+      voiceAsk(q);
+    }
+  }
+  function chipsEl(followups) {
+    const wrap = document.createElement("div");
+    wrap.className = "vcb-chips";
+    followups.slice(0, 3).forEach((q) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "vcb-chip";
+      b.textContent = q;
+      b.addEventListener("click", () => {
+        wrap.remove();
+        askChip(q);
+      });
+      wrap.appendChild(b);
+    });
+    return wrap;
   }
 
   function addMessage(role, text, sources, suggest) {
@@ -1229,8 +1269,9 @@
           welcomedBack = true;
           const w = document.createElement("div");
           w.className = "vcb-you";
-          w.textContent = `🙏 वापसी पर स्वागत${journey.name ? `, ${journey.name} जी` : ""} — पिछली बार: “${journey.asked[journey.asked.length - 1].q.slice(0, 60)}”`;
+          w.textContent = `🙏 ${todGreet()}${journey.name ? `, ${journey.name} जी` : ""} — वापसी पर स्वागत! पिछली बार: “${journey.asked[journey.asked.length - 1].q.slice(0, 60)}”`;
           capAdd(w);
+          if (journey.lastFollowups?.length) capAdd(chipsEl(journey.lastFollowups));
           fetchNextStep();
         }
       }
@@ -1337,6 +1378,10 @@
       const data = await askServer(text);
       typing.remove();
       addMessage("bot", data.answer, data.sources, data.suggest);
+      if (data.followups?.length) {
+        msgs.appendChild(chipsEl(data.followups));
+        msgs.scrollTop = msgs.scrollHeight;
+      }
       speak(data.answer);
     } catch (err) {
       typing.remove();

@@ -397,7 +397,7 @@ async function handleChat(req, res) {
   }
 
   try {
-    const answer = await complete({
+    let answer = await complete({
       system: buildSystemPrompt(FALLBACK),
       cacheSystem: true,
       maxTokens: 1024,
@@ -417,6 +417,15 @@ async function handleChat(req, res) {
         },
       ],
     });
+
+    // The model ends with a "सुझाव: q1 | q2" line — strip it into tappable
+    // follow-up questions (never shown as text, never spoken).
+    let followups = [];
+    const fu = answer.match(/\n\s*(?:सुझाव|suggestions?)\s*[:：]\s*([^\n]+)\s*$/i);
+    if (fu) {
+      followups = fu[1].split("|").map((s) => s.trim()).filter(Boolean).slice(0, 3);
+      answer = answer.slice(0, fu.index).trimEnd();
+    }
 
     // Top sources so the widget can link to the exact video moments.
     const seen = new Set();
@@ -450,7 +459,12 @@ async function handleChat(req, res) {
     }
 
     writeLog({ ...logEntry, answer });
-    json(res, 200, { answer, sources, ...(suggest && profile ? { suggest } : {}) });
+    json(res, 200, {
+      answer,
+      sources,
+      ...(suggest && profile ? { suggest } : {}),
+      ...(followups.length ? { followups } : {}),
+    });
   } catch (err) {
     if (err instanceof LlmAuthError) {
       console.error("chat auth error:", err.message);
