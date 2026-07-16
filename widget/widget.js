@@ -716,10 +716,18 @@
     rec.interimResults = true;
     rec.continuous = false;
 
+    // Recognition mishears brand words — spoken "गुरुदेव" comes back as
+    // "गुरुवार" (Thursday). Fix before showing or sending. Add pairs as found.
+    const MISHEARD = [
+      [/गुरुवार/g, "गुरुदेव"],
+      [/\bguru\s?[vw]aa?r\b/gi, "Gurudev"],
+    ];
+    const fixHearing = (t) => MISHEARD.reduce((s, [re, ok]) => s.replace(re, ok), t);
+
     rec.onresult = (e) => {
       let interim = "";
       let fin = rec._final || "";
-      for (const res of e.results) (res.isFinal ? (fin += res[0].transcript) : (interim += res[0].transcript));
+      for (const res of e.results) (res.isFinal ? (fin += fixHearing(res[0].transcript)) : (interim += fixHearing(res[0].transcript)));
       rec._final = fin;
       const textNow = (fin + interim).trim();
       if (rec._target === "stage") showLive(textNow ? `🎙️ ${textNow}` : "");
