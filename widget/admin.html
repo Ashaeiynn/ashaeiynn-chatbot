@@ -169,7 +169,32 @@
   <button class="tab" data-t="teach">📚 Teach the bot</button>
   <button class="tab" data-t="library">📖 Library</button>
   <button class="tab" data-t="notify">🔔 Notify</button>
+  <button class="tab" data-t="learning">🧠 Learning</button>
 </nav>
+<main id="view-learning" hidden>
+  <div id="lstats" class="statsgrid"></div>
+  <div class="teach-card">
+    <h3>🏛️ Core lessons — proven, applied for every user</h3>
+    <p>The guide's earned wisdom about HOW to communicate. A lesson enters here only after proving itself repeatedly, across many seekers and many nights. Every answer — for old members and brand-new ones — carries these.</p>
+    <ol id="lcore" style="color:var(--ink);font-size:13.5px;line-height:1.9;margin:0 0 0 20px"></ol>
+    <p id="lcore-empty" class="empty" style="padding:16px 0">No core lessons yet — they form as daily lessons keep proving themselves over the coming nights.</p>
+  </div>
+  <div class="teach-card">
+    <h3>🌱 Today's coaching — from last night's self-review</h3>
+    <p>Fresh observations from yesterday's real conversations (including answers seekers voted 👎). The ones that keep re-appearing get promoted to core.</p>
+    <ul id="ldaily" style="color:var(--ink);font-size:13.5px;line-height:1.9;margin:0 0 0 20px"></ul>
+    <p id="ldaily-empty" class="empty" style="padding:16px 0">First self-review runs tonight at 3 AM.</p>
+  </div>
+  <div class="teach-card">
+    <h3>📈 Growth — night by night</h3>
+    <p>Each night: how many conversations it studied, what seekers voted, and how its mind changed.</p>
+    <div id="lhist"><div class="empty">The diary begins after the first review.</div></div>
+  </div>
+  <div class="teach-card">
+    <h3>How the guide learns</h3>
+    <p style="margin-bottom:0">Three levels, one hard rule. <b>1 — Per seeker:</b> each member's phone carries their journey, साधना and communication style; the guide adapts to them personally (stored only on their device). <b>2 — Daily coaching:</b> every night at 3 AM it studies the day's conversations and votes, and coaches itself. <b>3 — Core:</b> lessons proven across many seekers become permanent, serving everyone. <b>The hard rule:</b> learning changes only warmth, flow and delivery — knowledge remains Bhaiya's teachings alone, forever.</p>
+  </div>
+</main>
 <main id="view-notify" hidden>
   <div id="nstats" class="statsgrid"></div>
   <div class="teach-card">
@@ -303,12 +328,6 @@
     <input id="search" placeholder="Search a question…">
   </div>
   <div id="list"></div>
-  <div id="lessons" class="teach-card" style="display:none;margin-top:20px">
-    <h3>🎓 Communication lessons — self-learned each night</h3>
-    <p style="color:var(--dim);font-size:12.5px;margin:4px 0 8px">Every night the bot reviews the day's conversations and coaches itself on <b>how</b> to speak better. Style only — its knowledge always stays Bhaiya's teachings.</p>
-    <ul id="lessons-list" style="color:var(--ink);font-size:13px;line-height:1.8;margin:0 0 0 18px"></ul>
-    <p id="lessons-when" style="color:var(--dim);font-size:11.5px;margin-top:8px"></p>
-  </div>
 </main>
 
 <script>
@@ -350,34 +369,6 @@
     $("#login").style.display = "none";
     render();
     loadJobs(); // pick up any study work still running (shows the ● on the Teach tab)
-    fetch("/api/admin/style-notes", { headers: { "x-admin-key": key } })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        const core = d?.core || [];
-        const notes = d?.notes || [];
-        if (!core.length && !notes.length) return;
-        $("#lessons").style.display = "block";
-        const ul = $("#lessons-list");
-        ul.innerHTML = "";
-        core.forEach((n) => {
-          const li = document.createElement("li");
-          li.textContent = `🏛️ ${n}`;
-          li.title = "core lesson — proven across many seekers, applies to everyone";
-          ul.appendChild(li);
-        });
-        notes.forEach((n) => {
-          const li = document.createElement("li");
-          li.textContent = `🌱 ${n}`;
-          li.title = "today's coaching — may be promoted to core if it keeps proving itself";
-          ul.appendChild(li);
-        });
-        $("#lessons-when").textContent = d.updated
-          ? `Last self-review: ${new Date(d.updated).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · ${d.reviewed ?? "?"} conversations studied${
-              d.feedback ? ` · votes: 👍${d.feedback.up} 👎${d.feedback.down}` : ""
-            } · 🏛️ ${core.length} core / 🌱 ${notes.length} daily`
-          : "";
-      })
-      .catch(() => {});
   }
 
   function render() {
@@ -499,10 +490,73 @@
     $("#view-teach").hidden = t.dataset.t !== "teach";
     $("#view-library").hidden = t.dataset.t !== "library";
     $("#view-notify").hidden = t.dataset.t !== "notify";
+    $("#view-learning").hidden = t.dataset.t !== "learning";
     if (t.dataset.t === "teach") loadJobs();
     if (t.dataset.t === "library") loadLibrary();
     if (t.dataset.t === "notify") loadNotify();
+    if (t.dataset.t === "learning") loadLearning();
   }));
+
+  // ——— 🧠 Learning: the guide's self-taught mind and its growth ———
+  async function loadLearning() {
+    const r = await fetch("/api/admin/learning", { headers: { "x-admin-key": key() } }).catch(() => null);
+    if (!r || !r.ok) return;
+    const d = await r.json();
+    const cur = d.current || {};
+    const core = cur.core || [];
+    const daily = cur.notes || [];
+    const hist = (d.history || []).slice().reverse();
+    const when = cur.updated
+      ? new Date(cur.updated).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
+      : "—";
+    $("#lstats").innerHTML = `
+      <div class="stat"><b>${core.length}</b><span>🏛️ core lessons</span></div>
+      <div class="stat"><b>${daily.length}</b><span>🌱 today's coaching</span></div>
+      <div class="stat"><b>${cur.reviewed ?? 0}</b><span>conversations studied</span></div>
+      <div class="stat"><b>👍${cur.feedback?.up ?? 0} 👎${cur.feedback?.down ?? 0}</b><span>seeker votes</span></div>
+      <div class="stat"><b style="font-size:14px">${when}</b><span>last self-review</span></div>`;
+    // since when has each core lesson held? (history is oldest → newest)
+    const since = (lesson) => {
+      const first = (d.history || []).find((h) => (h.core || []).includes(lesson));
+      return first ? ` — held since ${first.date}` : "";
+    };
+    $("#lcore").innerHTML = "";
+    core.forEach((n) => {
+      const li = document.createElement("li");
+      li.textContent = n;
+      const s = document.createElement("span");
+      s.style.cssText = "color:var(--dim);font-size:11px";
+      s.textContent = since(n);
+      li.appendChild(s);
+      $("#lcore").appendChild(li);
+    });
+    $("#lcore-empty").style.display = core.length ? "none" : "block";
+    $("#ldaily").innerHTML = "";
+    daily.forEach((n) => {
+      const li = document.createElement("li");
+      li.textContent = n;
+      $("#ldaily").appendChild(li);
+    });
+    $("#ldaily-empty").style.display = daily.length ? "none" : "block";
+    $("#lhist").innerHTML = hist.length ? "" : `<div class="empty">The diary begins after the first review.</div>`;
+    let prevCore = null;
+    const chrono = (d.history || []); // oldest → newest, for change detection
+    const changes = new Map();
+    chrono.forEach((h) => {
+      const added = prevCore ? (h.core || []).filter((c) => !prevCore.includes(c)).length : (h.core || []).length;
+      changes.set(h.date, added);
+      prevCore = h.core || [];
+    });
+    for (const h of hist) {
+      const el = document.createElement("div");
+      el.className = "job";
+      const grew = changes.get(h.date);
+      el.innerHTML = `<span>🌙</span>
+        <div><div>${h.date} — studied ${h.reviewed} conversations · 👍${h.up} 👎${h.down}</div>
+        <div class="d">core ${h.core?.length ?? 0} · daily ${h.notes?.length ?? 0}${grew ? ` · 🏛️ +${grew} promoted` : ""}</div></div>`;
+      $("#lhist").appendChild(el);
+    }
+  }
 
   // ——— 🔔 Notify: status, history, and sending by hand ———
   async function loadNotify() {

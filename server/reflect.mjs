@@ -115,6 +115,28 @@ STRICT rules:
       2,
     ),
   );
+  // the guide's growth diary: one line per night, so the admin can watch the
+  // mind form over weeks (also how "since when" is known for each core lesson)
+  const HIST = path.join(ROOT, "data", "learning-history.json");
+  try {
+    let hist = [];
+    try {
+      hist = JSON.parse(readFileSync(HIST, "utf8"));
+    } catch {
+      /* first night */
+    }
+    hist.push({
+      date: new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(0, 10),
+      reviewed: chats.length,
+      up: upCount,
+      down: downs.length,
+      core,
+      notes,
+    });
+    writeFileSync(HIST, JSON.stringify(hist.slice(-90), null, 1));
+  } catch {
+    /* history is best-effort */
+  }
   console.log(`reflect: ${chats.length} conversations, ${downs.length} downvotes studied → core ${core.length} · daily ${notes.length}`);
 } catch (err) {
   console.error("reflect: skipped —", err?.message);

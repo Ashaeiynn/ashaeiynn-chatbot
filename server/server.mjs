@@ -1086,6 +1086,23 @@ const server = createServer(async (req, res) => {
       return json(res, 200, { notes: [] });
     }
   }
+  // ——— the Learning tab: current mind + its night-by-night growth ———
+  if (req.method === "GET" && url.pathname === "/api/admin/learning") {
+    if (!adminOk()) return;
+    let current = { core: [], notes: [] };
+    let history = [];
+    try {
+      current = JSON.parse(readFileSync(path.join(ROOT, "data", "style-notes.json"), "utf8"));
+    } catch {
+      /* no review yet */
+    }
+    try {
+      history = JSON.parse(readFileSync(path.join(ROOT, "data", "learning-history.json"), "utf8")).slice(-30);
+    } catch {
+      /* no history yet */
+    }
+    return json(res, 200, { current, history });
+  }
   if (req.method === "POST" && url.pathname === "/api/admin/correction") {
     if (!adminOk()) return;
     let body = "";
