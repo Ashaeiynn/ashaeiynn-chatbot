@@ -377,7 +377,7 @@
       .vcb-panel[data-has-ans] .vcb-spacer{flex:0 0 0px}
     }
     /* page behind the open panel must not scroll on phones */
-    .vcb-lock,.vcb-lock body{overflow:hidden;overscroll-behavior:none}
+    .vcb-lock,.vcb-lock body{overflow:hidden;overscroll-behavior:none;background:#070b08}
 
     /* ——— first-open: ask the seeker's name (kept only on this device) ——— */
     .vcb-namecard{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;
@@ -1068,15 +1068,34 @@
     try { recAudioCtx?.close(); } catch { /* already closed */ }
     recAudioCtx = null;
   }
+  // each failure explains itself — the status line tells the seeker (and us)
+  // exactly which door is closed instead of a generic "mic didn't start"
+  function micTrouble(target, err, phase) {
+    listening = false;
+    const name = err?.name || "";
+    let hint;
+    if (name === "NotAllowedError" || name === "PermissionDeniedError" || name === "SecurityError")
+      hint = "🎙️ Mic की अनुमति बंद है — iPhone Settings → Ask Your Guide → Microphone को ON कीजिए, फिर app दोबारा खोलिए";
+    else if (name === "NotFoundError" || name === "NotReadableError")
+      hint = "🎙️ Mic उपलब्ध नहीं — कोई दूसरी app mic use कर रही हो सकती है";
+    else hint = `⚠️ Mic ${phase} में रुका (${name || "unknown"}) — एक बार फिर tap कीजिए`;
+    if (target === "stage") {
+      setVState("error");
+      showLive(hint);
+    } else {
+      input.placeholder = "Mic not available — please type…";
+    }
+  }
   async function startRecording(target) {
     stopSpeaking();
+    stopLevelWatch();
+    try {
+      recStream?.getTracks?.().forEach((t) => t.stop()); // never hold two mics
+    } catch { /* none open */ }
     try {
       recStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch {
-      listening = false;
-      if (target === "stage") setVState("error");
-      else input.placeholder = "Mic not available — please type…";
-      return;
+    } catch (err) {
+      return micTrouble(target, err, "permission");
     }
     const mime = MediaRecorder.isTypeSupported("audio/mp4")
       ? "audio/mp4"
@@ -1085,10 +1104,9 @@
         : "";
     try {
       mediaRec = new MediaRecorder(recStream, mime ? { mimeType: mime } : undefined);
-    } catch {
+    } catch (err) {
       recStream.getTracks().forEach((t) => t.stop());
-      if (target === "stage") setVState("error");
-      return;
+      return micTrouble(target, err, "recorder");
     }
     recChunks = [];
     mediaRec.ondataavailable = (e) => {
@@ -1125,8 +1143,12 @@
         }
       } catch {
         if (liveEl) { liveEl.remove(); liveEl = null; }
-        if (target === "stage") setVState("error");
-        else input.placeholder = "Mic not available — please type…";
+        if (target === "stage") {
+          setVState("error");
+          showLive("⚠️ आवाज़ record हुई पर समझी नहीं जा सकी (server) — एक बार फिर बोलिए");
+        } else {
+          input.placeholder = "Couldn't transcribe — try again or type…";
+        }
       }
     };
     mediaRec.start();
@@ -1685,6 +1707,7 @@
       hideNudge();
       playSplash();
       maybeAskName();
+      thoughtShownThisOpen = false;
       fetchThought();
       bellOfferedThisOpen = false;
       maybeOfferBell();
@@ -1807,34 +1830,35 @@
 
   // आज का विचार — the daily प्रसाद: one thought from the teachings, shown
   // once per day when the app opens (same thought for every seeker that day)
+  // आज का विचार — shown on every open; TAPPING it starts a conversation on it
+  let thoughtShownThisOpen = false;
   function fetchThought() {
+    if (thoughtShownThisOpen) return;
     fetch(`${API}/api/thought`)
       .then((r) => (r.ok ? r.json() : null))
       .then((t) => {
-        if (!t?.text || journey.thoughtSeen === t.date) return;
-        journey.thoughtSeen = t.date;
-        saveJourney();
+        if (!t?.text || thoughtShownThisOpen) return;
+        thoughtShownThisOpen = true;
+        const box = document.createElement("div");
+        box.className = "vcb-ans";
+        box.style.cursor = "pointer";
+        box.setAttribute("role", "button");
+        const head = document.createElement("div");
+        head.style.cssText = "color:#e8c987;font-weight:700;margin-bottom:6px;font-size:13px";
+        head.textContent = "🙏 आज का विचार";
+        box.appendChild(head);
+        box.appendChild(document.createTextNode(t.text));
+        const src = document.createElement("div");
+        src.className = "vcb-src";
+        src.textContent = "👆 tap करें — इस विचार पर guide से बात कीजिए";
+        box.appendChild(src);
+        box.addEventListener("click", () => {
+          askChip(`आज का विचार: "${t.text.slice(0, 140)}" — इसे और गहराई से समझाइए`);
+        });
         if (panel.dataset.mode === "text") {
-          addMessage("bot", `🙏 आज का विचार — ${t.text}`, t.url ? { sources: [{ title: t.title, timestamp: "", url: t.url }] } : undefined);
+          msgs.appendChild(box);
+          msgs.scrollTop = msgs.scrollHeight;
         } else {
-          const box = document.createElement("div");
-          box.className = "vcb-ans";
-          const head = document.createElement("div");
-          head.style.cssText = "color:#e8c987;font-weight:700;margin-bottom:6px;font-size:13px";
-          head.textContent = "🙏 आज का विचार";
-          box.appendChild(head);
-          box.appendChild(document.createTextNode(t.text));
-          if (t.url) {
-            const src = document.createElement("div");
-            src.className = "vcb-src";
-            const a = document.createElement("a");
-            a.href = t.url;
-            a.target = "_blank";
-            a.rel = "noopener";
-            a.textContent = t.title;
-            src.appendChild(a);
-            box.appendChild(src);
-          }
           capAdd(box);
         }
       })
