@@ -73,8 +73,9 @@ mlx_whisper large-v3-turbo hi) → `data/transcripts/*.json` → `npm run ingest
   `getAnimations()` clock jumps; real voice tests need the owner's own browser.
 
 ## State (2026-07-16)
-Knowledge: ~180 sources / ~2,700 chunks (91 Vimeo/YouTube videos ~64h + 58 articles +
-29 site pages + Bhaiya audio/video files). 3 Vimeo videos remain password-locked (skipped).
+Knowledge: 577 sources / 8,112 chunks in data/knowledge.db (91 original Vimeo/YouTube
+videos ~64h + articles + site pages + everything taught via the admin portal through
+2026-07-16). 3 Vimeo videos remain password-locked (skipped).
 Suite 22/22. Anthropic key funded (~$5, hard cap). ElevenLabs key NOT yet added.
 Done: GitHub repo (Ashaeiynn/ashaeiynn-chatbot, private) + both Macs cloned & auto-syncing.
 Pending: Render deploy → owner's app integrates via API-INTEGRATION.md.
