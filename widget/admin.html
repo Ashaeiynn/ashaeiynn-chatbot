@@ -173,23 +173,23 @@
 <main id="view-notify" hidden>
   <div id="nstats" class="statsgrid"></div>
   <div class="teach-card">
-    <h3>📣 सूचना भेजिए — send a notification</h3>
-    <p>यह उन सभी members के फ़ोन पर जाएगी जिन्होंने 🔔 चालू किया है। कम और क़ीमती — guide फुसफुसाता है, चिल्लाता नहीं।</p>
+    <h3>📣 Send a notification</h3>
+    <p>Goes to every member who turned on 🔔. Keep it rare and precious — the guide whispers, it never shouts. (Message text in Hindi is perfect — that's the guide speaking.)</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      <button class="mini ntpl" data-title="🪔 आज पूर्णिमा है" data-body="आज का दिन साधना के लिए उत्तम है — अपना जाप अवश्य कीजिए 🙏">🪔 पूर्णिमा</button>
-      <button class="mini ntpl" data-title="🙏 नया ज्ञान आया है" data-body="Pathshala पर नया article आ गया है — पढ़िए और अपनी यात्रा आगे बढ़ाइए।" data-url="https://ashaeiynn.com/pathshala/">📖 नया article</button>
-      <button class="mini ntpl" data-title="🙏 Ashaeiynn से संदेश" data-body="">✍️ ख़ुद लिखिए</button>
+      <button class="mini ntpl" data-title="🪔 आज पूर्णिमा है" data-body="आज का दिन साधना के लिए उत्तम है — अपना जाप अवश्य कीजिए 🙏">🪔 Purnima</button>
+      <button class="mini ntpl" data-title="🙏 नया ज्ञान आया है" data-body="Pathshala पर नया article आ गया है — पढ़िए और अपनी यात्रा आगे बढ़ाइए।" data-url="https://ashaeiynn.com/pathshala/">📖 New article</button>
+      <button class="mini ntpl" data-title="🙏 Ashaeiynn से संदेश" data-body="">✍️ Write your own</button>
     </div>
-    <input type="text" id="ntitle" placeholder="Title — जैसे: 🪔 कल पूर्णिमा है" maxlength="80">
-    <textarea id="nbody" placeholder="संदेश — छोटा और गर्मजोशी भरा (300 अक्षर तक)" maxlength="300" style="min-height:80px"></textarea>
-    <input type="text" id="nurl" placeholder="Link (optional) — tap करने पर कहाँ खुले, ख़ाली = guide">
-    <button class="gold-btn" id="nsend" style="width:100%;padding:11px">📣 सबको भेजिए · Send to all</button>
+    <input type="text" id="ntitle" placeholder="Title — e.g. 🪔 कल पूर्णिमा है" maxlength="80">
+    <textarea id="nbody" placeholder="Message — short and warm (up to 300 characters)" maxlength="300" style="min-height:80px"></textarea>
+    <input type="text" id="nurl" placeholder="Link (optional) — where a tap opens; empty = the guide">
+    <button class="gold-btn" id="nsend" style="width:100%;padding:11px">📣 Send to all</button>
     <p id="nresult" style="min-height:18px;margin-top:8px;font-size:13px"></p>
   </div>
   <div class="teach-card">
-    <h3>🗓️ भेजी गई सूचनाएँ — history</h3>
-    <p>हर सूचना — तारीख़, संदेश, कितनों तक पहुँची। "auto" यानी guide ने स्वयं भेजी (रविवार का ज्ञान / पर्व की पूर्व-सूचना)।</p>
-    <div id="nlog"><div class="empty">अभी तक कोई सूचना नहीं भेजी गई</div></div>
+    <h3>🗓️ Sent notifications — history</h3>
+    <p>Every notification — date, message, how many phones it reached. 🤖 auto = the guide sent it itself (Sunday's article / festival eves).</p>
+    <div id="nlog"><div class="empty">no notifications sent yet</div></div>
   </div>
 </main>
 <main id="view-library" hidden>
@@ -492,21 +492,21 @@
     if (!r || !r.ok) return;
     const d = await r.json();
     $("#nstats").innerHTML = `
-      <div class="stat"><b>${d.ready ? "🟢" : "🔴"}</b><span>${d.ready ? "system ready" : "setup बाकी है"}</span></div>
+      <div class="stat"><b>${d.ready ? "🟢" : "🔴"}</b><span>${d.ready ? "system ready" : "setup pending"}</span></div>
       <div class="stat"><b>${d.subscribers}</b><span>🔔 subscribed phones</span></div>
-      <div class="stat"><b>${(d.log || []).length}</b><span>सूचनाएँ भेजी गईं</span></div>`;
+      <div class="stat"><b>${(d.log || []).length}</b><span>notifications sent</span></div>`;
     $("#nsend").disabled = !d.ready;
-    if (!d.ready) $("#nresult").textContent = "⚠️ push system अभी configure नहीं हुआ — Claude से 'notifications setup पूरा करो' कहिए";
+    if (!d.ready) $("#nresult").textContent = "⚠️ Push system not configured yet — ask Claude to finish the notifications setup";
     const log = d.log || [];
-    $("#nlog").innerHTML = log.length ? "" : `<div class="empty">अभी तक कोई सूचना नहीं भेजी गई</div>`;
+    $("#nlog").innerHTML = log.length ? "" : `<div class="empty">no notifications sent yet</div>`;
     for (const e of log) {
       const el = document.createElement("div");
       el.className = "job";
       const when = new Date(e.at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
       el.innerHTML = `<span>${e.source === "auto" ? "🤖" : "📣"}</span>
         <div><div>${esc(e.title)} — ${esc(e.body)}</div>
-        <div class="d">${when} · ${e.source === "auto" ? "guide ने स्वयं भेजी" : "admin ने भेजी"}${e.url ? ` · link: ${esc(e.url)}` : ""}</div></div>
-        <span class="st done">पहुँची: ${e.sent}/${e.of}</span>`;
+        <div class="d">${when} · ${e.source === "auto" ? "sent by the guide (auto)" : "sent by admin"}${e.url ? ` · link: ${esc(e.url)}` : ""}</div></div>
+        <span class="st done">reached ${e.sent}/${e.of}</span>`;
       $("#nlog").appendChild(el);
     }
   }
@@ -519,10 +519,10 @@
   $("#nsend").addEventListener("click", async () => {
     const title = $("#ntitle").value.trim();
     const body = $("#nbody").value.trim();
-    if (!body) { $("#nresult").textContent = "⚠️ संदेश लिखिए पहले"; return; }
-    if (!confirm(`यह सूचना सभी 🔔 subscribed phones पर जाएगी:\n\n${title}\n${body}\n\nभेजें?`)) return;
+    if (!body) { $("#nresult").textContent = "⚠️ Write a message first"; return; }
+    if (!confirm(`This notification will go to ALL 🔔 subscribed phones:\n\n${title}\n${body}\n\nSend?`)) return;
     $("#nsend").disabled = true;
-    $("#nresult").textContent = "भेजी जा रही है…";
+    $("#nresult").textContent = "Sending…";
     try {
       const r = await fetch("/api/admin/push/send", {
         method: "POST",
@@ -531,36 +531,36 @@
       });
       const d = await r.json();
       $("#nresult").textContent = r.ok
-        ? `✅ भेज दी — ${d.sent}/${d.of} phones तक पहुँची${d.removed ? ` (${d.removed} पुराने हटाए)` : ""}`
-        : `❌ ${d.error || "भेज नहीं पाए"}`;
+        ? `✅ Sent — reached ${d.sent}/${d.of} phones${d.removed ? ` (${d.removed} stale removed)` : ""}`
+        : `❌ ${d.error || "could not send"}`;
       if (r.ok) { $("#nbody").value = ""; loadNotify(); }
     } catch {
-      $("#nresult").textContent = "❌ server से संपर्क नहीं हो पाया";
+      $("#nresult").textContent = "❌ could not reach the server";
     }
     $("#nsend").disabled = false;
   });
 
   const KIND_ICON = { media: "🎧", document: "📄", "video-link": "🎬", article: "🌐", note: "✍️", forget: "🗑️" };
   const ST_LABEL = {
-    queued: "⏳ कतार में · waiting",
-    working: "⚙️ पढ़ा जा रहा है · reading",
-    ready: "📖 पढ़ लिया · study next",
-    studying: "🧠 अध्ययन जारी · studying",
-    done: "✅ सीख लिया · learnt",
-    failed: "❌ नहीं सीख पाया · failed",
-    dup: "🔁 पहले से सीखा हुआ",
+    queued: "⏳ waiting",
+    working: "⚙️ reading",
+    ready: "📖 read · study next",
+    studying: "🧠 studying",
+    done: "✅ learnt",
+    failed: "❌ failed",
+    dup: "🔁 already learnt",
   };
 
   // raw errors → words the admin can act on (raw kept in brackets for support)
   function friendlyError(raw) {
     const r = String(raw || "");
     if (/textutil|studio Mac|transcrib|mlx_whisper|Videos and audios/i.test(r))
-      return "यह file type सिर्फ़ studio Mac के portal से सिखाई जा सकती है (.doc/.rtf/audio/video)। PDF या .docx बनाकर यहीं दोबारा upload कर सकते हैं।";
+      return "This file type (.doc/.rtf/audio/video) can only be taught from the studio Mac's portal. Save it as PDF or .docx and upload it here again.";
     if (/No readable text/i.test(r))
-      return "File में पढ़ने लायक text नहीं मिला — शायद यह scan/photo है। Text वाली PDF/docx upload कीजिए।";
-    if (/Unsupported file/i.test(r)) return "यह file type support नहीं है — PDF, docx, txt, या link भेजिए।";
-    if (/too large|too long/i.test(r)) return "File बहुत बड़ी है — छोटे हिस्सों में upload कीजिए।";
-    if (/fetch|network|ENOTFOUND|timeout/i.test(r)) return "Link खुल नहीं पाया — internet/link जाँच कर दोबारा try कीजिए।";
+      return "No readable text found — this may be a scan/photo. Upload a PDF/docx that contains real text.";
+    if (/Unsupported file/i.test(r)) return "This file type isn't supported — send PDF, docx, txt, or a link.";
+    if (/too large|too long/i.test(r)) return "File is too large — split it and upload in smaller parts.";
+    if (/fetch|network|ENOTFOUND|timeout/i.test(r)) return "The link couldn't be opened — check the link/internet and try again.";
     return "";
   }
 
@@ -585,7 +585,7 @@
       const prev = jobStatusSeen.get(j.id);
       if (prev && prev !== "done" && j.status === "done" && j.kind !== "forget") {
         celebrateUntil = Date.now() + 9000;
-        showStatus("🎉", `"${j.title}" — बॉट ने सीख लिया!`, "यह ज्ञान अब जवाबों में शामिल है — पूछकर test कीजिए");
+        showStatus("🎉", `"${j.title}" — the bot has learnt it!`, "This knowledge is now part of its answers — try asking about it");
       }
       jobStatusSeen.set(j.id, j.status);
     }
@@ -604,7 +604,7 @@
     if (activeN) {
       const working = jobs.find((j) => j.status === "working");
       if (t.studying)
-        showStatus("📖", "पढ़ाई चल रही है — studying (building searchable memory)…",
+        showStatus("📖", "Studying — building searchable memory…",
           "usually ~7 minutes · the bot keeps answering with its old knowledge meanwhile");
       else if (working)
         showStatus(working.kind === "media" || working.kind === "video-link" ? "🎧" : "⚙️",
@@ -639,7 +639,7 @@
         const f = friendlyError(j.detail);
         detail = f ? `${f}${j.detail ? `  (${j.detail})` : ""}` : j.detail;
       }
-      if (j.status === "done" && !detail) detail = "बॉट अब इस ज्ञान से जवाब दे रहा है — पूछकर देखिए";
+      if (j.status === "done" && !detail) detail = "the bot now answers with this knowledge — try asking";
       rows.push({ icon: KIND_ICON[j.kind] || "📦", title: j.title, detail, cls: j.status, label: ST_LABEL[j.status] || j.status });
     }
     $("#jobs").innerHTML = rows.length ? "" : `<div class="empty">nothing yet — add something above</div>`;

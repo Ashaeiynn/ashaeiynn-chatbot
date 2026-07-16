@@ -601,7 +601,7 @@
         <div class="vcb-ava"><img src="${API}/logo.png?v=3" alt=""/></div>
         <div><div class="vcb-title">${TITLE}</div><div class="vcb-sub">Ashaeiynn · answers from the teachings</div></div>
       </div>
-      <div><button class="vcb-bell" aria-label="Reminders" title="ज़रूरी अवसरों की सूचनाएँ">🔔</button><button class="vcb-voice" aria-label="Voice replies" title="Voice replies">🔇</button><button class="vcb-close" aria-label="Close">×</button></div>
+      <div><button class="vcb-bell" aria-label="Reminders" title="Reminders on special occasions">🔔</button><button class="vcb-voice" aria-label="Voice replies" title="Voice replies">🔇</button><button class="vcb-close" aria-label="Close">×</button></div>
     </div>
     <div class="vcb-bless"><span>${SPLASH}</span></div>
     <div class="vcb-stage">
@@ -1626,15 +1626,15 @@
     card.className = "vcb-ans vcb-bellask";
     const p = document.createElement("p");
     p.textContent =
-      "🔔 क्या guide आपको ज़रूरी अवसरों पर याद दिलाए? रविवार का नया ज्ञान और पूर्णिमा/नवरात्रि की पूर्व-सूचना — बस इतना ही, रोज़ परेशान नहीं करेंगे।";
+      "🔔 Would you like gentle reminders from your guide? Sunday's new teaching and Purnima/Navratri alerts — that's all, never daily noise.";
     const row = document.createElement("div");
     row.className = "vcb-bellrow";
     const yes = document.createElement("button");
     yes.className = "vcb-bellyes";
-    yes.textContent = "हाँ, ज़रूर 🙏";
+    yes.textContent = "Yes, please 🙏";
     const no = document.createElement("button");
     no.className = "vcb-bellno";
-    no.textContent = "अभी नहीं";
+    no.textContent = "Not now";
     yes.addEventListener("click", () => {
       card.remove();
       pushSubscribe().catch(() => {});
