@@ -810,10 +810,10 @@
             a.href = s.url;
             a.target = "_blank";
             a.rel = "noopener";
-            a.textContent = `${s.title} (${s.timestamp})`;
+            a.textContent = srcLabel(s);
             src.appendChild(a);
           } else {
-            src.append(`${s.title} (${s.timestamp})`);
+            src.append(srcLabel(s));
           }
         });
         ans.appendChild(src);
@@ -1201,6 +1201,8 @@
     const h = new Date().getHours();
     return h < 12 ? "सुप्रभात" : h < 17 ? "नमस्ते" : "शुभ संध्या";
   };
+  // channel/page links have no timestamp — show just the title then
+  const srcLabel = (s) => (s.timestamp ? `${s.title} (${s.timestamp})` : s.title);
   function askChip(q) {
     if (panel.dataset.mode === "text") {
       input.value = q;
@@ -1241,10 +1243,10 @@
           a.href = s.url;
           a.target = "_blank";
           a.rel = "noopener";
-          a.textContent = `${s.title} (${s.timestamp})`;
+          a.textContent = srcLabel(s);
           src.appendChild(a);
         } else {
-          src.append(`${s.title} (${s.timestamp})`);
+          src.append(srcLabel(s));
         }
       });
       el.appendChild(src);

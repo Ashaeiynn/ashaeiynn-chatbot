@@ -44,6 +44,29 @@ const MISHEARD = [
 ];
 const fixMishearings = (t) => MISHEARD.reduce((s, [re, ok]) => s.replace(re, ok), t);
 
+// ——— the address book (data/links.json): channels & standing pages the bot
+// can hand out when a seeker asks for a link. Re-read every 10 minutes.
+const LINK_ASK =
+  /\b(link|url|share|instagram|insta|reels?|youtube|channel|website|facebook|fb)\b|लिंक|लींक|इंस्टाग्राम|इंस्टा|रील|यूट्यूब|चैनल|वेबसाइट|फेसबुक|पाठशाला|pathshala/i;
+let linksCache = { at: 0, links: [] };
+function linkDirectory() {
+  if (Date.now() - linksCache.at < 600_000) return linksCache.links;
+  let links = [];
+  try {
+    links = JSON.parse(readFileSync(path.join(ROOT, "data", "links.json"), "utf8")).links || [];
+  } catch {
+    /* no address book */
+  }
+  linksCache = { at: Date.now(), links };
+  return links;
+}
+function matchLinks(message) {
+  const m = message.toLowerCase();
+  return linkDirectory()
+    .filter((l) => Array.isArray(l.keywords) && l.keywords.some((k) => m.includes(String(k).toLowerCase())))
+    .slice(0, 3);
+}
+
 const ADMIN_KEY = process.env.ADMIN_KEY || "";
 const LIBRARY_KEY = process.env.LIBRARY_KEY || ""; // second lock: the Library tab
 
@@ -255,6 +278,7 @@ async function handleChat(req, res) {
 
   const message = fixMishearings(String(payload.message ?? "").trim().slice(0, 2000));
   if (!message) return json(res, 400, { error: "Empty message." });
+  const wantsLink = LINK_ASK.test(message);
 
   // Recent conversation history from the widget (kept short on purpose).
   const history = Array.isArray(payload.history)
@@ -292,7 +316,7 @@ async function handleChat(req, res) {
   const spokenHindi =
     payload.via === "voice" && String(payload.lang || "").toLowerCase().startsWith("hi");
   const isDevanagari = /[ऀ-ॿ]/.test(message);
-  const hinglishHits = (message.toLowerCase().match(/\b(kya|kaun|kaise|kyu|kyon|kab|kahan|batao|bataiye|mujhe|humko|nahi|nahin|hota|hoti|hai|hain|karna|kare|krna|wala|matlab)\b/g) || []).length;
+  const hinglishHits = (message.toLowerCase().match(/\b(kya|kaun|kaise|kyu|kyon|kab|kahan|batao|bataiye|mujhe|humko|nahi|nahin|hota|hoti|hai|hain|karna|kare|krna|wala|wali|bhejo|bhej|matlab)\b/g) || []).length;
   const wantsHindi = spokenHindi || isDevanagari || hinglishHits >= 1;
 
   // Bhaiya-approved answers: a question meaning the same as an edited one gets
@@ -413,6 +437,10 @@ async function handleChat(req, res) {
                   seekerName ? ` Address them by name ONCE, naturally ("${seekerName} जी" in Hindi / "${seekerName} ji" in English).` : ""
                 } Where it fits naturally, connect the answer to their ongoing journey in one warm phrase; never list their history back to them.]`
               : ""
+          }${
+            wantsLink
+              ? `\n[The seeker asked for a link. The app automatically shows tappable links right below your answer (the sources, and the requested channel/page). Warmly point there — "नीचे लिंक दिया है, tap करके देखिए" in Hindi or "the link is right below" in English — never say you cannot share links, and never read a URL out loud.]`
+              : ""
           }`,
         },
       ],
@@ -431,6 +459,7 @@ async function handleChat(req, res) {
     const seen = new Set();
     const sources = [];
     for (const c of chunks) {
+      if (c.title.startsWith("Bhaiya's approved answer")) continue; // internal, not a linkable source
       const key = `${c.title}@${c.start_seconds}`;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -440,6 +469,14 @@ async function handleChat(req, res) {
         url: c.url ? `${c.url}#t=${Math.floor(c.start_seconds)}s` : null,
       });
       if (sources.length >= 3) break;
+    }
+
+    // Asked for a link? Add the matching channels/pages from the address book.
+    if (wantsLink) {
+      for (const l of matchLinks(message)) {
+        if (sources.some((s) => s.url === l.url)) continue;
+        sources.push({ title: l.title, timestamp: "", url: l.url });
+      }
     }
 
     // A gentle "watch next" the seeker hasn't seen yet (their device tells us

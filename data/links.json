@@ -1,0 +1,40 @@
+{
+  "_note": "The bot's address book: when a seeker asks for a link (Instagram, YouTube, website…), matching entries appear as tappable links under the answer. Specific videos/articles already link automatically from the knowledge base — this file covers channels and standing pages. Add entries freely; keywords are matched against the question (English + Hindi).",
+  "links": [
+    {
+      "title": "Ashaeiynn website",
+      "url": "https://ashaeiynn.com/",
+      "keywords": ["website", "site", "वेबसाइट", "साइट"]
+    },
+    {
+      "title": "Asha Pathshala — articles",
+      "url": "https://ashaeiynn.com/pathshala/",
+      "keywords": ["pathshala", "पाठशाला", "article", "articles", "आर्टिकल", "लेख"]
+    },
+    {
+      "title": "YouTube — @Ashaeiynn",
+      "url": "https://www.youtube.com/@Ashaeiynn",
+      "keywords": ["youtube", "यूट्यूब", "channel", "चैनल", "video", "videos", "वीडियो"]
+    },
+    {
+      "title": "Instagram — @ashaeiynn",
+      "url": "https://www.instagram.com/ashaeiynn/",
+      "keywords": ["instagram", "insta", "इंस्टाग्राम", "इंस्टा", "reel", "reels", "रील", "रील्स", "post", "पोस्ट"]
+    },
+    {
+      "title": "Facebook — Ashaeiynn",
+      "url": "https://www.facebook.com/Ashaeiynn",
+      "keywords": ["facebook", "फेसबुक", "fb"]
+    },
+    {
+      "title": "Book a screening",
+      "url": "https://ashaeiynn.com/asha-screening/",
+      "keywords": ["screening", "स्क्रीनिंग", "book", "booking", "बुक", "appointment", "अपॉइंटमेंट"]
+    },
+    {
+      "title": "Contact Ashaeiynn",
+      "url": "https://ashaeiynn.com/contact-us/",
+      "keywords": ["contact", "संपर्क", "phone", "फ़ोन", "address", "पता"]
+    }
+  ]
+}
