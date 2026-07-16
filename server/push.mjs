@@ -109,15 +109,13 @@ export async function autoWhispers(upcoming) {
   if (hour < 8) return; // let people wake up
   const st = load(STATE, {});
   // Sunday: the week's new Pathshala article
+  // auto messages are English by the owner's rule — titles above all
   if (ist.getUTCDay() === 0 && hour >= 9 && st.sunday !== today) {
     st.sunday = today;
     save(STATE, st);
     await sendToAll(
-      { hi: "🙏 रविवार का ज्ञान", en: "🙏 Sunday's Teaching" },
-      {
-        hi: "इस सप्ताह का नया Pathshala article आ गया है — पढ़िए और अपनी यात्रा आगे बढ़ाइए।",
-        en: "This week's new Pathshala article has arrived — read it and take your journey forward.",
-      },
+      "🙏 Sunday's Teaching",
+      "This week's new Pathshala article has arrived — read it and take your journey forward.",
       "https://ashaeiynn.com/pathshala/",
       "auto",
     ).catch(() => {});
@@ -130,17 +128,12 @@ export async function autoWhispers(upcoming) {
     st[k] = today;
     save(STATE, st);
     const days = Math.round((new Date(e.end) - new Date(e.start)) / 864e5) + 1;
+    const name = e.nameEn || e.name;
     await sendToAll(
-      "🪔 " + e.name,
+      "🪔 " + name,
       days > 1
-        ? {
-            hi: `कल से ${e.name} आरंभ हो रही है (${days} दिन)। साधना की तैयारी कर लीजिए 🙏`,
-            en: `${e.name} begins tomorrow (${days} days). Prepare for your sadhana 🙏`,
-          }
-        : {
-            hi: `कल ${e.name} है — साधना के लिए उत्तम दिन 🙏`,
-            en: `Tomorrow is ${e.name} — an excellent day for sadhana 🙏`,
-          },
+        ? `${name} begins tomorrow (${days} days). Prepare for your sadhana 🙏`
+        : `Tomorrow is ${name} — an excellent day for sadhana 🙏`,
       "/",
       "auto",
     ).catch(() => {});
