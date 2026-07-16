@@ -78,4 +78,8 @@ videos ~64h + articles + site pages + everything taught via the admin portal thr
 2026-07-16). 3 Vimeo videos remain password-locked (skipped).
 Suite 22/22. Anthropic key funded (~$5, hard cap). ElevenLabs key NOT yet added.
 Done: GitHub repo (Ashaeiynn/ashaeiynn-chatbot, private) + both Macs cloned & auto-syncing.
-Pending: Render deploy → owner's app integrates via API-INTEGRATION.md.
+Live: https://ashaeiynn-chatbot.onrender.com (Render, auto-deploys from GitHub;
+keep-alive Action pings /health every 10 min). Runtime state (questions.log,
+corrections.json) follows LOG_DIR — on free tier it resets ~daily; DEPLOY.md
+has the $7/mo Starter+disk recipe that makes it permanent.
+Pending: owner's app integrates via API-INTEGRATION.md.

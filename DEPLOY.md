@@ -24,6 +24,30 @@ You only deploy **after** the knowledge base is built (`npm run ingest` has prod
 Confirm a deploy is live by opening `https://<your-host>/health` — it returns
 `{"ok":true,...,"knowledgeBase":"built"}`.
 
+## Making the live bot permanent (before sharing with members)
+
+The **free** Render tier restarts the service at least daily and wipes its local
+files back to the deploy image each time. The knowledge itself is safe (it ships
+from GitHub on every deploy), but two things written on the live server are lost
+at each restart: **approved answers** edited in the admin portal
+(`corrections.json`) and the **question history** (`questions.log`). The
+keep-alive GitHub Action only prevents cold starts — not these daily wipes.
+
+The permanent fix (Render dashboard, ~5 minutes):
+1. Service → **Settings → Instance Type → Starter ($7/mo)** — required for disks;
+   also removes spin-downs and the daily-restart behaviour of free instances.
+2. Service → **Disks → Add Disk**: name `chatbot-state`, mount path `/var/data`,
+   size 1 GB (~$0.25/mo).
+3. Service → **Environment**: add `LOG_DIR=/var/data`, save (it redeploys).
+
+From then on approved answers and the full question history survive every
+restart and redeploy, forever. The disk is seeded automatically from the repo's
+`corrections.json` on first boot.
+
+Staying on the free tier is fine for casual testing, but expect corrections and
+question history to reset roughly daily — in that mode, make corrections and
+teach only from the studio Mac (that path goes through GitHub and is permanent).
+
 ## Option A — Docker (most reliable; works anywhere)
 
 A `Dockerfile` is included. It bakes in the knowledge base and the embedding model.

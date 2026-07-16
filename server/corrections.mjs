@@ -2,12 +2,24 @@
 // gave. Edits are stored with an embedding of their question — an incoming
 // question that means the same thing gets the approved answer verbatim, and a
 // merely similar one sees it as the highest-authority excerpt.
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from "node:fs";
 import path from "node:path";
 import { ROOT } from "./env.mjs";
 import { embedQuery, cosine } from "./embed.mjs";
 
-const FILE = path.join(ROOT, "data", "corrections.json");
+// Corrections are runtime state (edited in the live admin portal). Like
+// questions.log they live under LOG_DIR when it is set — on the cloud host
+// that's a mounted persistent disk, so approved answers survive restarts and
+// redeploys. A fresh disk is seeded once from the repo's own copy.
+const REPO_FILE = path.join(ROOT, "data", "corrections.json");
+const STATE_DIR = process.env.LOG_DIR || path.join(ROOT, "data");
+const FILE = path.join(STATE_DIR, "corrections.json");
+try {
+  mkdirSync(STATE_DIR, { recursive: true });
+  if (FILE !== REPO_FILE && !existsSync(FILE) && existsSync(REPO_FILE)) copyFileSync(REPO_FILE, FILE);
+} catch {
+  /* best effort — load() tolerates a missing file */
+}
 
 // Same-meaning questions score ~0.9+ with e5 query embeddings; related ~0.8+.
 export const DIRECT_MATCH = Number(process.env.CORRECTION_DIRECT || 0.9);
