@@ -766,6 +766,15 @@ const server = createServer(async (req, res) => {
     if (!adminOk()) return;
     return json(res, 200, { items: await listCorrections() });
   }
+  // ——— nightly self-learned communication lessons (style only, read-only) ———
+  if (req.method === "GET" && url.pathname === "/api/admin/style-notes") {
+    if (!adminOk()) return;
+    try {
+      return json(res, 200, JSON.parse(readFileSync(path.join(ROOT, "data", "style-notes.json"), "utf8")));
+    } catch {
+      return json(res, 200, { notes: [] });
+    }
+  }
   if (req.method === "POST" && url.pathname === "/api/admin/correction") {
     if (!adminOk()) return;
     let body = "";
