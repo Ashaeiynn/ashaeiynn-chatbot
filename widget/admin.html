@@ -168,7 +168,30 @@
   <button class="tab on" data-t="questions">🗨️ Questions</button>
   <button class="tab" data-t="teach">📚 Teach the bot</button>
   <button class="tab" data-t="library">📖 Library</button>
+  <button class="tab" data-t="notify">🔔 Notify</button>
 </nav>
+<main id="view-notify" hidden>
+  <div id="nstats" class="statsgrid"></div>
+  <div class="teach-card">
+    <h3>📣 सूचना भेजिए — send a notification</h3>
+    <p>यह उन सभी members के फ़ोन पर जाएगी जिन्होंने 🔔 चालू किया है। कम और क़ीमती — guide फुसफुसाता है, चिल्लाता नहीं।</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="mini ntpl" data-title="🪔 आज पूर्णिमा है" data-body="आज का दिन साधना के लिए उत्तम है — अपना जाप अवश्य कीजिए 🙏">🪔 पूर्णिमा</button>
+      <button class="mini ntpl" data-title="🙏 नया ज्ञान आया है" data-body="Pathshala पर नया article आ गया है — पढ़िए और अपनी यात्रा आगे बढ़ाइए।" data-url="https://ashaeiynn.com/pathshala/">📖 नया article</button>
+      <button class="mini ntpl" data-title="🙏 Ashaeiynn से संदेश" data-body="">✍️ ख़ुद लिखिए</button>
+    </div>
+    <input type="text" id="ntitle" placeholder="Title — जैसे: 🪔 कल पूर्णिमा है" maxlength="80">
+    <textarea id="nbody" placeholder="संदेश — छोटा और गर्मजोशी भरा (300 अक्षर तक)" maxlength="300" style="min-height:80px"></textarea>
+    <input type="text" id="nurl" placeholder="Link (optional) — tap करने पर कहाँ खुले, ख़ाली = guide">
+    <button class="gold-btn" id="nsend" style="width:100%;padding:11px">📣 सबको भेजिए · Send to all</button>
+    <p id="nresult" style="min-height:18px;margin-top:8px;font-size:13px"></p>
+  </div>
+  <div class="teach-card">
+    <h3>🗓️ भेजी गई सूचनाएँ — history</h3>
+    <p>हर सूचना — तारीख़, संदेश, कितनों तक पहुँची। "auto" यानी guide ने स्वयं भेजी (रविवार का ज्ञान / पर्व की पूर्व-सूचना)।</p>
+    <div id="nlog"><div class="empty">अभी तक कोई सूचना नहीं भेजी गई</div></div>
+  </div>
+</main>
 <main id="view-library" hidden>
   <div id="liblock" class="teach-card" style="max-width:420px;margin:34px auto;text-align:center" hidden>
     <h3>🔒 Library locked</h3>
@@ -457,9 +480,65 @@
     $("#view-questions").hidden = t.dataset.t !== "questions";
     $("#view-teach").hidden = t.dataset.t !== "teach";
     $("#view-library").hidden = t.dataset.t !== "library";
+    $("#view-notify").hidden = t.dataset.t !== "notify";
     if (t.dataset.t === "teach") loadJobs();
     if (t.dataset.t === "library") loadLibrary();
+    if (t.dataset.t === "notify") loadNotify();
   }));
+
+  // ——— 🔔 Notify: status, history, and sending by hand ———
+  async function loadNotify() {
+    const r = await fetch("/api/admin/push", { headers: { "x-admin-key": key() } }).catch(() => null);
+    if (!r || !r.ok) return;
+    const d = await r.json();
+    $("#nstats").innerHTML = `
+      <div class="stat"><b>${d.ready ? "🟢" : "🔴"}</b><span>${d.ready ? "system ready" : "setup बाकी है"}</span></div>
+      <div class="stat"><b>${d.subscribers}</b><span>🔔 subscribed phones</span></div>
+      <div class="stat"><b>${(d.log || []).length}</b><span>सूचनाएँ भेजी गईं</span></div>`;
+    $("#nsend").disabled = !d.ready;
+    if (!d.ready) $("#nresult").textContent = "⚠️ push system अभी configure नहीं हुआ — Claude से 'notifications setup पूरा करो' कहिए";
+    const log = d.log || [];
+    $("#nlog").innerHTML = log.length ? "" : `<div class="empty">अभी तक कोई सूचना नहीं भेजी गई</div>`;
+    for (const e of log) {
+      const el = document.createElement("div");
+      el.className = "job";
+      const when = new Date(e.at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+      el.innerHTML = `<span>${e.source === "auto" ? "🤖" : "📣"}</span>
+        <div><div>${esc(e.title)} — ${esc(e.body)}</div>
+        <div class="d">${when} · ${e.source === "auto" ? "guide ने स्वयं भेजी" : "admin ने भेजी"}${e.url ? ` · link: ${esc(e.url)}` : ""}</div></div>
+        <span class="st done">पहुँची: ${e.sent}/${e.of}</span>`;
+      $("#nlog").appendChild(el);
+    }
+  }
+  document.querySelectorAll(".ntpl").forEach((b) => b.addEventListener("click", () => {
+    $("#ntitle").value = b.dataset.title || "";
+    $("#nbody").value = b.dataset.body || "";
+    $("#nurl").value = b.dataset.url || "";
+    $("#nbody").focus();
+  }));
+  $("#nsend").addEventListener("click", async () => {
+    const title = $("#ntitle").value.trim();
+    const body = $("#nbody").value.trim();
+    if (!body) { $("#nresult").textContent = "⚠️ संदेश लिखिए पहले"; return; }
+    if (!confirm(`यह सूचना सभी 🔔 subscribed phones पर जाएगी:\n\n${title}\n${body}\n\nभेजें?`)) return;
+    $("#nsend").disabled = true;
+    $("#nresult").textContent = "भेजी जा रही है…";
+    try {
+      const r = await fetch("/api/admin/push/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-key": key() },
+        body: JSON.stringify({ title, body, url: $("#nurl").value.trim() }),
+      });
+      const d = await r.json();
+      $("#nresult").textContent = r.ok
+        ? `✅ भेज दी — ${d.sent}/${d.of} phones तक पहुँची${d.removed ? ` (${d.removed} पुराने हटाए)` : ""}`
+        : `❌ ${d.error || "भेज नहीं पाए"}`;
+      if (r.ok) { $("#nbody").value = ""; loadNotify(); }
+    } catch {
+      $("#nresult").textContent = "❌ server से संपर्क नहीं हो पाया";
+    }
+    $("#nsend").disabled = false;
+  });
 
   const KIND_ICON = { media: "🎧", document: "📄", "video-link": "🎬", article: "🌐", note: "✍️", forget: "🗑️" };
   const ST_LABEL = {

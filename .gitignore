@@ -18,6 +18,9 @@ data/run-all.log
 # output of ~64h of transcription (the repo doubles as their backup).
 data/questions.log
 data/thought.json
+data/push-subs.json
+data/push-log.json
+data/push-state.json
 data/uploads/
 data/teach-queue.json
 models/**/model_quantized.onnx

@@ -12,10 +12,18 @@ import { searchMulti, formatTimestamp, thoughtCandidate } from "./retrieve.mjs";
 // पंचांग is an enhancement, never a dependency: if the module has any problem,
 // the guide simply answers without calendar awareness.
 let panchangLine = () => "";
+let upcomingEvents = () => [];
 try {
-  ({ panchangLine } = await import("./panchang.mjs"));
+  ({ panchangLine, upcomingEvents } = await import("./panchang.mjs"));
 } catch (err) {
   console.error("panchang disabled:", err?.message);
+}
+// push notifications: same philosophy — never a dependency
+let push = { pushReady: () => false, publicKey: () => "", addSub: () => false, removeSub: () => 0, subCount: () => 0, pushLog: () => [], sendToAll: async () => ({ sent: 0, of: 0 }), autoWhispers: async () => {} };
+try {
+  push = await import("./push.mjs");
+} catch (err) {
+  console.error("push module disabled:", err?.message);
 }
 import { warmup } from "./embed.mjs";
 import { buildSystemPrompt, buildContextBlock } from "./prompt.mjs";
@@ -809,6 +817,31 @@ const server = createServer(async (req, res) => {
   if (req.method === "POST" && url.pathname === "/api/next-step") return handleNextStep(req, res);
   if (req.method === "POST" && url.pathname === "/api/stt") return handleStt(req, res);
   if (req.method === "GET" && url.pathname === "/api/thought") return handleThought(req, res);
+  // ——— push notifications (the guide's doorbell) ———
+  if (req.method === "GET" && url.pathname === "/sw.js") {
+    res.writeHead(200, { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "no-cache" });
+    return res.end(readFileSync(path.join(ROOT, "widget", "sw.js")));
+  }
+  if (req.method === "GET" && url.pathname === "/api/push/key") {
+    return json(res, 200, { ready: push.pushReady(), key: push.publicKey() });
+  }
+  if (req.method === "POST" && (url.pathname === "/api/push/subscribe" || url.pathname === "/api/push/unsubscribe")) {
+    const ip = req.socket.remoteAddress ?? "unknown";
+    if (rateLimited(ip)) return json(res, 429, { error: "Too many requests." });
+    let body = "";
+    for await (const part of req) {
+      body += part;
+      if (body.length > 10_000) return json(res, 413, { error: "Too long." });
+    }
+    try {
+      const p = JSON.parse(body);
+      if (url.pathname === "/api/push/subscribe") push.addSub(p.subscription || p);
+      else push.removeSub(String(p.endpoint || ""));
+      return json(res, 200, { ok: true });
+    } catch {
+      return json(res, 400, { error: "Invalid JSON." });
+    }
+  }
   // one-tap answer feedback (सहायक / नहीं) — logged for the admin's review
   if (req.method === "POST" && url.pathname === "/api/feedback") {
     const ip = req.socket.remoteAddress ?? "unknown";
@@ -971,6 +1004,30 @@ const server = createServer(async (req, res) => {
     if (!adminOk()) return;
     return json(res, 200, { items: await listCorrections() });
   }
+  // ——— notifications: status+history, and manual send to everyone ———
+  if (req.method === "GET" && url.pathname === "/api/admin/push") {
+    if (!adminOk()) return;
+    return json(res, 200, { ready: push.pushReady(), subscribers: push.subCount(), log: push.pushLog() });
+  }
+  if (req.method === "POST" && url.pathname === "/api/admin/push/send") {
+    if (!adminOk()) return;
+    let body = "";
+    for await (const part of req) {
+      body += part;
+      if (body.length > 20_000) return json(res, 413, { error: "Too long." });
+    }
+    try {
+      const p = JSON.parse(body);
+      const title = String(p.title || "").trim().slice(0, 80) || "Ask Your Guide";
+      const text = String(p.body || "").trim().slice(0, 300);
+      if (!text) return json(res, 400, { error: "Message text needed." });
+      const result = await push.sendToAll(title, text, String(p.url || "").trim().slice(0, 300), "admin");
+      return json(res, 200, result);
+    } catch (err) {
+      return json(res, 503, { error: String(err?.message || "send failed") });
+    }
+  }
+
   // ——— nightly self-learned communication lessons (style only, read-only) ———
   if (req.method === "GET" && url.pathname === "/api/admin/style-notes") {
     if (!adminOk()) return;
@@ -1156,3 +1213,9 @@ server.listen(PORT, () => {
   // Warm the embedding model so the first question isn't slow.
   warmup().then(() => console.log("Embedding model ready (cross-language search enabled).")).catch(() => {});
 });
+
+// The guide's rare whispers: checked hourly — Sunday's article, festival eves.
+// Each fires once; quiet before 8am IST; no-op until push is configured.
+const whisperTick = () => push.autoWhispers(upcomingEvents(3)).catch(() => {});
+setTimeout(whisperTick, 90_000).unref?.();
+setInterval(whisperTick, 3600_000).unref?.();

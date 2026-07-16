@@ -508,6 +508,18 @@
     .vcb-streak{align-self:center;display:flex;align-items:center;gap:7px;border-radius:999px;
       padding:7px 14px;font-size:12px;color:#f3d795;background:rgba(217,169,79,.09);
       box-shadow:inset 0 0 0 1px rgba(227,183,102,.4);animation:vcbMsgIn .3s ease both}
+
+    /* ——— notifications: header bell + one-time gentle ask ——— */
+    .vcb-bell{background:none;border:none;cursor:pointer;font-size:16px;line-height:1;
+      opacity:.38;padding:6px;transition:opacity .2s}
+    .vcb-bell.on{opacity:1;filter:drop-shadow(0 0 8px rgba(243,215,149,.7))}
+    .vcb-bellask{display:flex;flex-direction:column;gap:10px}
+    .vcb-bellask p{margin:0;font-size:14px}
+    .vcb-bellrow{display:flex;gap:10px}
+    .vcb-bellrow button{border:none;border-radius:11px;padding:10px 16px;font-size:13.5px;cursor:pointer;
+      font-family:inherit}
+    .vcb-bellyes{background:linear-gradient(140deg,#f7e3ae,#d9a94f 70%);color:#1d1503;font-weight:700}
+    .vcb-bellno{background:none;color:#a89b7d;box-shadow:inset 0 0 0 1px rgba(227,183,102,.3)}
   `;
   document.head.appendChild(style);
 
@@ -572,7 +584,7 @@
         <div class="vcb-ava"><img src="${API}/logo.png?v=3" alt=""/></div>
         <div><div class="vcb-title">${TITLE}</div><div class="vcb-sub">Ashaeiynn · answers from the teachings</div></div>
       </div>
-      <div><button class="vcb-voice" aria-label="Voice replies" title="Voice replies">🔇</button><button class="vcb-close" aria-label="Close">×</button></div>
+      <div><button class="vcb-bell" aria-label="Reminders" title="ज़रूरी अवसरों की सूचनाएँ">🔔</button><button class="vcb-voice" aria-label="Voice replies" title="Voice replies">🔇</button><button class="vcb-close" aria-label="Close">×</button></div>
     </div>
     <div class="vcb-bless"><span>${SPLASH}</span></div>
     <div class="vcb-stage">
@@ -966,6 +978,7 @@
       enrichAnswer(ans, data, text);
       capAdd(ans);
       if (data.followups?.length) capAdd(chipsEl(data.followups));
+      maybeOfferBell();
       panel.dataset.hasAns = "1";
       // long answers: read from the beginning, not scrolled to the end
       cap.scrollTop += ans.getBoundingClientRect().top - cap.getBoundingClientRect().top - 4;
@@ -1516,6 +1529,105 @@
     }
   }
 
+  // ——— notifications: the guide's doorbell (rare whispers, never noise) ———
+  const bellBtn = panel.querySelector(".vcb-bell");
+  const pushCapable = () => {
+    try {
+      return (
+        "serviceWorker" in navigator && "PushManager" in window && "Notification" in window &&
+        new URL(API).origin === location.origin
+      );
+    } catch {
+      return false;
+    }
+  };
+  function urlB64(u) {
+    const pad = "=".repeat((4 - (u.length % 4)) % 4);
+    const raw = atob((u + pad).replace(/-/g, "+").replace(/_/g, "/"));
+    return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+  }
+  function syncBell() {
+    if (!bellBtn) return;
+    if (!pushCapable()) {
+      bellBtn.style.display = "none";
+      return;
+    }
+    bellBtn.classList.toggle("on", !!journey.push && Notification.permission === "granted");
+  }
+  async function pushSubscribe() {
+    const kr = await fetch(`${API}/api/push/key`).then((r) => r.json()).catch(() => null);
+    if (!kr?.ready || !kr.key) return false;
+    const reg = await navigator.serviceWorker.register("/sw.js");
+    if ((await Notification.requestPermission()) !== "granted") return false;
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64(kr.key) });
+    await fetch(`${API}/api/push/subscribe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subscription: sub.toJSON() }),
+    }).catch(() => {});
+    journey.push = 1;
+    saveJourney();
+    syncBell();
+    return true;
+  }
+  async function pushUnsubscribe() {
+    try {
+      const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+      const sub = await reg?.pushManager.getSubscription();
+      if (sub) {
+        fetch(`${API}/api/push/unsubscribe`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        }).catch(() => {});
+        await sub.unsubscribe();
+      }
+    } catch {
+      /* best effort */
+    }
+    journey.push = 0;
+    saveJourney();
+    syncBell();
+  }
+  bellBtn?.addEventListener("click", () => {
+    if (journey.push && Notification.permission === "granted") pushUnsubscribe();
+    else pushSubscribe().catch(() => {});
+  });
+  syncBell();
+
+  // one-time gentle offer, only after the seeker has received a real answer
+  function maybeOfferBell() {
+    if (!pushCapable() || journey.pushAsked || journey.push || Notification.permission !== "default") return;
+    journey.pushAsked = 1;
+    saveJourney();
+    const card = document.createElement("div");
+    card.className = "vcb-ans vcb-bellask";
+    const p = document.createElement("p");
+    p.textContent =
+      "🔔 क्या guide आपको ज़रूरी अवसरों पर याद दिलाए? रविवार का नया ज्ञान और पूर्णिमा/नवरात्रि की पूर्व-सूचना — बस इतना ही, रोज़ परेशान नहीं करेंगे।";
+    const row = document.createElement("div");
+    row.className = "vcb-bellrow";
+    const yes = document.createElement("button");
+    yes.className = "vcb-bellyes";
+    yes.textContent = "हाँ, ज़रूर 🙏";
+    const no = document.createElement("button");
+    no.className = "vcb-bellno";
+    no.textContent = "अभी नहीं";
+    yes.addEventListener("click", () => {
+      card.remove();
+      pushSubscribe().catch(() => {});
+    });
+    no.addEventListener("click", () => card.remove());
+    row.append(yes, no);
+    card.append(p, row);
+    if (panel.dataset.mode === "text") {
+      msgs.appendChild(card);
+      msgs.scrollTop = msgs.scrollHeight;
+    } else {
+      capAdd(card);
+    }
+  }
+
   let greeted = false;
   function toggle(open) {
     panel.classList.toggle("open", open);
@@ -1699,6 +1811,7 @@
         msgs.appendChild(chipsEl(data.followups));
         msgs.scrollTop = msgs.scrollHeight;
       }
+      maybeOfferBell();
       speak(data.answer);
     } catch (err) {
       typing.remove();

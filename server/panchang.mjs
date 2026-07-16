@@ -110,6 +110,12 @@ function allEvents(nowMs) {
   return out.concat(pinned).sort((a, b) => (a.start < b.start ? -1 : 1));
 }
 
+// events starting within the next N days — for reminder notifications
+export function upcomingEvents(days = 10, now = Date.now()) {
+  const today = istDate(now);
+  return allEvents(now).filter((e) => e.start > today && daysBetween(today, e.start) <= days);
+}
+
 // one compact Hindi line the model can reason with
 export function panchangLine(now = Date.now()) {
   const today = istDate(now);
