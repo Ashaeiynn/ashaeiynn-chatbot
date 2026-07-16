@@ -453,8 +453,17 @@
     .vcb-btn{box-shadow:0 6px 24px rgba(5,8,4,.55),0 0 0 1.5px rgba(227,183,102,.6),0 0 22px rgba(217,169,79,.35)}
     .vcb-nudge{background:linear-gradient(135deg,#f7e3ae,#d9a94f);color:#231a04;font-weight:700}
     .vcb-nudge::after{background:#d9a94f}
-    .vcb-splash-halo{background:radial-gradient(circle,rgba(217,169,79,.26) 0%,transparent 70%)}
-    .vcb-splash-line{background:linear-gradient(90deg,transparent,#d9a94f,transparent)}
+    .vcb-splash{background:
+      radial-gradient(120% 90% at 50% 42%,rgba(217,169,79,.15) 0%,transparent 55%),
+      radial-gradient(100% 45% at 50% 112%,rgba(217,169,79,.20) 0%,transparent 55%),
+      linear-gradient(180deg,#0b120c 0%,#070b08 50%,#0a0e08 100%)}
+    .vcb-splash-halo{background:radial-gradient(circle,rgba(217,169,79,.30) 0%,rgba(217,169,79,.08) 45%,transparent 70%)}
+    .vcb-splash-line{background:linear-gradient(90deg,transparent,#d9a94f,transparent);position:relative}
+    .vcb-splash-line::before,.vcb-splash-line::after{content:"";position:absolute;top:-2.5px;width:6px;height:6px;
+      transform:rotate(45deg);background:#d9a94f;opacity:.9}
+    .vcb-splash-line::before{left:-14px}
+    .vcb-splash-line::after{right:-14px}
+    .vcb-splash-en{color:#cbbd97}
     .vcb-splash-hi span{background:linear-gradient(100deg,#a97c2c 0%,#f7e3ae 30%,#d9a94f 55%,#f7e3ae 76%,#a97c2c 100%);
       -webkit-background-clip:text;background-clip:text;color:transparent}
     .vcb-spark{background:radial-gradient(circle,#f7e3ae 0%,rgba(217,169,79,.85) 45%,transparent 75%)}
