@@ -15,17 +15,29 @@ self.addEventListener("push", (e) => {
       body: d.body || "",
       icon: "/icon-192.png",
       badge: "/icon-192.png",
-      data: { url: d.url || "/" },
+      data: { url: d.url || "/", title: d.title || "", body: d.body || "" },
     }),
   );
 });
 
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();
-  const url = e.notification.data?.url || "/";
+  const d = e.notification.data || {};
+  let url = d.url || "/";
+  // opening the guide itself? carry the message in, so the conversation
+  // starts FROM the notification (external links open as-is)
+  if (url === "/" || url.startsWith(self.location.origin + "/?") || url === self.location.origin + "/") {
+    const q = `n_t=${encodeURIComponent((d.title || "").slice(0, 80))}&n_b=${encodeURIComponent((d.body || "").slice(0, 200))}`;
+    url = "/?" + q;
+  }
   e.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((ws) => {
-      for (const w of ws) if ("focus" in w) return w.focus();
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (ws) => {
+      for (const w of ws) {
+        if ("focus" in w && "navigate" in w) {
+          await w.focus();
+          return w.navigate(url).catch(() => {});
+        }
+      }
       return clients.openWindow(url);
     }),
   );

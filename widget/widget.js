@@ -951,7 +951,9 @@
       // the guide noticed the seeker declared (or stopped) a regular practice
       journey.sadhana = data.sadhana === "-" ? null : { name: data.sadhana, since: new Date().toISOString().slice(0, 10) };
     }
-    recordAsk(text);
+    // a notification-opener isn't something the seeker asked — keep it out of
+    // their topics diary (the conversation that follows is recorded normally)
+    if (via !== "notification") recordAsk(text);
     if (data.sources?.length) recordSeen(data.sources.map((s) => s.title));
     if (data.suggest) recordSeen([data.suggest.title]);
     return data;
@@ -1686,6 +1688,7 @@
       fetchThought();
       bellOfferedThisOpen = false;
       maybeOfferBell();
+      notifWelcome();
       if (panel.dataset.mode === "text") input.focus();
       else {
         setVState("idle");
@@ -1716,6 +1719,54 @@
     }
   }
   let welcomedBack = false;
+
+  // ——— opened from a notification: the guide starts THAT conversation ———
+  // sw.js appends ?n_t/n_b when a guide-targeted notification is tapped.
+  const notifCtx = (() => {
+    try {
+      const sp = new URLSearchParams(location.search);
+      const t = (sp.get("n_t") || "").trim();
+      const b = (sp.get("n_b") || "").trim();
+      if (!t && !b) return null;
+      history_cleanup: {
+        const clean = location.pathname + location.hash;
+        window.history.replaceState(null, "", clean); // refresh won't re-trigger
+      }
+      return { t, b };
+    } catch {
+      return null;
+    }
+  })();
+  let notifOpened = false;
+  async function notifWelcome() {
+    if (!notifCtx || notifOpened) return;
+    notifOpened = true;
+    const msg = `${notifCtx.t}${notifCtx.b ? " — " + notifCtx.b : ""}`.slice(0, 300);
+    if (panel.dataset.mode !== "text") setVState("thinking");
+    try {
+      const data = await askServer(msg, "notification");
+      if (panel.dataset.mode === "text") {
+        addMessage("bot", data.answer, data, msg);
+        if (data.followups?.length) {
+          msgs.appendChild(chipsEl(data.followups));
+          msgs.scrollTop = msgs.scrollHeight;
+        }
+      } else {
+        const ans = document.createElement("div");
+        ans.className = "vcb-ans";
+        ans.textContent = data.answer;
+        enrichAnswer(ans, data, msg);
+        capAdd(ans);
+        if (data.followups?.length) capAdd(chipsEl(data.followups));
+        panel.dataset.hasAns = "1";
+        cap.scrollTop += ans.getBoundingClientRect().top - cap.getBoundingClientRect().top - 4;
+        setVState("speaking");
+        speak(data.answer, () => setVState("idle"));
+      }
+    } catch {
+      if (panel.dataset.mode !== "text") setVState("idle");
+    }
+  }
 
   // first ever open: ask the seeker's name (one time, skippable, device-only)
   function maybeAskName() {

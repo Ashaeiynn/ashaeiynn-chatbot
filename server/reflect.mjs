@@ -33,7 +33,10 @@ if (entries.length < 5) {
 
 const sample = entries
   .slice(-120)
-  .map((e) => `Q: ${e.q}\nA: ${String(e.answer || e.error || "").slice(0, 400)}`)
+  .map(
+    (e) =>
+      `Q${e.via === "notification" ? " (seeker arrived by tapping a notification — judge the opener's warmth)" : e.via === "voice" ? " (spoken)" : ""}: ${e.q}\nA: ${String(e.answer || e.error || "").slice(0, 400)}`,
+  )
   .join("\n---\n");
 
 let current = [];
