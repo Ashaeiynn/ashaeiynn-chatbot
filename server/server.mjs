@@ -1223,9 +1223,10 @@ const server = createServer(async (req, res) => {
   }
 
   if (req.method === "GET" && url.pathname === "/manifest.webmanifest") {
+    // no-cache: name/icon changes must reach installed apps without a fight
     res.writeHead(200, {
       "Content-Type": "application/manifest+json",
-      "Cache-Control": "public, max-age=86400",
+      "Cache-Control": "no-cache",
     });
     return res.end(readFileSync(path.join(ROOT, "widget", "manifest.webmanifest")));
   }
@@ -1275,7 +1276,7 @@ setInterval(queueTick, 60_000).unref?.();
 
 // App icons follow the theme: rebuilt once per style version at startup
 // (sharp ships with the ML deps). Purely cosmetic — failures never matter.
-const ICON_STYLE = "gold-v1";
+const ICON_STYLE = "gold-v2";
 try {
   const stampFile = path.join(ROOT, "data", "icon-style.txt");
   const current = existsSync(stampFile) ? readFileSync(stampFile, "utf8").trim() : "";

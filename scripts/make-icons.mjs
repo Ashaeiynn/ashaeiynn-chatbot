@@ -34,20 +34,28 @@ const bgSvg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="512" h
 
 const LOGO_W = 300; // lotus width inside the 512 canvas
 
-const gold = (buf) =>
-  sharp(buf).resize({ width: LOGO_W }).greyscale().tint({ r: 233, g: 190, b: 105 }).png().toBuffer();
+// TRUE gold lotus: use the logo purely as a stencil (its alpha), filled with
+// solid gold — tinting the original colors washed out to silver.
+const resized = await sharp(path.join(W, "logo.png")).resize({ width: LOGO_W }).ensureAlpha().png().toBuffer();
+const meta = await sharp(resized).metadata();
+const alpha = await sharp(resized).extractChannel(3).toBuffer(); // the stencil
+const goldLotus = await sharp({
+  create: { width: meta.width, height: meta.height, channels: 3, background: { r: 231, g: 186, b: 108 } },
+})
+  .joinChannel(alpha)
+  .png()
+  .toBuffer();
 
 const bg = await sharp(bgSvg).png().toBuffer();
-const logo = await gold(path.join(W, "logo.png"));
-const meta = await sharp(logo).metadata();
 const left = Math.round((512 - meta.width) / 2);
 const top = Math.round((512 - meta.height) / 2);
-const glowLayer = await sharp(logo).blur(14).modulate({ brightness: 1.3 }).png().toBuffer();
+const glowLayer = await sharp(goldLotus).blur(9).png().toBuffer(); // soft halo, same gold
 
 const icon512 = await sharp(bg)
   .composite([
-    { input: glowLayer, left, top, blend: "screen" },
-    { input: logo, left, top },
+    { input: glowLayer, left, top },
+    { input: glowLayer, left, top },
+    { input: goldLotus, left, top },
   ])
   .png()
   .toBuffer();
