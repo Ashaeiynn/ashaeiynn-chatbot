@@ -321,6 +321,11 @@ async function handleChat(req, res) {
     profile?.sadhana && typeof profile.sadhana.name === "string"
       ? { name: profile.sadhana.name.trim().slice(0, 120), since: String(profile.sadhana.since || "").slice(0, 20) }
       : null;
+  // first question of a fresh session: where did the LAST conversation end?
+  const leftover =
+    profile?.leftover && typeof profile.leftover.q === "string" && profile.leftover.q.trim()
+      ? { q: profile.leftover.q.trim().slice(0, 120), when: String(profile.leftover.when || "").slice(0, 30) }
+      : null;
   const recentTopics = (Array.isArray(profile?.topics) ? profile.topics : [])
     .filter((t) => typeof t === "string" && t.trim())
     .slice(-8)
@@ -459,7 +464,11 @@ async function handleChat(req, res) {
                   seekerSadhana ? ` Their ongoing practice (self-declared${seekerSadhana.since ? `, since ${seekerSadhana.since}` : ""}): "${seekerSadhana.name}".` : ""
                 }${
                   seekerName ? ` Address them by name ONCE, naturally ("${seekerName} जी" in Hindi / "${seekerName} ji" in English).` : ""
-                } Where it fits naturally, connect the answer to their ongoing journey in one warm phrase; never list their history back to them.]`
+                } Where it fits naturally, connect the answer to their ongoing journey in one warm phrase; never list their history back to them.${
+                  leftover
+                    ? ` FRESH conversation — their previous one (${leftover.when || "पिछली बार"}) ended around: "${leftover.q}". Answer the CURRENT question fully and cleanly first. If the current question is a DIFFERENT topic, you may close with ONE short warm bridge offering the old thread back ("वैसे ${leftover.when || "पिछली बार"} हम इस बारे में बात कर रहे थे — चाहें तो वहीं से आगे बढ़ें?") and make ONE of the सुझाव questions that continuation. If it's the same topic, continue naturally with no bridge. Never let the old thread hijack the new answer.`
+                    : ""
+                }]`
               : ""
           }${
             wantsLink

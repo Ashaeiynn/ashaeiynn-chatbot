@@ -36,7 +36,15 @@
     journey.asked.length > 0 &&
     journey.lastSeen &&
     Date.now() - new Date(journey.lastSeen).getTime() > 3 * 3600 * 1000;
-  history.push(...journey.convo.slice(-6)); // follow-ups survive app restarts
+  // Every open is a FRESH conversation — the new question gets a clean answer,
+  // never the old thread's leftovers. But the guide remembers where the last
+  // conversation ended and, after answering, may OFFER to pick that thread up
+  // ("वैसे पिछली बार हम … पर रुके थे — वहीं से आगे बढ़ें?"). The seeker chooses.
+  const agoLabel = (iso) => {
+    const h = (Date.now() - new Date(iso).getTime()) / 3600e3;
+    return h < 3 ? "कुछ देर पहले" : h < 24 ? "आज ही" : h < 48 ? "कल" : `${Math.round(h / 24)} दिन पहले`;
+  };
+  let sessionAsks = 0;
   function saveJourney() {
     journey.lastSeen = new Date().toISOString();
     try {
@@ -921,6 +929,10 @@
             topics: journey.asked.slice(-8).map((a) => a.q),
             seen: journey.seen,
             sadhana: journey.sadhana || undefined,
+            leftover:
+              sessionAsks === 0 && journey.asked.length
+                ? { q: journey.asked[journey.asked.length - 1].q, when: agoLabel(journey.asked[journey.asked.length - 1].at) }
+                : undefined,
           },
         }),
       });
@@ -929,6 +941,7 @@
       throw new Error("Sorry, I couldn't reach the server. Please try again.");
     }
     if (!resp.ok) throw new Error(data.error || "Sorry, something went wrong. Please try again.");
+    sessionAsks++;
     history.push({ role: "user", content: text }, { role: "assistant", content: data.answer });
     if (history.length > 12) history.splice(0, history.length - 12);
     journey.convo = history.slice(-12);
