@@ -274,6 +274,8 @@ async function handleChat(req, res) {
   // the app). Used once for this answer, never stored — the server keeps no
   // per-person memory by design.
   const profile = payload.profile && typeof payload.profile === "object" ? payload.profile : null;
+  const seekerName = typeof profile?.name === "string" ? profile.name.trim().slice(0, 40) : "";
+  const seekerSummary = typeof profile?.summary === "string" ? profile.summary.trim().slice(0, 300) : "";
   const recentTopics = (Array.isArray(profile?.topics) ? profile.topics : [])
     .filter((t) => typeof t === "string" && t.trim())
     .slice(-8)
@@ -405,8 +407,12 @@ async function handleChat(req, res) {
         {
           role: "user",
           content: `Transcript excerpts for this question:\n\n${buildContextBlock(chunks)}\n\n---\nVisitor question: ${message}\n\n[${langInstruction}]${
-            recentTopics.length
-              ? `\n[Returning seeker — their recent questions (from their own device): ${recentTopics.join(" | ")}. Where it fits naturally, connect the answer to this ongoing journey in one warm phrase; never list their history back to them.]`
+            recentTopics.length || seekerName
+              ? `\n[Seeker${seekerName ? ` named "${seekerName}"` : ""}${
+                  recentTopics.length ? ` — recent questions (from their own device): ${recentTopics.join(" | ")}.` : "."
+                }${seekerSummary ? ` Journey so far: ${seekerSummary}` : ""}${
+                  seekerName ? ` Address them by name ONCE, naturally ("${seekerName} जी" in Hindi / "${seekerName} ji" in English).` : ""
+                } Where it fits naturally, connect the answer to their ongoing journey in one warm phrase; never list their history back to them.]`
               : ""
           }`,
         },
@@ -463,12 +469,96 @@ async function handleChat(req, res) {
   }
 }
 
+// ——— personal-guide helpers (stateless: the seeker's diary lives on their device) ———
+
+// Distill the seeker's recent questions into a one-line journey summary the
+// device stores and sends back with future questions. One cheap "light" call.
+async function handleDistill(req, res) {
+  const ip = req.socket.remoteAddress ?? "unknown";
+  if (rateLimited(ip)) return json(res, 429, { error: "Too many requests." });
+  if (!apiKeyConfigured) return json(res, 503, { error: "not-configured" });
+  let body = "";
+  for await (const part of req) {
+    body += part;
+    if (body.length > 20_000) return json(res, 413, { error: "Too long." });
+  }
+  let qs = [];
+  try {
+    qs = (JSON.parse(body).questions || [])
+      .filter((q) => typeof q === "string" && q.trim())
+      .slice(-30)
+      .map((q) => q.slice(0, 120));
+  } catch {
+    return json(res, 400, { error: "Invalid JSON." });
+  }
+  if (qs.length < 3) return json(res, 400, { error: "Need a few questions first." });
+  try {
+    const line = await complete({
+      system:
+        "You summarise a spiritual seeker's ongoing interests from their recent questions to a meditation-centre guide. Output ONE warm, factual line in Hindi (Devanagari, max 25 words) naming their main themes. Output only that line — no preamble.",
+      messages: [{ role: "user", content: qs.join("\n") }],
+      maxTokens: 100,
+      light: true,
+      retry: false,
+    });
+    return json(res, 200, { summary: line.split("\n")[0].trim().slice(0, 300) });
+  } catch {
+    return json(res, 503, { error: "busy" });
+  }
+}
+
+// A fresh "watch next" for a returning seeker, matched to their whole journey
+// (summary + recent topics), excluding what they've already seen. Free (local search).
+async function handleNextStep(req, res) {
+  const ip = req.socket.remoteAddress ?? "unknown";
+  if (rateLimited(ip)) return json(res, 429, { error: "Too many requests." });
+  let body = "";
+  for await (const part of req) {
+    body += part;
+    if (body.length > 30_000) return json(res, 413, { error: "Too long." });
+  }
+  let p = {};
+  try {
+    p = JSON.parse(body) || {};
+  } catch {
+    return json(res, 400, { error: "Invalid JSON." });
+  }
+  const topics = (Array.isArray(p.topics) ? p.topics : [])
+    .filter((t) => typeof t === "string" && t.trim())
+    .slice(-5)
+    .map((t) => t.slice(0, 120));
+  const summary = typeof p.summary === "string" ? p.summary.trim().slice(0, 300) : "";
+  const seenSet = new Set(
+    (Array.isArray(p.seen) ? p.seen : [])
+      .filter((t) => typeof t === "string")
+      .slice(-80)
+      .map((t) => t.trim().toLowerCase()),
+  );
+  const queryText = [summary, ...topics].filter(Boolean).join(" ").trim();
+  if (!queryText) return json(res, 200, {});
+  const chunks = await searchMulti([queryText], 12);
+  for (const c of chunks) {
+    const t = c.title.toLowerCase();
+    if (seenSet.has(t) || c.title.startsWith("Bhaiya's approved answer")) continue;
+    return json(res, 200, {
+      suggest: {
+        title: c.title,
+        timestamp: formatTimestamp(c.start_seconds),
+        url: c.url ? `${c.url}#t=${Math.floor(c.start_seconds)}s` : null,
+      },
+    });
+  }
+  return json(res, 200, {});
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
 
   if (req.method === "OPTIONS") return json(res, 204, {});
   if (req.method === "POST" && url.pathname === "/api/chat") return handleChat(req, res);
   if (req.method === "POST" && url.pathname === "/api/tts") return handleTts(req, res);
+  if (req.method === "POST" && url.pathname === "/api/distill") return handleDistill(req, res);
+  if (req.method === "POST" && url.pathname === "/api/next-step") return handleNextStep(req, res);
 
   // Health check — for hosting platforms and to confirm a deploy is live.
   if (req.method === "GET" && url.pathname === "/health") {

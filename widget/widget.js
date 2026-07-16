@@ -49,6 +49,23 @@
     journey.asked.push({ q: q.slice(0, 120), at: new Date().toISOString() });
     if (journey.asked.length > 30) journey.asked.splice(0, journey.asked.length - 30);
     saveJourney();
+    // every 5 questions: quietly distill the journey into a one-line summary
+    // (stored on this device) so the guide's understanding deepens over days
+    if (journey.asked.length >= 5 && journey.asked.length % 5 === 0) {
+      fetch(`${API}/api/distill`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questions: journey.asked.map((a) => a.q) }),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d?.summary) {
+            journey.summary = d.summary;
+            saveJourney();
+          }
+        })
+        .catch(() => {});
+    }
   }
   function recordSeen(titles) {
     for (const t of titles) if (t && !journey.seen.includes(t)) journey.seen.push(t);
@@ -201,8 +218,8 @@
       background:rgba(255,255,255,.065);border:1px solid rgba(255,255,255,.09);
       border-bottom-left-radius:5px;backdrop-filter:blur(3px)}
     .vcb-src{font-size:12px;margin-top:8px;padding-top:8px;border-top:1px dashed rgba(52,211,153,.3);color:#9d96c4}
-    .vcb-src a{color:#34d399;text-decoration:none;font-weight:500}
-    .vcb-src a:hover{text-decoration:underline}
+    .vcb-src a,.vcb-ans a{color:#34d399;text-decoration:none;font-weight:500}
+    .vcb-src a:hover,.vcb-ans a:hover{text-decoration:underline}
 
     .vcb-form{position:relative;z-index:2;display:flex;gap:8px;padding:12px;
       border-top:1px solid rgba(52,211,153,.16);background:rgba(2,2,6,.65)}
@@ -346,6 +363,20 @@
     }
     /* page behind the open panel must not scroll on phones */
     .vcb-lock,.vcb-lock body{overflow:hidden;overscroll-behavior:none}
+
+    /* ——— first-open: ask the seeker's name (kept only on this device) ——— */
+    .vcb-namecard{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:13px;padding:30px 26px;text-align:center;
+      background:rgba(3,3,8,.86);backdrop-filter:blur(7px)}
+    .vcb-namecard h4{color:#eae6fb;font-size:18px;font-weight:700;line-height:1.4}
+    .vcb-namecard p{color:#9d96c4;font-size:13px;line-height:1.5;max-width:300px}
+    .vcb-namecard input{width:min(280px,84%);border:1.5px solid rgba(52,211,153,.45);
+      background:rgba(255,255,255,.07);color:#f2eefe;border-radius:12px;padding:13px 14px;
+      font-size:16px;text-align:center;outline:none}
+    .vcb-namecard input:focus{border-color:#34d399}
+    .vcb-namego{border:none;border-radius:12px;padding:12px 26px;font-size:15px;font-weight:700;
+      cursor:pointer;color:#04140c;background:linear-gradient(135deg,#5eead4,#34d399)}
+    .vcb-nameskip{background:none;border:none;color:#9aa0ab;font-size:13px;cursor:pointer;padding:8px}
   `;
   document.head.appendChild(style);
 
@@ -679,7 +710,12 @@
           history,
           via: via || "text",
           lang: recLang,
-          profile: { topics: journey.asked.slice(-8).map((a) => a.q), seen: journey.seen },
+          profile: {
+            name: journey.name || "",
+            summary: journey.summary || "",
+            topics: journey.asked.slice(-8).map((a) => a.q),
+            seen: journey.seen,
+          },
         }),
       });
       data = await resp.json();
@@ -902,8 +938,8 @@
         addMessage(
           "bot",
           cameBack
-            ? `Jai Siya Ram 🙏 वापसी पर स्वागत! पिछली बार आपने पूछा था: “${journey.asked[journey.asked.length - 1].q.slice(0, 80)}” — आगे जो मन में हो, पूछिए।`
-            : "Jai Siya Ram 🙏 Ask me anything about the teachings — I'll find the answer from our videos.",
+            ? `Jai Siya Ram${journey.name ? `, ${journey.name} जी` : ""} 🙏 वापसी पर स्वागत! पिछली बार आपने पूछा था: “${journey.asked[journey.asked.length - 1].q.slice(0, 80)}” — आगे जो मन में हो, पूछिए।`
+            : `Jai Siya Ram${journey.name ? `, ${journey.name} जी` : ""} 🙏 Ask me anything about the teachings — I'll find the answer from our videos.`,
         );
       }
       input.focus();
@@ -1014,6 +1050,7 @@
     if (open) {
       hideNudge();
       playSplash();
+      maybeAskName();
       if (panel.dataset.mode === "text") input.focus();
       else {
         setVState("idle");
@@ -1021,13 +1058,84 @@
           welcomedBack = true;
           const w = document.createElement("div");
           w.className = "vcb-you";
-          w.textContent = `🙏 वापसी पर स्वागत — पिछली बार: “${journey.asked[journey.asked.length - 1].q.slice(0, 60)}”`;
+          w.textContent = `🙏 वापसी पर स्वागत${journey.name ? `, ${journey.name} जी` : ""} — पिछली बार: “${journey.asked[journey.asked.length - 1].q.slice(0, 60)}”`;
           capAdd(w);
+          fetchNextStep();
         }
       }
     }
   }
   let welcomedBack = false;
+
+  // first ever open: ask the seeker's name (one time, skippable, device-only)
+  function maybeAskName() {
+    if (journey.name || journey.namePrompted) return;
+    journey.namePrompted = true;
+    saveJourney();
+    const card = document.createElement("div");
+    card.className = "vcb-namecard";
+    const h = document.createElement("h4");
+    h.textContent = "🙏 जय सिया राम — आपका नाम क्या है?";
+    const p = document.createElement("p");
+    p.textContent = "ताकि आपका guide आपसे नाम से बात कर सके। नाम सिर्फ़ आपके इसी फ़ोन में रहता है — कहीं और नहीं।";
+    const inp = document.createElement("input");
+    inp.placeholder = "आपका नाम / Your name";
+    inp.maxLength = 30;
+    const go = document.createElement("button");
+    go.className = "vcb-namego";
+    go.textContent = "आगे बढ़ें 🙏";
+    const skip = document.createElement("button");
+    skip.className = "vcb-nameskip";
+    skip.textContent = "बाद में (skip)";
+    const done = () => {
+      const v = inp.value.trim();
+      if (v) {
+        journey.name = v.slice(0, 30);
+        saveJourney();
+      }
+      card.remove();
+    };
+    go.addEventListener("click", done);
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") done();
+    });
+    skip.addEventListener("click", () => card.remove());
+    card.append(h, p, inp, go, skip);
+    panel.appendChild(card);
+  }
+
+  // returning seeker: fetch one fresh pick matched to their whole journey
+  function fetchNextStep() {
+    fetch(`${API}/api/next-step`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        summary: journey.summary || "",
+        topics: journey.asked.slice(-5).map((a) => a.q),
+        seen: journey.seen,
+      }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d?.suggest) return;
+        recordSeen([d.suggest.title]);
+        const box = document.createElement("div");
+        box.className = "vcb-ans";
+        box.append("🌱 आपकी यात्रा के लिए एक सुझाव: ");
+        if (d.suggest.url) {
+          const a = document.createElement("a");
+          a.href = d.suggest.url;
+          a.target = "_blank";
+          a.rel = "noopener";
+          a.textContent = `${d.suggest.title} (${d.suggest.timestamp})`;
+          box.appendChild(a);
+        } else {
+          box.append(`${d.suggest.title} (${d.suggest.timestamp})`);
+        }
+        capAdd(box);
+      })
+      .catch(() => {});
+  }
   btn.addEventListener("click", () => toggle(!panel.classList.contains("open")));
   panel.querySelector(".vcb-close").addEventListener("click", () => toggle(false));
 
