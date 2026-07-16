@@ -1141,11 +1141,15 @@
           input.placeholder = "Type your question…";
           if (text) form.requestSubmit();
         }
-      } catch {
+      } catch (err) {
         if (liveEl) { liveEl.remove(); liveEl = null; }
         if (target === "stage") {
           setVState("error");
-          showLive("⚠️ आवाज़ record हुई पर समझी नहीं जा सकी (server) — एक बार फिर बोलिए");
+          showLive(
+            err?.status === 429
+              ? "⚠️ बहुत सारे सवाल एक साथ — 1-2 मिनट रुककर फिर बोलिए"
+              : `⚠️ आवाज़ record हुई पर समझी नहीं जा सकी (server ${err?.status || ""}) — एक बार फिर बोलिए`,
+          );
         } else {
           input.placeholder = "Couldn't transcribe — try again or type…";
         }
@@ -1182,7 +1186,11 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ audio: btoa(bin), mime: blob.type, lang: recLang }),
     });
-    if (!r.ok) throw new Error("stt failed");
+    if (!r.ok) {
+      const e = new Error("stt " + r.status);
+      e.status = r.status;
+      throw e;
+    }
     return String((await r.json()).text || "").trim();
   }
 

@@ -113,12 +113,16 @@ function writeLog(entry) {
 // Simple per-IP rate limit: 20 questions per 5 minutes (override via RATE_LIMIT_MAX).
 const RATE_LIMIT = { windowMs: 5 * 60 * 1000, max: Number(process.env.RATE_LIMIT_MAX || 20) };
 const hits = new Map();
-function rateLimited(ip) {
+// Buckets keep features from starving each other: one spoken answer costs a
+// chat call + an stt call + several tts chunks — with one shared bucket, a
+// few questions in a row 429'd the mic ("आवाज़ समझी नहीं जा सकी (server)").
+function rateLimited(ip, bucket = "general", max = RATE_LIMIT.max) {
+  const key = `${bucket}:${ip}`;
   const now = Date.now();
-  const list = (hits.get(ip) ?? []).filter((t) => now - t < RATE_LIMIT.windowMs);
-  if (list.length >= RATE_LIMIT.max) return true;
+  const list = (hits.get(key) ?? []).filter((t) => now - t < RATE_LIMIT.windowMs);
+  if (list.length >= max) return true;
   list.push(now);
-  hits.set(ip, list);
+  hits.set(key, list);
   return false;
 }
 
@@ -214,7 +218,7 @@ async function geminiTtsModel(model, text) {
 async function handleTts(req, res) {
   if (!TTS_KEY && !GEMINI_TTS_KEY) return json(res, 501, { error: "tts-not-configured" });
   const ip = req.socket.remoteAddress ?? "unknown";
-  if (rateLimited(ip)) return json(res, 429, { error: "Too many requests." });
+  if (rateLimited(ip, "tts", 80)) return json(res, 429, { error: "Too many requests." });
 
   let body = "";
   for await (const part of req) {
@@ -277,7 +281,7 @@ async function handleTts(req, res) {
 
 async function handleChat(req, res) {
   const ip = req.socket.remoteAddress ?? "unknown";
-  if (rateLimited(ip)) {
+  if (rateLimited(ip, "chat", RATE_LIMIT.max)) {
     return json(res, 429, { error: "Too many messages — please wait a few minutes." });
   }
 
@@ -635,7 +639,7 @@ async function handleChat(req, res) {
 // sends it here. Gemini transcribes it on the same free key.
 async function handleStt(req, res) {
   const ip = req.socket.remoteAddress ?? "unknown";
-  if (rateLimited(ip)) return json(res, 429, { error: "Too many requests." });
+  if (rateLimited(ip, "stt", 40)) return json(res, 429, { error: "Too many requests." });
   if (!GEMINI_TTS_KEY) return json(res, 503, { error: "stt-not-configured" });
   let body = "";
   for await (const part of req) {
@@ -744,7 +748,7 @@ async function handleThought(req, res) {
 // device stores and sends back with future questions. One cheap "light" call.
 async function handleDistill(req, res) {
   const ip = req.socket.remoteAddress ?? "unknown";
-  if (rateLimited(ip)) return json(res, 429, { error: "Too many requests." });
+  if (rateLimited(ip, "light", 60)) return json(res, 429, { error: "Too many requests." });
   if (!apiKeyConfigured) return json(res, 503, { error: "not-configured" });
   let body = "";
   for await (const part of req) {
@@ -780,7 +784,7 @@ async function handleDistill(req, res) {
 // (summary + recent topics), excluding what they've already seen. Free (local search).
 async function handleNextStep(req, res) {
   const ip = req.socket.remoteAddress ?? "unknown";
-  if (rateLimited(ip)) return json(res, 429, { error: "Too many requests." });
+  if (rateLimited(ip, "light", 60)) return json(res, 429, { error: "Too many requests." });
   let body = "";
   for await (const part of req) {
     body += part;
@@ -840,7 +844,7 @@ const server = createServer(async (req, res) => {
   }
   if (req.method === "POST" && (url.pathname === "/api/push/subscribe" || url.pathname === "/api/push/unsubscribe")) {
     const ip = req.socket.remoteAddress ?? "unknown";
-    if (rateLimited(ip)) return json(res, 429, { error: "Too many requests." });
+    if (rateLimited(ip, "light", 60)) return json(res, 429, { error: "Too many requests." });
     let body = "";
     for await (const part of req) {
       body += part;
@@ -858,7 +862,7 @@ const server = createServer(async (req, res) => {
   // one-tap answer feedback (सहायक / नहीं) — logged for the admin's review
   if (req.method === "POST" && url.pathname === "/api/feedback") {
     const ip = req.socket.remoteAddress ?? "unknown";
-    if (rateLimited(ip)) return json(res, 429, { error: "Too many requests." });
+    if (rateLimited(ip, "light", 60)) return json(res, 429, { error: "Too many requests." });
     let body = "";
     for await (const part of req) {
       body += part;
