@@ -833,6 +833,46 @@
     canRecord && ((IOS && navigator.standalone === true) || journey.sttFallback === true || !SR);
 
   let mediaRec = null, recChunks = [], recStream = null, recTimer = null;
+  let recAudioCtx = null, recLevelInt = null;
+
+  // Listen to the mic's loudness: once the seeker has spoken and then stayed
+  // quiet for ~2s, send automatically — same feel as Android's recognizer.
+  function watchForPause(stream) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    try {
+      recAudioCtx = new AC();
+      recAudioCtx.resume?.();
+      const analyser = recAudioCtx.createAnalyser();
+      analyser.fftSize = 1024;
+      recAudioCtx.createMediaStreamSource(stream).connect(analyser);
+      const buf = new Uint8Array(analyser.fftSize);
+      let spoke = false, quietSince = 0;
+      recLevelInt = setInterval(() => {
+        analyser.getByteTimeDomainData(buf);
+        let sum = 0;
+        for (let i = 0; i < buf.length; i++) {
+          const v = (buf[i] - 128) / 128;
+          sum += v * v;
+        }
+        const rms = Math.sqrt(sum / buf.length);
+        if (rms > 0.025) {
+          spoke = true;
+          quietSince = 0;
+        } else if (spoke) {
+          const now = Date.now();
+          if (!quietSince) quietSince = now;
+          else if (now - quietSince > 2000) stopRecording();
+        }
+      }, 120);
+    } catch { /* level watching is best-effort — tap-again and the 12s cap remain */ }
+  }
+  function stopLevelWatch() {
+    clearInterval(recLevelInt);
+    recLevelInt = null;
+    try { recAudioCtx?.close(); } catch { /* already closed */ }
+    recAudioCtx = null;
+  }
   async function startRecording(target) {
     stopSpeaking();
     try {
@@ -861,6 +901,7 @@
     };
     mediaRec.onstop = async () => {
       clearTimeout(recTimer);
+      stopLevelWatch();
       recStream.getTracks().forEach((t) => t.stop());
       listening = false;
       micBtn.classList.remove("listening");
@@ -894,10 +935,11 @@
       }
     };
     mediaRec.start();
+    watchForPause(recStream);
     listening = true;
     if (target === "stage") {
       setVState("listening");
-      showLive("🎙️ बोलिए… हो जाए तो फिर से टैप कीजिए (tap again when done)");
+      showLive("🎙️ बोलिए… रुकते ही भेज दिया जाएगा (auto-sends when you pause)");
     } else {
       micBtn.classList.add("listening");
       input.placeholder = "🎙️ बोलिए… (listening)";
