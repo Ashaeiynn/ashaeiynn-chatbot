@@ -1081,7 +1081,8 @@ const server = createServer(async (req, res) => {
   }
 
   if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/demo")) {
-    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    // no-cache: installed home-screen apps must always pick up fresh design
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" });
     return res.end(readFileSync(path.join(ROOT, "widget", "demo.html")));
   }
 
