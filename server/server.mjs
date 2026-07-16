@@ -8,6 +8,15 @@ import { teachFile, teachLink, teachText, forget, publicJobs, jobTotals, uploads
 import { matchCorrection, addCorrection, removeCorrection, listCorrections, DIRECT_MATCH } from "./corrections.mjs";
 import { ROOT } from "./env.mjs";
 import { searchMulti, formatTimestamp, thoughtCandidate } from "./retrieve.mjs";
+
+// पंचांग is an enhancement, never a dependency: if the module has any problem,
+// the guide simply answers without calendar awareness.
+let panchangLine = () => "";
+try {
+  ({ panchangLine } = await import("./panchang.mjs"));
+} catch (err) {
+  console.error("panchang disabled:", err?.message);
+}
 import { warmup } from "./embed.mjs";
 import { buildSystemPrompt, buildContextBlock } from "./prompt.mjs";
 import { complete, PROVIDER, ACTIVE_MODEL, keyConfigured, BACKUP_CONFIGURED, failover, LlmAuthError, LlmRateLimitError } from "./llm.mjs";
@@ -448,7 +457,13 @@ async function handleChat(req, res) {
             wantsLink
               ? `\n[The seeker asked for a link. The app automatically shows tappable links right below your answer (the sources, and the requested channel/page). Warmly point there — "नीचे लिंक दिया है, tap करके देखिए" in Hindi or "the link is right below" in English — never say you cannot share links, and never read a URL out loud.]`
               : ""
-          }`,
+          }${(() => {
+            try {
+              return `\n[पंचांग — use ONLY this to resolve time references (आज, कल, नवरात्रि के आख़िरी दिन…): ${panchangLine()}. Dates can differ from a local पंचांग by ±1 day, so on exact-date questions add "पंचांग से मिला लीजिएगा". Never invent dates beyond these.]`;
+            } catch {
+              return "";
+            }
+          })()}`,
         },
       ],
     });

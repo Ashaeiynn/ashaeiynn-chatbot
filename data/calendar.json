@@ -1,0 +1,4 @@
+{
+  "_note": "Owner's पंचांग overrides. पूर्णिमा/अमावस्या/नवरात्रि/त्योहार are computed automatically (±1 day possible). To pin an exact date from your पंचांग, add it here — a pinned event replaces the computed one with the same name within ±20 days. Single day: {\"name\":\"दिवाली\",\"date\":\"2026-11-08\"}. Range: {\"name\":\"गुप्त नवरात्रि (आषाढ़)\",\"start\":\"2026-07-15\",\"end\":\"2026-07-23\"}. You can also add the centre's own events (havan days, shivirs) — the guide will know them.",
+  "events": []
+}
