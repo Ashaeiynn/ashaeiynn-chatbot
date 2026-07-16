@@ -528,6 +528,10 @@
   let naturalVoice = false; // does the server offer a human voice? (probed at load)
   fetch(`${API}/health`).then((r) => r.json()).then((h) => (naturalVoice = !!h.naturalVoice)).catch(() => {});
   let currentAudio = null;
+  // ONE reusable player for all spoken answers: iOS grants sound permission
+  // per-element at tap time — a fresh `new Audio()` created later is muted in
+  // home-screen apps. This element gets blessed on the first tap and reused.
+  let ttsAudio = null;
 
   const cleanForSpeech = (text) =>
     text
@@ -645,10 +649,18 @@
         if (firstBlob) {
           const playBlob = (blob) =>
             new Promise((resolve, reject) => {
-              const audio = new Audio(URL.createObjectURL(blob));
+              const audio = ttsAudio || (ttsAudio = new Audio());
+              const url = URL.createObjectURL(blob);
+              audio.src = url;
               currentAudio = audio;
-              audio.onended = resolve;
-              audio.onerror = reject;
+              audio.onended = () => {
+                URL.revokeObjectURL(url);
+                resolve();
+              };
+              audio.onerror = (e) => {
+                URL.revokeObjectURL(url);
+                reject(e);
+              };
               audio.play().catch(reject);
             });
           try {
@@ -694,9 +706,16 @@
     "click",
     () => {
       try {
-        const a = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=");
-        a.play().catch(() => {});
-        if ("speechSynthesis" in window) speechSynthesis.getVoices(); // warm the voice list
+        // bless the ONE reusable player with this tap — iOS lets it speak later
+        ttsAudio = ttsAudio || new Audio();
+        ttsAudio.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=";
+        ttsAudio.play().catch(() => {});
+        if ("speechSynthesis" in window) {
+          speechSynthesis.getVoices(); // warm the voice list
+          const u = new SpeechSynthesisUtterance(" ");
+          u.volume = 0;
+          speechSynthesis.speak(u); // bless the browser voice too
+        }
       } catch { /* best effort */ }
     },
     { once: true, capture: true },
