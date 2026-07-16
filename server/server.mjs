@@ -500,13 +500,20 @@ async function handleChat(req, res) {
       }
     }
 
-    // Deterministic refusal rule: an answer WITHOUT a Source line is a refusal,
-    // an identity reply, or otherwise not grounded teaching — it must never be
-    // decorated with Watch links, follow-up chips, or conversation extras.
+    // Deterministic rule: an answer WITHOUT a Source line is either a refusal
+    // or a purely conversational reply (rule 4b) — never decorate it with
+    // Watch links or teaching extras. Conversation may keep its follow-up
+    // chips and check-in so the dialogue breathes; sources stay empty.
     // (Handoffs and link requests are the deliberate exceptions.)
     if (!help && !wantsLink && !/source\s*[:：]/i.test(answer)) {
       writeLog({ ...logEntry, answer, refusal: true });
-      return json(res, 200, { answer, sources: [] });
+      return json(res, 200, {
+        answer,
+        sources: [],
+        ...(followups.length ? { followups } : {}),
+        ...(checkin ? { checkin } : {}),
+        ...(sadhana ? { sadhana } : {}),
+      });
     }
 
     // Top sources so the widget can link to the exact video moments.

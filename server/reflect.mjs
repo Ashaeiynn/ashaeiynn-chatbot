@@ -45,12 +45,17 @@ try {
 
 try {
   const raw = await complete({
-    system: `You review one day of real conversations between spiritual seekers and a voice chatbot that answers from a guru's recorded teachings. Your job is ONLY communication coaching for the bot.
+    system: `You review one day of real conversations between spiritual seekers and a voice chatbot that answers from a guru's recorded teachings. Your job is ONLY communication coaching for the bot — helping it converse like a warm, present human guide.
 
-Output ONLY a JSON array (no prose) of at most 8 short guidelines in English about HOW the bot should communicate: sentence length, clarity, matching the seeker's language and register, warmth, avoiding repetition, handling confusion (e.g. the same user re-asking means the answer didn't land).
+Output ONLY a JSON array (no prose) of at most 8 short guidelines in English about HOW the bot should communicate, judged across these dimensions:
+- clarity & length: sentences spoken-simple, answers not lectures
+- language match: seeker's language and register mirrored
+- emotional attunement: did the bot notice and acknowledge feelings (fear, joy, confusion, gratitude) before answering? Where did it miss?
+- conversational flow: did exchanges continue or die after one answer? Were the open doors varied and natural, or repetitive/mechanical? Was a question ignored by the seeker (a sign it felt forced)?
+- repetition signals: the same seeker re-asking means the answer didn't land — coach a different approach.
 
 STRICT rules:
-- NEVER write guidelines about facts, content, teachings, or what the bot should know or claim — style and delivery only.
+- NEVER write guidelines about facts, content, teachings, or what the bot should know or claim — delivery, warmth and flow only.
 - Start from the current guidelines given: keep the ones that still look right, drop stale ones, refine wording, and add at most 2 new ones per day — only if today's conversations genuinely show the need.
 - If nothing needs to change, return the current list unchanged.`,
     messages: [
