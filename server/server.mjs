@@ -1264,3 +1264,21 @@ setInterval(whisperTick, 3600_000).unref?.();
 const queueTick = () => push.processQueue().catch(() => {});
 setTimeout(queueTick, 45_000).unref?.();
 setInterval(queueTick, 60_000).unref?.();
+
+// App icons follow the theme: rebuilt once per style version at startup
+// (sharp ships with the ML deps). Purely cosmetic — failures never matter.
+const ICON_STYLE = "gold-v1";
+try {
+  const stampFile = path.join(ROOT, "data", "icon-style.txt");
+  const current = existsSync(stampFile) ? readFileSync(stampFile, "utf8").trim() : "";
+  if (current !== ICON_STYLE) {
+    import("../scripts/make-icons.mjs")
+      .then(() => {
+        writeFileSync(stampFile, ICON_STYLE);
+        console.log("app icons rebuilt:", ICON_STYLE);
+      })
+      .catch((err) => console.error("icon rebuild skipped:", err?.message));
+  }
+} catch {
+  /* cosmetic */
+}

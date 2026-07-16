@@ -1,6 +1,6 @@
 {
-  "name": "Ask Your Guide — Ashaeiynn",
-  "short_name": "Ask Your Guide",
+  "name": "Ashaeiynn Guide",
+  "short_name": "Ashaeiynn Guide",
   "description": "Speak your question, hear answers from Bhaiya's teachings.",
   "start_url": "/",
   "display": "standalone",
