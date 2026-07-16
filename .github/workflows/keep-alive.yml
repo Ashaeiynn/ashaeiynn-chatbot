@@ -1,0 +1,17 @@
+name: Keep chatbot awake
+
+# Render's free tier spins the service down after ~15 min idle, causing a
+# 50+ second delay for whoever asks the next question. Pinging /health
+# regularly keeps it warm. Runs on GitHub's own schedule — independent of
+# any laptop being on.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        run: curl -fsS https://ashaeiynn-chatbot.onrender.com/health
