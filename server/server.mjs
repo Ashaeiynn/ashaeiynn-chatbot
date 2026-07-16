@@ -245,6 +245,11 @@ async function handleChat(req, res) {
   const MISHEARD = [
     [/गुरुवार/g, "गुरुदेव"],
     [/\bguru\s?[vw]aa?r\b/gi, "Gurudev"],
+    [/[अआ]शा\s?[ईइय]{1,2}न/g, "Ashaeiynn"],
+    [/\basha\s?[eiy]{1,3}nn?\b/gi, "Ashaeiynn"],
+    [/पाठ\s+शाला/g, "पाठशाला"],
+    [/\bpath\s+shala\b/gi, "Pathshala"],
+    [/\bpar[ie]{0,2}ksh[ie]+t\b/gi, "Parikshit"],
   ];
   const message = MISHEARD.reduce(
     (s, [re, ok]) => s.replace(re, ok),
