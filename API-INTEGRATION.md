@@ -36,6 +36,12 @@ While developing against a laptop on the same network, it can be `http://<laptop
 - `message` (required) — the visitor's current question. Any language (Hindi or English).
 - `history` (optional) — recent turns for follow-up context. Send the last few exchanges;
   the server keeps only the most recent and caps length. Omit it for a fresh question.
+- `profile` (optional) — personal-guide context stored on the USER'S device (the server
+  keeps no per-person memory): `{ "topics": ["their recent questions", …≤8],
+  "seen": ["source titles already shown", …≤80] }`. When present, the answer is gently
+  connected to their journey and the response gains a `suggest` field — one relevant
+  source they haven't seen: `{ "title", "timestamp", "url" }`. Show it as a
+  "watch next" hint and add its title to `seen`.
 
 ### Response body
 

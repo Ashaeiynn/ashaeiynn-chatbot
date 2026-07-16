@@ -37,7 +37,11 @@ YOUR part as Claude, on any machine:
 - `widget/widget.js` — voice-first UI: third-eye orb launcher + golden "Ask Your Guide"
   nudge; जय सिया राम splash → docks to blessing strip; animated solar system background;
   tap-to-speak stage (SpeechRecognition hi-IN/en-IN toggle), answers spoken (server TTS →
-  browser fallback); "⌨️ type instead" fallback. Served no-cache.
+  browser fallback); "⌨️ type instead" fallback. Served no-cache. Personal guide:
+  the seeker's journey lives ONLY in their device's localStorage ("ashaiJourney" —
+  asked/seen/convo); each question sends a profile context card (topics+seen) that the
+  server uses once (prompt note + unseen `suggest` in response) and never stores.
+  Welcome-back greeting after 3h+; conversation survives app restarts.
 - Answering AI is switchable via `server/llm.mjs`: `CHAT_PROVIDER` in `.env` — `"gemini"`
   (`GEMINI_API_KEY` + `GEMINI_MODEL`, currently `gemini-3.5-flash`, free tier; owner switched
   2026-07-13 to save cost) or `"anthropic"` (`CHAT_MODEL=claude-haiku-4-5`, prepaid $5).

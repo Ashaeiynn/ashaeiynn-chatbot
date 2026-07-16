@@ -16,6 +16,46 @@
 
   const history = [];
 
+  // ——— the seeker's diary — kept ONLY on this device (localStorage), never on
+  // the server. Each question carries a small context card (recent topics +
+  // already-seen sources) that the server uses once and forgets. ———
+  const J_KEY = "ashaiJourney";
+  const journey = (() => {
+    try {
+      const j = JSON.parse(localStorage.getItem(J_KEY) || "{}");
+      return j && typeof j === "object" ? j : {};
+    } catch {
+      return {};
+    }
+  })();
+  journey.asked = Array.isArray(journey.asked) ? journey.asked : [];
+  journey.seen = Array.isArray(journey.seen) ? journey.seen : [];
+  journey.convo = Array.isArray(journey.convo) ? journey.convo : [];
+  // returning after 3+ hours (not just a page reload in the same sitting)?
+  const cameBack =
+    journey.asked.length > 0 &&
+    journey.lastSeen &&
+    Date.now() - new Date(journey.lastSeen).getTime() > 3 * 3600 * 1000;
+  history.push(...journey.convo.slice(-6)); // follow-ups survive app restarts
+  function saveJourney() {
+    journey.lastSeen = new Date().toISOString();
+    try {
+      localStorage.setItem(J_KEY, JSON.stringify(journey));
+    } catch {
+      /* private mode — the guide still answers, just without memory */
+    }
+  }
+  function recordAsk(q) {
+    journey.asked.push({ q: q.slice(0, 120), at: new Date().toISOString() });
+    if (journey.asked.length > 30) journey.asked.splice(0, journey.asked.length - 30);
+    saveJourney();
+  }
+  function recordSeen(titles) {
+    for (const t of titles) if (t && !journey.seen.includes(t)) journey.seen.push(t);
+    if (journey.seen.length > 80) journey.seen.splice(0, journey.seen.length - 80);
+    saveJourney();
+  }
+
   const style = document.createElement("style");
   style.textContent = `
     .vcb-btn{position:fixed;bottom:20px;right:20px;width:62px;height:62px;border-radius:50%;
@@ -632,8 +672,15 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // via+lang let the server answer in the mic's language even when the
-        // recognizer writes Hindi speech down in Latin letters.
-        body: JSON.stringify({ message: text, history, via: via || "text", lang: recLang }),
+        // recognizer writes Hindi speech down in Latin letters. profile = the
+        // context card from this device's diary (used once, never stored).
+        body: JSON.stringify({
+          message: text,
+          history,
+          via: via || "text",
+          lang: recLang,
+          profile: { topics: journey.asked.slice(-8).map((a) => a.q), seen: journey.seen },
+        }),
       });
       data = await resp.json();
     } catch {
@@ -642,6 +689,10 @@
     if (!resp.ok) throw new Error(data.error || "Sorry, something went wrong. Please try again.");
     history.push({ role: "user", content: text }, { role: "assistant", content: data.answer });
     if (history.length > 12) history.splice(0, history.length - 12);
+    journey.convo = history.slice(-12);
+    recordAsk(text);
+    if (data.sources?.length) recordSeen(data.sources.map((s) => s.title));
+    if (data.suggest) recordSeen([data.suggest.title]);
     return data;
   }
 
@@ -703,6 +754,22 @@
           }
         });
         ans.appendChild(src);
+      }
+      if (data.suggest) {
+        const sug = document.createElement("div");
+        sug.className = "vcb-src";
+        sug.append("🌱 आगे देखिए: ");
+        if (data.suggest.url) {
+          const a = document.createElement("a");
+          a.href = data.suggest.url;
+          a.target = "_blank";
+          a.rel = "noopener";
+          a.textContent = `${data.suggest.title} (${data.suggest.timestamp})`;
+          sug.appendChild(a);
+        } else {
+          sug.append(`${data.suggest.title} (${data.suggest.timestamp})`);
+        }
+        ans.appendChild(sug);
       }
       capAdd(ans);
       panel.dataset.hasAns = "1";
@@ -832,7 +899,12 @@
       if (listening) rec?.stop();
       if (!greeted) {
         greeted = true;
-        addMessage("bot", "Jai Siya Ram 🙏 Ask me anything about the teachings — I'll find the answer from our videos.");
+        addMessage(
+          "bot",
+          cameBack
+            ? `Jai Siya Ram 🙏 वापसी पर स्वागत! पिछली बार आपने पूछा था: “${journey.asked[journey.asked.length - 1].q.slice(0, 80)}” — आगे जो मन में हो, पूछिए।`
+            : "Jai Siya Ram 🙏 Ask me anything about the teachings — I'll find the answer from our videos.",
+        );
       }
       input.focus();
     } else {
@@ -888,7 +960,7 @@
     );
   }
 
-  function addMessage(role, text, sources) {
+  function addMessage(role, text, sources, suggest) {
     const el = document.createElement("div");
     el.className = `vcb-m ${role}`;
     el.textContent = text;
@@ -911,6 +983,22 @@
       });
       el.appendChild(src);
     }
+    if (suggest) {
+      const sug = document.createElement("div");
+      sug.className = "vcb-src";
+      sug.append("🌱 आगे देखिए: ");
+      if (suggest.url) {
+        const a = document.createElement("a");
+        a.href = suggest.url;
+        a.target = "_blank";
+        a.rel = "noopener";
+        a.textContent = `${suggest.title} (${suggest.timestamp})`;
+        sug.appendChild(a);
+      } else {
+        sug.append(`${suggest.title} (${suggest.timestamp})`);
+      }
+      el.appendChild(sug);
+    }
     msgs.appendChild(el);
     msgs.scrollTop = msgs.scrollHeight;
   }
@@ -927,9 +1015,19 @@
       hideNudge();
       playSplash();
       if (panel.dataset.mode === "text") input.focus();
-      else setVState("idle");
+      else {
+        setVState("idle");
+        if (cameBack && !welcomedBack) {
+          welcomedBack = true;
+          const w = document.createElement("div");
+          w.className = "vcb-you";
+          w.textContent = `🙏 वापसी पर स्वागत — पिछली बार: “${journey.asked[journey.asked.length - 1].q.slice(0, 60)}”`;
+          capAdd(w);
+        }
+      }
     }
   }
+  let welcomedBack = false;
   btn.addEventListener("click", () => toggle(!panel.classList.contains("open")));
   panel.querySelector(".vcb-close").addEventListener("click", () => toggle(false));
 
@@ -959,7 +1057,7 @@
     try {
       const data = await askServer(text);
       typing.remove();
-      addMessage("bot", data.answer, data.sources);
+      addMessage("bot", data.answer, data.sources, data.suggest);
       speak(data.answer);
     } catch (err) {
       typing.remove();

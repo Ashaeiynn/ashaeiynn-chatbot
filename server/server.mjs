@@ -270,6 +270,21 @@ async function handleChat(req, res) {
         .map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }))
     : [];
 
+  // Personal-guide context card from the visitor's OWN device (widget diary or
+  // the app). Used once for this answer, never stored — the server keeps no
+  // per-person memory by design.
+  const profile = payload.profile && typeof payload.profile === "object" ? payload.profile : null;
+  const recentTopics = (Array.isArray(profile?.topics) ? profile.topics : [])
+    .filter((t) => typeof t === "string" && t.trim())
+    .slice(-8)
+    .map((t) => t.trim().slice(0, 120));
+  const seenTitles = new Set(
+    (Array.isArray(profile?.seen) ? profile.seen : [])
+      .filter((t) => typeof t === "string")
+      .slice(-80)
+      .map((t) => t.trim().toLowerCase()),
+  );
+
   // Detect the QUESTION's language early — it decides reply language everywhere
   // below. Romanized-Hindi (Hinglish) counts as Hindi; when SPOKEN, the widget's
   // mic language wins (speech recognition may write Hindi speech in Latin letters).
@@ -389,7 +404,11 @@ async function handleChat(req, res) {
         ...history,
         {
           role: "user",
-          content: `Transcript excerpts for this question:\n\n${buildContextBlock(chunks)}\n\n---\nVisitor question: ${message}\n\n[${langInstruction}]`,
+          content: `Transcript excerpts for this question:\n\n${buildContextBlock(chunks)}\n\n---\nVisitor question: ${message}\n\n[${langInstruction}]${
+            recentTopics.length
+              ? `\n[Returning seeker — their recent questions (from their own device): ${recentTopics.join(" | ")}. Where it fits naturally, connect the answer to this ongoing journey in one warm phrase; never list their history back to them.]`
+              : ""
+          }`,
         },
       ],
     });
@@ -409,8 +428,24 @@ async function handleChat(req, res) {
       if (sources.length >= 3) break;
     }
 
+    // A gentle "watch next" the seeker hasn't seen yet (their device tells us
+    // what they've seen; nothing tracked here) — the next-best relevant source.
+    let suggest = null;
+    const usedTitles = new Set(sources.map((s) => s.title.toLowerCase()));
+    for (const c of chunks) {
+      const t = c.title.toLowerCase();
+      if (usedTitles.has(t) || seenTitles.has(t)) continue;
+      if (c.title.startsWith("Bhaiya's approved answer")) continue;
+      suggest = {
+        title: c.title,
+        timestamp: formatTimestamp(c.start_seconds),
+        url: c.url ? `${c.url}#t=${Math.floor(c.start_seconds)}s` : null,
+      };
+      break;
+    }
+
     writeLog({ ...logEntry, answer });
-    json(res, 200, { answer, sources });
+    json(res, 200, { answer, sources, ...(suggest && profile ? { suggest } : {}) });
   } catch (err) {
     if (err instanceof LlmAuthError) {
       console.error("chat auth error:", err.message);
