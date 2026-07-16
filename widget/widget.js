@@ -55,22 +55,7 @@
     .vcb-panel.open{display:flex;animation:vcbPanelIn .4s cubic-bezier(.18,.89,.32,1.15)}
     @keyframes vcbPanelIn{from{opacity:0;transform:scale(.86) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
 
-    /* ——— phones: the panel becomes a full-screen app ——— */
-    @media (max-width:640px){
-      .vcb-panel{top:0;left:0;right:0;bottom:0;width:100%;height:100vh;height:100dvh;
-        border-radius:0;transform-origin:center bottom}
-      .vcb-head{padding-top:calc(12px + env(safe-area-inset-top))}
-      .vcb-form{padding-bottom:calc(12px + env(safe-area-inset-bottom))}
-      .vcb-input{font-size:16px} /* 16px+ stops iOS zooming into the field */
-      .vcb-m{font-size:15px}
-      .vcb-btn{bottom:calc(18px + env(safe-area-inset-bottom))}
-      .vcb-nudge{bottom:calc(30px + env(safe-area-inset-bottom))}
-      /* finger-sized touch targets (≥44px) for the stage controls */
-      .vcb-kbd{font-size:15px;padding:12px 16px;min-height:44px}
-      .vcb-lang{font-size:15px;padding:12px 18px;min-height:44px}
-    }
-    /* page behind the open panel must not scroll on phones */
-    .vcb-lock,.vcb-lock body{overflow:hidden;overscroll-behavior:none}
+    /* (phone-specific rules live at the end of this stylesheet so they win) */
 
     /* ——— animated universe (slow motion) ——— */
     .vcb-cosmos{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
@@ -217,8 +202,12 @@
     .vcb-panel[data-mode="text"] .vcb-stage{display:none}
     .vcb-stage{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;
       align-items:center;padding:12px 14px 14px;min-height:0}
-    .vcb-cap{flex:1;width:100%;overflow-y:auto;display:flex;flex-direction:column;gap:9px;
-      align-items:center;justify-content:flex-end;padding:2px 2px 8px;min-height:0}
+    .vcb-cap{flex:1;width:100%;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:9px;
+      align-items:center;padding:2px 2px 8px;min-height:0;position:relative}
+    .vcb-cap>*{box-sizing:border-box}
+    /* bottom-anchor via auto margin, NOT justify-content:flex-end — flex-end
+       makes overflowing content above the top unreachable by scrolling */
+    .vcb-cap>:first-child{margin-top:auto}
     .vcb-cap::-webkit-scrollbar{width:6px}
     .vcb-cap::-webkit-scrollbar-thumb{background:rgba(52,211,153,.25);border-radius:3px}
     .vcb-you{color:#b9b0e6;font-size:13px;text-align:center;max-width:95%;animation:vcbMsgIn .3s ease both}
@@ -291,6 +280,32 @@
       .vcb-spark,.vcb-shoot{display:none}
       .vcb-neb,.vcb-starfield,.vcb-twinkle,.vcb-galaxy,.vcb-orbit,.vcb-sun,.vcb-moon,.vcb-btn,.vcb-nudge.show{animation:none !important}
     }
+
+    /* ——— phones: the panel becomes a full-screen app ———
+       (kept last so these win over the base rules above) */
+    @media (max-width:640px){
+      .vcb-panel{top:0;left:0;right:0;bottom:0;width:100%;height:100vh;height:100dvh;
+        border-radius:0;transform-origin:center bottom}
+      .vcb-head{padding-top:calc(12px + env(safe-area-inset-top))}
+      .vcb-form{padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+      .vcb-input{font-size:16px} /* 16px+ stops iOS zooming into the field */
+      .vcb-m{font-size:15px}
+      .vcb-btn{bottom:calc(18px + env(safe-area-inset-bottom))}
+      .vcb-nudge{bottom:calc(30px + env(safe-area-inset-bottom))}
+      /* finger-sized touch targets (≥44px) for the stage controls */
+      .vcb-kbd{font-size:15px;padding:12px 16px;min-height:44px}
+      .vcb-lang{font-size:15px;padding:12px 18px;min-height:44px}
+      /* once an answer is on screen, reading wins: compact mic, no solar
+         clutter behind the text, the answer area runs down to the controls */
+      .vcb-ans{font-size:16px}
+      .vcb-you{font-size:14px}
+      .vcb-panel[data-has-ans] .vcb-orbbig{width:56px;height:56px;margin:4px 0}
+      .vcb-panel[data-has-ans] .vcb-mic-big{width:26px;height:26px}
+      .vcb-panel[data-has-ans] .vcb-solar{display:none}
+      .vcb-panel[data-has-ans] .vcb-spacer{flex:0 0 0px}
+    }
+    /* page behind the open panel must not scroll on phones */
+    .vcb-lock,.vcb-lock body{overflow:hidden;overscroll-behavior:none}
   `;
   document.head.appendChild(style);
 
@@ -690,6 +705,9 @@
         ans.appendChild(src);
       }
       capAdd(ans);
+      panel.dataset.hasAns = "1";
+      // long answers: read from the beginning, not scrolled to the end
+      cap.scrollTop += ans.getBoundingClientRect().top - cap.getBoundingClientRect().top - 4;
       setVState("speaking");
       speak(data.answer, () => setVState("idle"));
     } catch (err) {
@@ -697,6 +715,7 @@
       e.className = "vcb-ans";
       e.textContent = err.message;
       capAdd(e);
+      panel.dataset.hasAns = "1";
       setVState("idle");
     }
   }
