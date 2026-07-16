@@ -844,7 +844,7 @@ const server = createServer(async (req, res) => {
     }
     try {
       const p = JSON.parse(body);
-      if (url.pathname === "/api/push/subscribe") push.addSub(p.subscription || p);
+      if (url.pathname === "/api/push/subscribe") push.addSub(p.subscription || p, p.lang);
       else push.removeSub(String(p.endpoint || ""));
       return json(res, 200, { ok: true });
     } catch {

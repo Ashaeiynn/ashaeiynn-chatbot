@@ -1585,7 +1585,8 @@
     await fetch(`${API}/api/push/subscribe`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subscription: sub.toJSON() }),
+      // lang: auto-messages arrive in the seeker's own language
+      body: JSON.stringify({ subscription: sub.toJSON(), lang: recLang && recLang.startsWith("en") ? "en" : "hi" }),
     }).catch(() => {});
     journey.push = 1;
     saveJourney();

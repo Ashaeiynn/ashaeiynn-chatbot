@@ -48,13 +48,17 @@ const save = (f, v) => {
   }
 };
 
-export function addSub(sub) {
+export function addSub(sub, lang) {
   if (!sub?.endpoint || !sub?.keys) return false;
   const all = load(SUBS, []);
-  if (!all.some((s) => s.endpoint === sub.endpoint)) {
-    all.push({ endpoint: sub.endpoint, keys: sub.keys, at: new Date().toISOString() });
-    save(SUBS, all);
+  const clean = lang === "en" ? "en" : "hi";
+  const existing = all.find((s) => s.endpoint === sub.endpoint);
+  if (existing) {
+    existing.lang = clean; // language preference can change over time
+  } else {
+    all.push({ endpoint: sub.endpoint, keys: sub.keys, lang: clean, at: new Date().toISOString() });
   }
+  save(SUBS, all);
   return true;
 }
 export function removeSub(endpoint) {
@@ -66,6 +70,11 @@ export function removeSub(endpoint) {
 export const subCount = () => load(SUBS, []).length;
 export const pushLog = () => load(LOG, []).slice(-120).reverse();
 
+// title/body may be a plain string (sent as-is to everyone — the admin's
+// choice of language) or {hi, en} — each subscriber gets their own language.
+const inLang = (v, lang) => (v && typeof v === "object" ? v[lang] || v.hi || v.en || "" : v);
+const forLog = (v) => (v && typeof v === "object" ? `${v.hi || ""}${v.en ? ` | EN: ${v.en}` : ""}` : String(v || ""));
+
 export async function sendToAll(title, body, url, source) {
   if (!ready) throw new Error("push-not-configured");
   const all = load(SUBS, []);
@@ -75,7 +84,7 @@ export async function sendToAll(title, body, url, source) {
     try {
       await webpush.sendNotification(
         { endpoint: s.endpoint, keys: s.keys },
-        JSON.stringify({ title, body, url: url || "/" }),
+        JSON.stringify({ title: inLang(title, s.lang || "hi"), body: inLang(body, s.lang || "hi"), url: url || "/" }),
         { TTL: 86400 },
       );
       sent++;
@@ -85,7 +94,7 @@ export async function sendToAll(title, body, url, source) {
   }
   if (dead.length) save(SUBS, all.filter((s) => !dead.includes(s.endpoint)));
   const log = load(LOG, []);
-  log.push({ at: new Date().toISOString(), title, body: String(body).slice(0, 300), url: url || "", source: source || "admin", sent, of: all.length });
+  log.push({ at: new Date().toISOString(), title: forLog(title).slice(0, 120), body: forLog(body).slice(0, 400), url: url || "", source: source || "admin", sent, of: all.length });
   save(LOG, log.slice(-500));
   return { sent, of: all.length, removed: dead.length };
 }
@@ -104,8 +113,11 @@ export async function autoWhispers(upcoming) {
     st.sunday = today;
     save(STATE, st);
     await sendToAll(
-      "🙏 रविवार का ज्ञान",
-      "इस सप्ताह का नया Pathshala article आ गया है — पढ़िए और अपनी यात्रा आगे बढ़ाइए।",
+      { hi: "🙏 रविवार का ज्ञान", en: "🙏 Sunday's Teaching" },
+      {
+        hi: "इस सप्ताह का नया Pathshala article आ गया है — पढ़िए और अपनी यात्रा आगे बढ़ाइए।",
+        en: "This week's new Pathshala article has arrived — read it and take your journey forward.",
+      },
       "https://ashaeiynn.com/pathshala/",
       "auto",
     ).catch(() => {});
@@ -121,8 +133,14 @@ export async function autoWhispers(upcoming) {
     await sendToAll(
       "🪔 " + e.name,
       days > 1
-        ? `कल से ${e.name} आरंभ हो रही है (${days} दिन)। साधना की तैयारी कर लीजिए 🙏`
-        : `कल ${e.name} है — साधना के लिए उत्तम दिन 🙏`,
+        ? {
+            hi: `कल से ${e.name} आरंभ हो रही है (${days} दिन)। साधना की तैयारी कर लीजिए 🙏`,
+            en: `${e.name} begins tomorrow (${days} days). Prepare for your sadhana 🙏`,
+          }
+        : {
+            hi: `कल ${e.name} है — साधना के लिए उत्तम दिन 🙏`,
+            en: `Tomorrow is ${e.name} — an excellent day for sadhana 🙏`,
+          },
       "/",
       "auto",
     ).catch(() => {});
