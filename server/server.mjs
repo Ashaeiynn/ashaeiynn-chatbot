@@ -239,7 +239,17 @@ async function handleChat(req, res) {
     return json(res, 400, { error: "Invalid JSON." });
   }
 
-  const message = String(payload.message ?? "").trim().slice(0, 2000);
+  // Speech recognition (the widget's mic, or the app's own) mishears brand
+  // words — spoken "गुरुदेव" arrives as "गुरुवार" (Thursday). Fix the known
+  // ones so retrieval finds the right teachings. Keep in step with widget.js.
+  const MISHEARD = [
+    [/गुरुवार/g, "गुरुदेव"],
+    [/\bguru\s?[vw]aa?r\b/gi, "Gurudev"],
+  ];
+  const message = MISHEARD.reduce(
+    (s, [re, ok]) => s.replace(re, ok),
+    String(payload.message ?? "").trim().slice(0, 2000),
+  );
   if (!message) return json(res, 400, { error: "Empty message." });
 
   // Recent conversation history from the widget (kept short on purpose).

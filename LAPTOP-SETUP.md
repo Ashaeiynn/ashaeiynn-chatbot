@@ -42,6 +42,16 @@ videos listed in `data/inventory.json`), `npm run ingest` (rebuild knowledge bas
 
 ## Day-to-day rhythm (both computers)
 
-- **Before working:** `git pull`
-- **After working:** `git add -A && git commit -m "what changed" && git push`
-- Or simply tell Claude: *"pull the latest chatbot changes"* / *"commit and push my changes"*.
+**Syncing is fully automatic** — hooks in `.claude/settings.json` (committed in this repo)
+run `scripts/auto-sync.sh`: `git pull` when a Claude Code session starts, auto-commit + push
+every time Claude finishes a turn. The script also sets up git identity on a brand-new
+machine by itself, and CLAUDE.md tells Claude to sync manually if the hooks haven't loaded
+yet — so on any computer: clone, open Claude Code, done.
+
+- If Claude Code ever asks to approve the project's hooks, say yes (one time, security prompt).
+- If both computers edited the same lines while one was offline, the conflict is reported
+  to Claude automatically and it resolves it in-session — nothing for you to do.
+- Being offline is fine: syncing just catches up the next time you work.
+- Manual fallback still works: `git pull` / `git add -A && git commit -m "…" && git push`.
+
+_Auto-sync verified end-to-end from the Intel MacBook on 2026-07-16 — this very line was committed and pushed by the sync system itself._

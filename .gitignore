@@ -1,6 +1,11 @@
 # Secrets — never commit
 .env
 
+# Machine-local files — never sync between computers
+.DS_Store
+.claude/settings.local.json
+.claude/launch.json
+
 # Dependencies
 node_modules/
 

@@ -9,6 +9,18 @@ Owner (Parikshit) is non-technical: explain simply, do the work for him, verify 
 - `API-INTEGRATION.md` — API contract for the owner's separate app (built on another laptop)
 - `DEPLOY.md` — Render/Docker go-live steps · `LAPTOP-SETUP.md` — new-machine setup
 
+## Sync protocol (multiple computers share this repo via GitHub)
+Hooks in `.claude/settings.json` run `scripts/auto-sync.sh`: pull on session start,
+auto commit+push after every turn. Offline failures are silent (sync catches up later).
+YOUR part as Claude, on any machine:
+- Session start: if the hooks didn't run (not yet approved / settings not loaded),
+  run `bash scripts/auto-sync.sh start` yourself before touching any file.
+- If you ever see an AUTO-SYNC CONFLICT message (from a hook or the script): resolving
+  it is your top priority — `git pull --rebase`, merge conflicted files keeping both
+  sides' work (regenerate or take the newer side for package-lock.json / knowledge.db),
+  `git rebase --continue`, `git push`. Don't ask permission; just fix and report.
+- Never disable these hooks or leave the repo unpushed at the end of a task.
+
 ## Architecture (all local Node 22+, no external services except Anthropic API)
 - `server/server.mjs` — HTTP server (port 3111): `POST /api/chat` (rate-limited, logs to
   `data/questions.log`), `POST /api/tts` (ElevenLabs if key set, else 501 → widget falls back
@@ -55,12 +67,15 @@ mlx_whisper large-v3-turbo hi) → `data/transcripts/*.json` → `npm run ingest
   bar is 22/22; a grounded answer must end with a `Source:` line, fallbacks must not.
 - Mac quirks: PATH needs `~/.local/node/bin`, `~/.local/bin`, `~/Library/Python/3.9/bin`
   (no Homebrew, no profile edits). Kill stale servers: `lsof -ti :3111 | xargs kill -9`.
+  The owner's second Mac is Intel (x86_64): `onnxruntime-node` is pinned to 1.23.0 in
+  package.json `overrides` (1.24+ ships Apple-Silicon-only macOS binaries) — never remove.
   Hidden browser tabs freeze CSS animations and SpeechRecognition — verify via
   `getAnimations()` clock jumps; real voice tests need the owner's own browser.
 
-## State (2026-07-11)
-Knowledge: ~180 sources / ~2,700 chunks (91 Vimeo/YouTube videos ~64h + 58 articles +
-29 site pages + Bhaiya audio/video files). 3 Vimeo videos remain password-locked (skipped).
+## State (2026-07-16)
+Knowledge: 577 sources / 8,112 chunks in data/knowledge.db (91 original Vimeo/YouTube
+videos ~64h + articles + site pages + everything taught via the admin portal through
+2026-07-16). 3 Vimeo videos remain password-locked (skipped).
 Suite 22/22. Anthropic key funded (~$5, hard cap). ElevenLabs key NOT yet added.
-Pending: GitHub repo (owner creating account) → work-from-anywhere + Render deploy →
-owner's app integrates via API-INTEGRATION.md.
+Done: GitHub repo (Ashaeiynn/ashaeiynn-chatbot, private) + both Macs cloned & auto-syncing.
+Pending: Render deploy → owner's app integrates via API-INTEGRATION.md.

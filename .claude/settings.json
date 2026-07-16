@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/scripts/auto-sync.sh\" start",
+            "timeout": 60,
+            "statusMessage": "Pulling latest chatbot changes from GitHub…"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/scripts/auto-sync.sh\" stop",
+            "timeout": 120,
+            "statusMessage": "Auto-syncing to GitHub…"
+          }
+        ]
+      }
+    ]
+  }
+}
