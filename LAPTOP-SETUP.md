@@ -53,3 +53,5 @@ yet — so on any computer: clone, open Claude Code, done.
   to Claude automatically and it resolves it in-session — nothing for you to do.
 - Being offline is fine: syncing just catches up the next time you work.
 - Manual fallback still works: `git pull` / `git add -A && git commit -m "…" && git push`.
+
+_Auto-sync verified end-to-end from the Intel MacBook on 2026-07-16 — this very line was committed and pushed by the sync system itself._
