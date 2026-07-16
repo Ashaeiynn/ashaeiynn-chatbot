@@ -753,6 +753,7 @@
     if (history.length > 12) history.splice(0, history.length - 12);
     journey.convo = history.slice(-12);
     if (data.followups?.length) journey.lastFollowups = data.followups.slice(0, 3);
+    if (data.checkin) journey.checkin = data.checkin;
     recordAsk(text);
     if (data.sources?.length) recordSeen(data.sources.map((s) => s.title));
     if (data.suggest) recordSeen([data.suggest.title]);
@@ -1140,6 +1141,7 @@
             ? `${todGreet()}${journey.name ? `, ${journey.name} जी` : ""} 🙏 वापसी पर स्वागत! पिछली बार आपने पूछा था: “${journey.asked[journey.asked.length - 1].q.slice(0, 80)}” — आगे जो मन में हो, पूछिए।`
             : `Jai Siya Ram${journey.name ? `, ${journey.name} जी` : ""} 🙏 Ask me anything about the teachings — I'll find the answer from our videos.`,
         );
+        if (cameBack) presentCheckin((q) => addMessage("bot", q));
         if (cameBack && journey.lastFollowups?.length) msgs.appendChild(chipsEl(journey.lastFollowups));
       }
       input.focus();
@@ -1211,6 +1213,19 @@
       voiceAsk(q);
     }
   }
+  // On a return visit, the guide asks the caring question it saved last time
+  // ("जाप का अभ्यास शुरू किया? कैसा रहा?"). It also goes into the conversation
+  // memory as the guide's own words, so the seeker's reply is understood.
+  function presentCheckin(displayAsBot) {
+    const q = (journey.checkin || "").trim();
+    if (!q) return;
+    journey.checkin = "";
+    history.push({ role: "assistant", content: q });
+    journey.convo = history.slice(-12);
+    saveJourney();
+    displayAsBot(q);
+  }
+
   function chipsEl(followups) {
     const wrap = document.createElement("div");
     wrap.className = "vcb-chips";
@@ -1292,6 +1307,12 @@
           w.className = "vcb-you";
           w.textContent = `🙏 ${todGreet()}${journey.name ? `, ${journey.name} जी` : ""} — वापसी पर स्वागत! पिछली बार: “${journey.asked[journey.asked.length - 1].q.slice(0, 60)}”`;
           capAdd(w);
+          presentCheckin((q) => {
+            const d = document.createElement("div");
+            d.className = "vcb-ans";
+            d.textContent = q;
+            capAdd(d);
+          });
           if (journey.lastFollowups?.length) capAdd(chipsEl(journey.lastFollowups));
           fetchNextStep();
         }

@@ -446,13 +446,22 @@ async function handleChat(req, res) {
       ],
     });
 
-    // The model ends with a "सुझाव: q1 | q2" line — strip it into tappable
-    // follow-up questions (never shown as text, never spoken).
+    // The model ends with "सुझाव: q1 | q2" (tappable follow-ups) and
+    // "वापसी: q" (a caring question saved for the seeker's next visit).
+    // Strip both regardless of order — never shown as text, never spoken.
     let followups = [];
-    const fu = answer.match(/\n\s*(?:सुझाव|suggestions?)\s*[:：]\s*([^\n]+)\s*$/i);
-    if (fu) {
-      followups = fu[1].split("|").map((s) => s.trim()).filter(Boolean).slice(0, 3);
-      answer = answer.slice(0, fu.index).trimEnd();
+    let checkin = "";
+    for (let pass = 0; pass < 2; pass++) {
+      const fu = answer.match(/\n\s*(?:सुझाव|suggestions?)\s*[:：]\s*([^\n]+)\s*$/i);
+      if (fu) {
+        followups = fu[1].split("|").map((s) => s.trim()).filter(Boolean).slice(0, 3);
+        answer = answer.slice(0, fu.index).trimEnd();
+      }
+      const ci = answer.match(/\n\s*(?:वापसी|check-?in)\s*[:：]\s*([^\n]+)\s*$/i);
+      if (ci) {
+        checkin = ci[1].trim().slice(0, 200);
+        answer = answer.slice(0, ci.index).trimEnd();
+      }
     }
 
     // Top sources so the widget can link to the exact video moments.
@@ -501,6 +510,7 @@ async function handleChat(req, res) {
       sources,
       ...(suggest && profile ? { suggest } : {}),
       ...(followups.length ? { followups } : {}),
+      ...(checkin ? { checkin } : {}),
     });
   } catch (err) {
     if (err instanceof LlmAuthError) {
