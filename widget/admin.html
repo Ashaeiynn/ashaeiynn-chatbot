@@ -462,7 +462,28 @@
   }));
 
   const KIND_ICON = { media: "🎧", document: "📄", "video-link": "🎬", article: "🌐", note: "✍️", forget: "🗑️" };
-  const ST_LABEL = { queued: "waiting", working: "processing…", ready: "processed", studying: "studying…", done: "✓ learnt", failed: "✗ failed" };
+  const ST_LABEL = {
+    queued: "⏳ कतार में · waiting",
+    working: "⚙️ पढ़ा जा रहा है · reading",
+    ready: "📖 पढ़ लिया · study next",
+    studying: "🧠 अध्ययन जारी · studying",
+    done: "✅ सीख लिया · learnt",
+    failed: "❌ नहीं सीख पाया · failed",
+    dup: "🔁 पहले से सीखा हुआ",
+  };
+
+  // raw errors → words the admin can act on (raw kept in brackets for support)
+  function friendlyError(raw) {
+    const r = String(raw || "");
+    if (/textutil|studio Mac|transcrib|mlx_whisper|Videos and audios/i.test(r))
+      return "यह file type सिर्फ़ studio Mac के portal से सिखाई जा सकती है (.doc/.rtf/audio/video)। PDF या .docx बनाकर यहीं दोबारा upload कर सकते हैं।";
+    if (/No readable text/i.test(r))
+      return "File में पढ़ने लायक text नहीं मिला — शायद यह scan/photo है। Text वाली PDF/docx upload कीजिए।";
+    if (/Unsupported file/i.test(r)) return "यह file type support नहीं है — PDF, docx, txt, या link भेजिए।";
+    if (/too large|too long/i.test(r)) return "File बहुत बड़ी है — छोटे हिस्सों में upload कीजिए।";
+    if (/fetch|network|ENOTFOUND|timeout/i.test(r)) return "Link खुल नहीं पाया — internet/link जाँच कर दोबारा try कीजिए।";
+    return "";
+  }
 
   // the big status banner at the top of the Teach tab
   let uploading = false;
@@ -477,8 +498,23 @@
     if (pct != null) $("#ts-bar").style.width = pct + "%";
   }
 
+  // when something finishes learning while the admin watches, say it loudly
+  let celebrateUntil = 0;
+  const jobStatusSeen = new Map(); // job id → last status this page saw
+  function celebrateNewLearning(jobs) {
+    for (const j of jobs) {
+      const prev = jobStatusSeen.get(j.id);
+      if (prev && prev !== "done" && j.status === "done" && j.kind !== "forget") {
+        celebrateUntil = Date.now() + 9000;
+        showStatus("🎉", `"${j.title}" — बॉट ने सीख लिया!`, "यह ज्ञान अब जवाबों में शामिल है — पूछकर test कीजिए");
+      }
+      jobStatusSeen.set(j.id, j.status);
+    }
+  }
+
   function statusFromJobs(jobs, totals) {
     if (uploading) return; // the upload loop owns the banner while files transfer
+    if (Date.now() < celebrateUntil) return; // let the 🎉 moment breathe
     // with very large queues the list is trimmed — totals carry the real numbers
     const t = totals || { total: jobs.length };
     for (const st of ["queued", "working", "ready", "studying", "done", "failed"])
@@ -519,7 +555,13 @@
       });
     }
     for (const j of serverJobs) {
-      rows.push({ icon: KIND_ICON[j.kind] || "📦", title: j.title, detail: j.detail, cls: j.status, label: ST_LABEL[j.status] || j.status });
+      let detail = j.detail;
+      if (j.status === "failed") {
+        const f = friendlyError(j.detail);
+        detail = f ? `${f}${j.detail ? `  (${j.detail})` : ""}` : j.detail;
+      }
+      if (j.status === "done" && !detail) detail = "बॉट अब इस ज्ञान से जवाब दे रहा है — पूछकर देखिए";
+      rows.push({ icon: KIND_ICON[j.kind] || "📦", title: j.title, detail, cls: j.status, label: ST_LABEL[j.status] || j.status });
     }
     $("#jobs").innerHTML = rows.length ? "" : `<div class="empty">nothing yet — add something above</div>`;
     for (const r of rows) {
@@ -540,6 +582,7 @@
       const d = await r.json();
       const fresh = d.at && Date.now() - d.at < 150000;
       serverJobs = d.jobs || [];
+      celebrateNewLearning(serverJobs);
       $("#jobs-sub").textContent = fresh
         ? "🖥️ studio Mac — LIVE · updates every ~30 seconds"
         : d.at
@@ -555,6 +598,7 @@
     if (!r.ok) return;
     const d = await r.json();
     serverJobs = d.jobs || [];
+    celebrateNewLearning(serverJobs);
     statusFromJobs(serverJobs, d.totals);
     renderJobs();
     if (pendingUploads.length || serverJobs.some((j) => ["queued", "working", "ready", "studying"].includes(j.status))) {
