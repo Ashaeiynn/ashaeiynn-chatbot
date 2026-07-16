@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd \"${CLAUDE_PROJECT_DIR:-.}\" && git pull --rebase --autostash --quiet 2>/dev/null || true",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/scripts/auto-sync.sh\" start",
             "timeout": 60,
             "statusMessage": "Pulling latest chatbot changes from GitHub…"
           }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd \"${CLAUDE_PROJECT_DIR:-.}\" && { if [ -n \"$(git status --porcelain)\" ]; then git add -A && git commit -q -m \"Auto-sync from $(hostname -s): $(date '+%Y-%m-%d %H:%M')\"; fi; git pull --rebase --quiet 2>/dev/null || git rebase --abort 2>/dev/null; git push --quiet 2>/dev/null; } || true",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/scripts/auto-sync.sh\" stop",
             "timeout": 120,
             "statusMessage": "Auto-syncing to GitHub…"
           }
