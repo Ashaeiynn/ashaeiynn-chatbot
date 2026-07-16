@@ -1,7 +1,7 @@
 // The chatbot backend: serves the widget and answers questions.
 // Usage: npm start   → http://localhost:3111
 import { createServer } from "node:http";
-import { readFileSync, existsSync, appendFileSync, createWriteStream, rmSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, existsSync, appendFileSync, createWriteStream, rmSync, readdirSync, statSync, mkdirSync } from "node:fs";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { teachFile, teachLink, teachText, forget, publicJobs, jobTotals, uploadsDir } from "./teach.mjs";
@@ -33,11 +33,23 @@ if (process.platform === "darwin" && existsSync("/usr/bin/caffeinate")) {
 const ADMIN_KEY = process.env.ADMIN_KEY || "";
 const LIBRARY_KEY = process.env.LIBRARY_KEY || ""; // second lock: the Library tab
 
-// One JSON line per question in data/questions.log (question, answer, retrieval)
-// — reviewed in the admin portal at /admin.
+// One JSON line per question (question, answer, retrieval) — reviewed in the
+// admin portal at /admin. Written under LOG_DIR rather than the repo's own
+// data/ folder so it survives redeploys: on Render, data/ is rebuilt fresh
+// from the git image on every deploy, but a mounted persistent Disk (set
+// LOG_DIR to its mount path) keeps this file across restarts. Defaults to
+// data/ for local dev, where the repo folder itself is already persistent.
+const LOG_DIR = process.env.LOG_DIR || path.join(ROOT, "data");
+const QUESTIONS_LOG = path.join(LOG_DIR, "questions.log");
+try {
+  mkdirSync(LOG_DIR, { recursive: true });
+} catch {
+  /* best effort — writeLog already tolerates a missing/unwritable dir */
+}
+
 function writeLog(entry) {
   try {
-    appendFileSync(path.join(ROOT, "data", "questions.log"), JSON.stringify(entry) + "\n");
+    appendFileSync(QUESTIONS_LOG, JSON.stringify(entry) + "\n");
   } catch {
     /* logging must never break answering */
   }
@@ -656,7 +668,7 @@ const server = createServer(async (req, res) => {
     if (!adminOk()) return;
     let entries = [];
     try {
-      const lines = readFileSync(path.join(ROOT, "data", "questions.log"), "utf8").trim().split("\n");
+      const lines = readFileSync(QUESTIONS_LOG, "utf8").trim().split("\n");
       entries = lines
         .slice(-1000)
         .map((l) => {

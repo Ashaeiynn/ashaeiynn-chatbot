@@ -19,6 +19,7 @@ You only deploy **after** the knowledge base is built (`npm run ingest` has prod
 | `CHAT_MODEL` | – | `claude-opus-4-8` (best) / `claude-sonnet-5` / `claude-haiku-4-5` (cheapest) |
 | `ALLOWED_ORIGIN` | – | Leave unset/`*` for a native app; set to your web origin if it's a browser app |
 | `PORT` | – | Most hosts set this automatically |
+| `LOG_DIR` | recommended | Folder for `questions.log` (the admin Questions tab). Without a persistent Disk mounted here, this resets to empty on every redeploy — see below. |
 
 Confirm a deploy is live by opening `https://<your-host>/health` — it returns
 `{"ok":true,...,"knowledgeBase":"built"}`.
@@ -53,6 +54,20 @@ ANTHROPIC_API_KEY="sk-ant-..." node server/server.mjs   # listens on PORT (defau
 
 Run it under a process manager (pm2, systemd) and put it behind your existing HTTPS
 (nginx/Caddy) at a subdomain like `chat.ashaeiynn.com`.
+
+## Keeping the visitor Q&A history (admin Questions tab)
+
+The knowledge base itself is safe across redeploys — `teach.mjs` commits new sources
+to git, and the Docker build bakes them into the image (see the Dockerfile). But
+`data/questions.log` is intentionally NOT committed (it's per-visitor traffic, not
+knowledge), so without extra setup it lives only in the container's disk and is wiped
+every time the service redeploys — which happens automatically after every teaching
+session or code push.
+
+To keep it: on Render, go to your service → **Disks** tab → **Add Disk** (1GB is
+plenty) → mount path e.g. `/var/data` → then set the env var `LOG_DIR=/var/data` in
+the **Environment** tab. Redeploy once after adding both. From then on the Questions
+tab keeps its full history across restarts and redeploys.
 
 ## Updating the knowledge base later
 
