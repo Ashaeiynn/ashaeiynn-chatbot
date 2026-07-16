@@ -86,5 +86,7 @@ chatbot-update.timer syncs from GitHub every 5 min via scripts/auto-sync.sh
 VPS disk is permanent: questions.log/corrections survive restarts, no LOG_DIR
 needed. Legacy: ashaeiynn-chatbot.onrender.com (Render free) still auto-deploys
 + keep-alive Action pings it — retire both once the owner confirms.
-Pending: owner's real .env onto the VPS (test mode until then); owner's app
-integrates via API-INTEGRATION.md.
+Owner's real .env is installed on the VPS and this MacBook (2026-07-16): fully
+live — Gemini answers + natural voice working end-to-end on guide.ashaeiynn.com.
+Pending: owner's app integrates via API-INTEGRATION.md; retire Render (owner's
+call); VPS deploy key still read-only (teach-on-live can't push back yet).
