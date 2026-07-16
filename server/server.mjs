@@ -505,7 +505,10 @@ async function handleChat(req, res) {
         sources.push({ title: l.title, timestamp: "", url: l.url });
       }
     }
-    // This needs a human — attach the way to reach one.
+    // This needs a human — attach the way to reach one. Safety net: even if
+    // the model forgot its सहायता marker, an answer that points the seeker to
+    // a mentor or screening should always carry the links.
+    if (!help && /mentor|मेंटर|मेन्टर|screening|स्क्रीनिंग/i.test(answer)) help = "screening";
     if (help) {
       const wanted = help === "screening" ? ["Book a screening", "Contact Ashaeiynn"] : ["Contact Ashaeiynn"];
       for (const l of linkDirectory().filter((l) => wanted.includes(l.title))) {
