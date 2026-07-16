@@ -67,15 +67,15 @@ function moonDays(nowMs, phase /* 0 = new, 0.5 = full */) {
 
 // festivals derived from a moon day: start = moon + offset, lasting duration days
 const DERIVED = [
-  { name: "चैत्र नवरात्रि", nameEn: "Chaitra Navratri", phase: 0, window: ["03-15", "04-16"], offset: 1, duration: 9 },
-  { name: "गुप्त नवरात्रि (आषाढ़)", nameEn: "Gupt Navratri (Ashadha)", phase: 0, window: ["06-20", "07-22"], offset: 1, duration: 9 },
-  { name: "शारदीय नवरात्रि", nameEn: "Sharadiya Navratri", phase: 0, window: ["09-15", "10-17"], offset: 1, duration: 9 },
-  { name: "गुप्त नवरात्रि (माघ)", nameEn: "Gupt Navratri (Magha)", phase: 0, window: ["01-12", "02-13"], offset: 1, duration: 9 },
+  { name: "चैत्र नवरात्रि", nameEn: "Chaitra Navaratri", phase: 0, window: ["03-15", "04-16"], offset: 1, duration: 9 },
+  { name: "गुप्त नवरात्रि (आषाढ़)", nameEn: "Gupt Navaratri", phase: 0, window: ["06-20", "07-22"], offset: 1, duration: 9 },
+  { name: "शारदीय नवरात्रि", nameEn: "Navaratri", phase: 0, window: ["09-15", "10-17"], offset: 1, duration: 9 },
+  { name: "गुप्त नवरात्रि (माघ)", nameEn: "Gupt Navaratri", phase: 0, window: ["01-12", "02-13"], offset: 1, duration: 9 },
   { name: "महाशिवरात्रि", nameEn: "Mahashivratri", phase: 0, window: ["02-05", "03-10"], offset: -1, duration: 1 },
-  { name: "होली (होलिका दहन)", nameEn: "Holi (Holika Dahan)", phase: 0.5, window: ["02-25", "03-25"], offset: 0, duration: 2 },
+  { name: "होली (होलिका दहन)", nameEn: "Holi", phase: 0.5, window: ["02-25", "03-25"], offset: 0, duration: 2 },
   { name: "गुरु पूर्णिमा", nameEn: "Guru Purnima", phase: 0.5, window: ["07-03", "08-02"], offset: 0, duration: 1 },
   { name: "रक्षाबंधन", nameEn: "Raksha Bandhan", phase: 0.5, window: ["08-04", "09-02"], offset: 0, duration: 1 },
-  { name: "जन्माष्टमी (लगभग)", nameEn: "Janmashtami (approx.)", phase: 0.5, window: ["08-04", "09-02"], offset: 8, duration: 1 },
+  { name: "जन्माष्टमी (लगभग)", nameEn: "Janmashtami", phase: 0.5, window: ["08-04", "09-02"], offset: 8, duration: 1 },
   { name: "दिवाली", nameEn: "Diwali", phase: 0, window: ["10-15", "11-14"], offset: 0, duration: 1 },
 ];
 
