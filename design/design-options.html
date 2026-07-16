@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<title>Ask Your Guide — design options</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Elsie:wght@400;900&display=swap');
+  :root{
+    --bg:#070b08; --card:rgba(20,30,21,.72); --card2:rgba(13,21,14,.85);
+    --hair:rgba(227,183,102,.20); --hair2:rgba(227,183,102,.45);
+    --gold:#d9a94f; --gold2:#f3d795; --golddeep:#a97c2c;
+    --cream:#f5edda; --ink:#e9dfc6; --dim:#a89b7d;
+    --leaf:#9adcb4; --user:#1c4633;
+    --serif:Georgia,'Kohinoor Devanagari','Devanagari MT','Noto Serif Devanagari',serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#161616;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;padding:34px}
+  .row{display:flex;gap:40px;justify-content:center;align-items:flex-start;margin-bottom:26px}
+  .optlbl{max-width:830px;margin:0 auto 20px;display:flex;align-items:center;gap:14px}
+  .optlbl h2{font-size:17px;letter-spacing:.5px;color:#eee;font-family:Georgia,serif}
+  .optlbl p{font-size:12.5px;color:#9a9a9a}
+  .optlbl .tag{border-radius:999px;padding:5px 13px;font-size:12px;font-weight:700;flex-shrink:0}
+  .tag.a{background:linear-gradient(140deg,#f7e3ae,#d9a94f);color:#231a04}
+  .tag.b{background:linear-gradient(140deg,#efe6d9,#c1a78c);color:#33291b}
+  .divider{height:1px;max-width:900px;margin:34px auto;background:linear-gradient(90deg,transparent,#555,transparent)}
+
+  /* ═══════ OPTION B — website theme (light, earthy) ═══════ */
+  .frame.light{color:#33302b;background:
+    radial-gradient(130% 45% at 50% -5%,rgba(193,167,140,.25) 0%,transparent 55%),
+    radial-gradient(100% 40% at 50% 112%,rgba(212,203,194,.55) 0%,transparent 60%),
+    linear-gradient(180deg,#fbf9f6 0%,#f6f1ea 55%,#f1e9df 100%)}
+  .light .stars{opacity:.25;filter:invert(.8) sepia(.4)}
+  .light .mandala{opacity:.14}
+  .light .mandala g{stroke:#a8886a}
+  .light .sbar{color:#33302b}
+  .light .head h1{font-family:'Elsie',Georgia,serif;font-weight:900;
+    background:linear-gradient(180deg,#4a3f2f 30%,#8a6a3f 90%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .light .head p{color:#a09484}
+  .light .badge{background:#fff;box-shadow:0 0 0 1px rgba(168,136,106,.6),0 0 0 4px rgba(168,136,106,.12),0 8px 22px rgba(120,95,60,.18)}
+  .light .badge img,.light .gdot img,.light .who img{filter:none}
+  .light .bless{color:#8a6a3f;text-shadow:none}
+  .light .rule{background:linear-gradient(90deg,transparent,#b98c5e)}
+  .light .rule.r{background:linear-gradient(270deg,transparent,#b98c5e)}
+  .light .rule::after{background:#b98c5e}
+  .light .streak{border-color:rgba(168,136,106,.5);background:#fff;color:#7a5c35;box-shadow:0 3px 10px rgba(120,95,60,.10)}
+  .light .thought{background:linear-gradient(155deg,#ffffff,#f6efe6 70%);
+    box-shadow:inset 0 0 0 1px #e6d9c6,0 10px 26px rgba(120,95,60,.12)}
+  .light .thought::before{color:rgba(168,136,106,.22)}
+  .light .thought h4{color:#8a6a3f}
+  .light .thought p{color:#33302b}
+  .light .thought span{color:#7d9a85}
+  .light .greet{color:#5c5245}
+  .light .greet b{color:#8a6a3f}
+  .light .gdot{background:#fff;box-shadow:0 0 0 1px rgba(168,136,106,.5)}
+  .light .gbub{background:#fff;box-shadow:inset 0 0 0 1px #eadfd0,0 8px 20px rgba(120,95,60,.12);color:#33302b}
+  .light .chip{border-color:rgba(138,106,63,.4);color:#7a5c35;background:#fff;box-shadow:0 3px 10px rgba(120,95,60,.10)}
+  .light .r1{border-color:rgba(168,136,106,.6)}
+  .light .r2{border-color:rgba(168,136,106,.34)}
+  .light .r3{border-color:rgba(168,136,106,.16)}
+  .light .mic{background:radial-gradient(circle at 33% 26%,#ffffff 0%,#f4ede3 60%,#e9ddcc 100%);
+    box-shadow:0 0 0 2.5px rgba(138,106,63,.85),0 14px 40px rgba(120,95,60,.28),inset 0 0 24px rgba(193,167,140,.25)}
+  .light .hint{color:#6b5d49}
+  .light .hint b{color:#8a6a3f}
+  .light .pill{background:#fff;border-color:rgba(168,136,106,.5);color:#7a5c35;box-shadow:0 4px 14px rgba(120,95,60,.12)}
+  .light .ghost{color:#a09484}
+  .light .temple path{fill:#d9ccbb;opacity:.85}
+  .light .ub{background:linear-gradient(150deg,#3a352e,#27241f);color:#f4efe6}
+  .light .ub time{color:#c9bfa9}
+  .light .card{background:rgba(255,255,255,.94);box-shadow:inset 0 0 0 1px #eadfd0,0 14px 36px rgba(120,95,60,.16)}
+  .light .card::before,.light .card::after{opacity:.9;border-color:#b98c5e}
+  .light .who{color:#8a6a3f}
+  .light .who em{color:#a09484}
+  .light .flow{color:#33302b}
+  .light .quote{background:linear-gradient(150deg,#faf4ea,#f3eadb);box-shadow:inset 0 0 0 1px #e6d9c6;color:#4a4237}
+  .light .quote::before{color:#b98c5e}
+  .light .quote span{color:#a09484}
+  .light .lbl{color:#a8886a}
+  .light .lbl::after{background:linear-gradient(90deg,#e0d2bd,transparent)}
+  .light .vid{background:#fbf8f3;box-shadow:inset 0 0 0 1px #efe5d5}
+  .light .vid p{color:#33302b}
+  .light .vid span{color:#a09484}
+  .light .thumb{background:linear-gradient(130deg,#cbb99f 0%,#e6dbc9 55%,#f2ebdf 100%)}
+  .light .thumb::before{background:radial-gradient(60% 80% at 30% 20%,rgba(255,255,255,.5),transparent 60%)}
+  .light .play{background:rgba(255,255,255,.85);box-shadow:0 0 0 1.5px rgba(138,106,63,.8)}
+  .light .play i{color:#8a6a3f}
+  .light .fb{border-top-color:#eadfd0}
+  .light .fb div{color:#a09484}
+  .light .fb .on{color:#8a6a3f}
+  .light .fb .on i{filter:none}
+  .light .inmic{background:#fff;box-shadow:0 0 0 1.5px rgba(138,106,63,.6),0 6px 16px rgba(120,95,60,.18)}
+  .light .field{background:#fff;box-shadow:inset 0 0 0 1.5px #e6d9c6;color:#a09484}
+  .light .send{background:linear-gradient(140deg,#3a352e,#27241f);color:#f3e9d5;
+    box-shadow:0 6px 18px rgba(50,44,35,.35),inset 0 1px 0 rgba(255,255,255,.15)}
+  .frame{width:375px;height:812px;border-radius:38px;overflow:hidden;position:relative;color:var(--cream);
+    background:
+      radial-gradient(130% 50% at 50% -6%,rgba(217,169,79,.16) 0%,transparent 58%),
+      radial-gradient(100% 42% at 50% 110%,rgba(217,169,79,.22) 0%,transparent 55%),
+      radial-gradient(60% 30% at 50% 55%,rgba(154,220,180,.05) 0%,transparent 70%),
+      linear-gradient(180deg,#0a110b 0%,#070b08 50%,#0a0d07 100%);
+    box-shadow:0 26px 70px rgba(0,0,0,.65),0 0 0 7px #202020,0 0 0 8px #2e2e2e}
+  .caption{position:absolute;left:0;right:0;bottom:-48px;text-align:center;color:#9a9a9a;font-size:13px}
+  .wrap{position:relative;padding-bottom:56px}
+
+  /* iOS status bar */
+  .sbar{display:flex;justify-content:space-between;align-items:center;padding:14px 26px 2px;
+    font-size:13.5px;font-weight:600;color:var(--cream);position:relative;z-index:3}
+  .sbar span{letter-spacing:.3px} .sbar i{font-style:normal;font-size:12px;letter-spacing:2px}
+
+  /* atmosphere */
+  .stars{position:absolute;inset:0;pointer-events:none;opacity:.55;
+    background-image:radial-gradient(1px 1px at 44px 110px,rgba(243,215,149,.8) 50%,transparent 51%),
+      radial-gradient(1.3px 1.3px at 306px 170px,rgba(255,255,255,.35) 50%,transparent 51%),
+      radial-gradient(1px 1px at 186px 84px,rgba(243,215,149,.5) 50%,transparent 51%),
+      radial-gradient(.9px .9px at 96px 260px,rgba(255,255,255,.3) 50%,transparent 51%),
+      radial-gradient(1.2px 1.2px at 336px 360px,rgba(243,215,149,.5) 50%,transparent 51%),
+      radial-gradient(1px 1px at 250px 470px,rgba(255,255,255,.28) 50%,transparent 51%),
+      radial-gradient(1px 1px at 60px 420px,rgba(243,215,149,.4) 50%,transparent 51%)}
+  .mandala{position:absolute;left:50%;top:56%;transform:translate(-50%,-50%);pointer-events:none;opacity:.16}
+  .temple{position:absolute;left:0;right:0;bottom:0;pointer-events:none}
+
+  /* header */
+  .head{display:flex;align-items:center;gap:13px;padding:14px 20px 6px;position:relative;z-index:2}
+  .badge{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 34% 28%,#232d1d 0%,#0d130c 70%);position:relative;
+    box-shadow:0 0 0 1px rgba(227,183,102,.55),0 0 0 4px rgba(227,183,102,.10),0 0 26px rgba(217,169,79,.35)}
+  .badge img{width:38px;height:40px;object-fit:contain;
+    filter:sepia(1) saturate(2.1) hue-rotate(-10deg) brightness(1.18) drop-shadow(0 0 7px rgba(243,215,149,.55))}
+  .head h1{font-family:var(--serif);font-size:24px;letter-spacing:.5px;
+    background:linear-gradient(180deg,#f7e3ae 20%,#d9a94f 85%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .head p{font-size:11.5px;color:var(--dim);letter-spacing:.4px;margin-top:2px}
+  .bless{display:flex;align-items:center;gap:12px;justify-content:center;padding:7px 0 4px;position:relative;z-index:2;
+    color:var(--gold2);font-family:var(--serif);font-size:16px;letter-spacing:1px;text-shadow:0 0 14px rgba(243,215,149,.35)}
+  .rule{height:1px;width:58px;background:linear-gradient(90deg,transparent,var(--gold));position:relative}
+  .rule.r{background:linear-gradient(270deg,transparent,var(--gold))}
+  .rule::after{content:"";position:absolute;right:-3px;top:-2.5px;width:6px;height:6px;transform:rotate(45deg);
+    background:var(--gold);opacity:.9}
+  .rule.r::after{left:-3px;right:auto}
+
+  .body{padding:10px 16px 0;position:relative;z-index:2;display:flex;flex-direction:column;gap:11px;height:610px;overflow:hidden}
+
+  /* streak + thought */
+  .streakrow{display:flex;gap:8px;justify-content:center}
+  .streak{display:flex;align-items:center;gap:7px;border:1px solid var(--hair2);border-radius:999px;
+    padding:7px 14px;font-size:12px;color:var(--gold2);background:rgba(217,169,79,.08)}
+  .thought{position:relative;border-radius:18px;padding:14px 16px 12px;overflow:hidden;
+    background:linear-gradient(155deg,rgba(217,169,79,.13),rgba(217,169,79,.03) 60%);
+    box-shadow:inset 0 0 0 1px var(--hair2),0 8px 24px rgba(0,0,0,.25)}
+  .thought::before{content:"❝";position:absolute;right:10px;top:-6px;font-size:52px;color:rgba(243,215,149,.14);font-family:Georgia}
+  .thought h4{color:var(--gold2);font-size:11.5px;letter-spacing:1.4px;margin-bottom:6px;font-weight:600}
+  .thought p{font-size:14.5px;line-height:1.7;font-family:var(--serif);color:var(--cream)}
+  .thought span{display:block;margin-top:7px;font-size:11px;color:var(--leaf);letter-spacing:.3px}
+
+  .greet{text-align:center;font-size:13.5px;color:#e5d9b4;line-height:1.55}
+  .greet b{color:var(--gold2)}
+  .gcard{display:flex;gap:10px;align-items:flex-start;max-width:92%}
+  .gdot{width:30px;height:30px;border-radius:50%;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 35% 30%,#222c1c,#0c110b);box-shadow:0 0 0 1px var(--hair2)}
+  .gdot img{width:20px;height:21px;object-fit:contain;filter:sepia(1) saturate(2.1) hue-rotate(-10deg) brightness(1.15)}
+  .gbub{background:var(--card);backdrop-filter:blur(6px);border-radius:16px;border-top-left-radius:5px;
+    padding:11px 14px;font-size:14.5px;line-height:1.65;box-shadow:inset 0 0 0 1px var(--hair),0 6px 18px rgba(0,0,0,.3)}
+
+  .stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;position:relative}
+  .halo{position:relative;width:170px;height:170px;display:flex;align-items:center;justify-content:center}
+  .ring{position:absolute;border-radius:50%}
+  .r1{inset:6px;border:1px solid rgba(227,183,102,.5)}
+  .r2{inset:-10px;border:1px dashed rgba(227,183,102,.28)}
+  .r3{inset:-30px;border:1px solid rgba(227,183,102,.12)}
+  .mic{width:118px;height:118px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 33% 26%,#2b3722 0%,#121a10 52%,#080d08 100%);position:relative;
+    box-shadow:0 0 0 2.5px rgba(243,215,149,.85),0 0 44px rgba(217,169,79,.45),inset 0 0 30px rgba(217,169,79,.15)}
+  .mic svg{width:44px;height:44px;filter:drop-shadow(0 0 10px rgba(243,215,149,.7))}
+  .hint{color:#ddd1ab;font-size:14px;text-align:center;line-height:1.65;font-family:var(--serif)}
+  .hint b{color:var(--gold2)}
+  .stagebar{display:flex;gap:14px;align-items:center;justify-content:center;padding:2px 0 14px}
+  .pill{border:1px solid var(--hair2);border-radius:999px;padding:12px 20px;font-size:14px;color:var(--gold2);
+    background:linear-gradient(160deg,rgba(217,169,79,.14),rgba(217,169,79,.04));font-family:var(--serif);
+    box-shadow:0 4px 14px rgba(0,0,0,.3)}
+  .ghost{color:var(--dim);font-size:13.5px}
+
+  .chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .chip{border:1px solid rgba(154,220,180,.4);color:var(--leaf);background:rgba(154,220,180,.07);
+    border-radius:999px;padding:10px 15px;font-size:13px;box-shadow:0 3px 10px rgba(0,0,0,.25)}
+
+  /* frame 2 */
+  .ub{align-self:flex-end;background:linear-gradient(150deg,#245741,#1c4633);border-radius:16px;border-bottom-right-radius:5px;
+    padding:11px 14px;max-width:80%;font-size:14.5px;line-height:1.55;box-shadow:0 6px 16px rgba(0,0,0,.35)}
+  .ub time{display:block;text-align:right;font-size:10px;color:#a9d3ba;margin-top:4px}
+  .card{position:relative;background:var(--card);backdrop-filter:blur(8px);border-radius:20px;border-top-left-radius:6px;
+    padding:16px 16px 12px;display:flex;flex-direction:column;gap:12px;font-size:14.5px;line-height:1.7;
+    box-shadow:inset 0 0 0 1px var(--hair),0 12px 34px rgba(0,0,0,.4)}
+  .card::before,.card::after{content:"";position:absolute;width:22px;height:22px;pointer-events:none;opacity:.75}
+  .card::before{left:-1px;top:-1px;border-left:1.5px solid var(--gold);border-top:1.5px solid var(--gold);border-top-left-radius:7px}
+  .card::after{right:-1px;bottom:-1px;border-right:1.5px solid var(--gold);border-bottom:1.5px solid var(--gold);border-bottom-right-radius:19px}
+  .who{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--gold2);letter-spacing:.6px}
+  .who img{width:17px;height:18px;object-fit:contain;filter:sepia(1) saturate(2.1) hue-rotate(-10deg) brightness(1.18)}
+  .who em{font-style:normal;color:var(--dim);letter-spacing:.2px;font-size:10.5px;margin-left:auto}
+  .flow{font-family:var(--serif);color:var(--cream);font-size:15px;line-height:1.78}
+  .quote{position:relative;border-radius:14px;padding:13px 15px 11px 40px;font-family:var(--serif);font-style:italic;
+    color:#f2e5bf;font-size:14px;line-height:1.7;
+    background:linear-gradient(150deg,rgba(217,169,79,.12),rgba(217,169,79,.03));
+    box-shadow:inset 0 0 0 1px var(--hair2)}
+  .quote::before{content:"❝";position:absolute;left:12px;top:6px;font-size:26px;color:var(--gold);font-style:normal;font-family:Georgia}
+  .quote span{display:block;font-style:normal;font-size:10.5px;color:var(--dim);margin-top:6px;letter-spacing:.4px}
+  .lbl{color:var(--gold);font-size:11px;letter-spacing:1.6px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .lbl::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--hair2),transparent)}
+  .vids{display:flex;flex-direction:column;gap:9px}
+  .vid{display:flex;gap:11px;align-items:center;border-radius:14px;padding:9px;background:var(--card2);
+    box-shadow:inset 0 0 0 1px var(--hair)}
+  .thumb{width:86px;height:52px;border-radius:9px;flex-shrink:0;position:relative;overflow:hidden;
+    background:linear-gradient(130deg,#33290f 0%,#1a2013 55%,#10160e 100%)}
+  .thumb::before{content:"";position:absolute;inset:0;background:radial-gradient(60% 80% at 30% 20%,rgba(243,215,149,.25),transparent 60%)}
+  .play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:24px;height:24px;border-radius:50%;
+    background:rgba(8,10,6,.65);display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 0 1.5px rgba(243,215,149,.8)}
+  .play i{font-style:normal;color:var(--gold2);font-size:9px;margin-left:1.5px}
+  .thumb b{position:absolute;right:4px;bottom:4px;font-size:8.5px;background:rgba(0,0,0,.75);color:#fff;
+    border-radius:4px;padding:1px 5px;font-weight:600}
+  .vid p{font-size:13px;line-height:1.5;color:var(--ink)}
+  .vid span{color:var(--dim);font-size:10.5px;letter-spacing:.2px}
+  .fb{display:flex;justify-content:space-around;border-top:1px solid var(--hair);padding:10px 0 2px}
+  .fb div{display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--dim);font-size:10px;letter-spacing:.3px}
+  .fb div i{font-style:normal;font-size:16px}
+  .fb .on{color:var(--gold2)}
+  .fb .on i{filter:drop-shadow(0 0 8px rgba(243,215,149,.5))}
+
+  .inbar{position:absolute;left:14px;right:14px;bottom:16px;display:flex;gap:10px;align-items:center;z-index:3}
+  .inmic{width:48px;height:48px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 35% 30%,#273220,#0d130c);
+    box-shadow:0 0 0 1.5px rgba(227,183,102,.7),0 0 16px rgba(217,169,79,.3)}
+  .inmic svg{width:19px;height:19px}
+  .field{flex:1;background:rgba(15,24,16,.92);border-radius:999px;padding:14px 18px;color:var(--dim);font-size:14px;
+    box-shadow:inset 0 0 0 1.5px var(--hair2)}
+  .send{width:48px;height:48px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    font-size:17px;color:#1d1503;background:linear-gradient(140deg,#f7e3ae,#d9a94f 70%);
+    box-shadow:0 6px 18px rgba(217,169,79,.4),inset 0 1px 0 rgba(255,255,255,.5)}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0"><defs>
+  <g id="micico"><path d="M22 4a7 7 0 0 0-7 7v9a7 7 0 0 0 14 0v-9a7 7 0 0 0-7-7z" fill="none" stroke="#f3d795" stroke-width="2.6"/>
+  <path d="M9 20a13 13 0 0 0 26 0M22 33v7" fill="none" stroke="#f3d795" stroke-width="2.6" stroke-linecap="round"/></g>
+  <g id="micico2"><path d="M22 4a7 7 0 0 0-7 7v9a7 7 0 0 0 14 0v-9a7 7 0 0 0-7-7z" fill="none" stroke="#8a6a3f" stroke-width="2.6"/>
+  <path d="M9 20a13 13 0 0 0 26 0M22 33v7" fill="none" stroke="#8a6a3f" stroke-width="2.6" stroke-linecap="round"/></g>
+</defs></svg>
+
+<div class="optlbl"><span class="tag a">OPTION A</span>
+  <div><h2>देवालय Gold — dark & premium</h2><p>दीये की रोशनी वाला मंदिर-भाव · गहरे रंग पर सोना · रात में भी आँखों को आराम</p></div>
+</div>
+<div class="row">
+
+<!-- ——————— FRAME 1 : voice-first home ——————— -->
+<div class="wrap">
+<div class="frame">
+  <div class="stars"></div>
+  <svg class="mandala" width="360" height="360" viewBox="0 0 360 360">
+    <g fill="none" stroke="#e3b766">
+      <circle cx="180" cy="180" r="170" stroke-width=".7" opacity=".5"/>
+      <circle cx="180" cy="180" r="140" stroke-width=".6" stroke-dasharray="2 7" opacity=".7"/>
+      <circle cx="180" cy="180" r="112" stroke-width=".6" opacity=".5"/>
+      <g opacity=".65">
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(30 180 180)"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(60 180 180)"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(90 180 180)"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(120 180 180)"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(150 180 180)"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(180 180 180)"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(210 180 180)"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(240 180 180)"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(270 180 180)"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(300 180 180)"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(330 180 180)"/>
+      </g>
+    </g>
+  </svg>
+  <svg class="temple" viewBox="0 0 375 190" preserveAspectRatio="none" height="190">
+    <path d="M0 190 L0 150 L30 150 L30 122 L52 122 L60 92 L68 122 L90 122 L90 150 L126 150 L126 106 L148 106 L158 62 L164 76 L170 40 L176 76 L182 62 L192 106 L214 106 L214 150 L252 150 L252 126 L270 126 L277 98 L284 126 L302 126 L302 150 L340 150 L340 160 L375 160 L375 190 Z"
+      fill="#020403" opacity=".92"/>
+    <circle cx="170" cy="33" r="3.4" fill="#f3d795" opacity=".95"/>
+    <circle cx="60" cy="86" r="2.2" fill="#e3b766" opacity=".8"/>
+    <circle cx="277" cy="92" r="2.2" fill="#e3b766" opacity=".8"/>
+    <g opacity=".9">
+      <ellipse cx="120" cy="176" rx="3" ry="4.5" fill="#ffb84d"/>
+      <ellipse cx="240" cy="180" rx="3" ry="4.5" fill="#ffb84d"/>
+      <ellipse cx="330" cy="172" rx="2.6" ry="4" fill="#ffb84d"/>
+      <ellipse cx="44" cy="180" rx="2.6" ry="4" fill="#ffb84d"/>
+    </g>
+  </svg>
+
+  <div class="sbar"><span>9:41</span><i>●●● ⌁ ▮</i></div>
+  <div class="head">
+    <div class="badge"><img src="logo.png" alt=""></div>
+    <div><h1>Ask Your Guide</h1><p>ASHAEIYNN · GURUDEV की शिक्षाओं से</p></div>
+  </div>
+  <div class="bless"><span class="rule"></span> जय सिया राम <span class="rule r"></span></div>
+
+  <div class="body">
+    <div class="streakrow"><span class="streak">📿 आपकी साधना — दिन 3</span><span class="streak">🔥 नियमित</span></div>
+
+    <div class="thought">
+      <h4>🪔 आज का विचार</h4>
+      <p>जैसे आपको अपने जीवन में शांति चाहिए, वैसे ही दूसरों के जीवन में भी शांति का अनुभव करें।</p>
+      <span>— दिव्य दर्शन और आध्यात्मिक अनुभव का महत्व</span>
+    </div>
+
+    <p class="greet">🙏 सुप्रभात, <b>Rohan जी</b> — वापसी पर स्वागत</p>
+    <div class="gcard">
+      <div class="gdot"><img src="logo.png" alt=""></div>
+      <div class="gbub">क्या आज आपने अपना 108 बार का जाप पूरा किया?</div>
+    </div>
+    <div class="chips"><span class="chip">जाप का सही समय क्या है?</span><span class="chip">माला कौन सी लें?</span></div>
+
+    <div class="stage">
+      <div class="halo">
+        <span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span>
+        <div class="mic"><svg viewBox="0 0 44 44"><use href="#micico"/></svg></div>
+      </div>
+      <p class="hint">माइक को दबाइए और <b>बोलिए</b> — हिंदी या English</p>
+      <div class="stagebar"><span class="pill">भाषा: हिंदी</span><span class="ghost">⌨️ type instead</span></div>
+    </div>
+  </div>
+</div>
+<p class="caption">1 · Home — दिन की साधना, आज का विचार, guide का check-in, बोलने का निमंत्रण</p>
+</div>
+
+<!-- ——————— FRAME 2 : answer view ——————— -->
+<div class="wrap">
+<div class="frame">
+  <div class="stars"></div>
+  <div class="sbar"><span>9:41</span><i>●●● ⌁ ▮</i></div>
+  <div class="head">
+    <div class="badge"><img src="logo.png" alt=""></div>
+    <div><h1>Ask Your Guide</h1><p>ASHAEIYNN · GURUDEV की शिक्षाओं से</p></div>
+  </div>
+  <div class="bless"><span class="rule"></span> जय सिया राम <span class="rule r"></span></div>
+
+  <div class="body">
+    <div class="ub">ध्यान में विचार क्यों आते हैं?<time>11:15 ✓✓</time></div>
+
+    <div class="card">
+      <div class="who"><img src="logo.png" alt=""> ASHAEIYNN GUIDE <em>Bhaiya की शिक्षाओं से</em></div>
+      <p class="flow">देखो भाई, ध्यान में विचारों का आना बहुत सामान्य है — इनसे लड़ो मत। क्या होता है कि वर्षों से चंचल मन जब शांत बैठता है, तो भीतर की हलचल ऊपर आती है। बस विचारों को साक्षी भाव से देखते रहो और धीरे से अपने मंत्र पर लौट आओ। समय के साथ मन अपने आप स्थिर होने लगेगा, ठीक है?</p>
+      <div class="quote">
+        विचारों को बिना पकड़े देखते रहो — उनकी शक्ति अपने आप क्षीण हो जाती है।
+        <span>— BHAIYA की RECORDING से, शब्दशः · 12:43</span>
+      </div>
+      <div>
+        <p class="lbl">📿 देखिए</p>
+        <div class="vids" style="margin-top:9px">
+          <div class="vid"><div class="thumb"><span class="play"><i>▶</i></span><b>12:43</b></div><div><p>ध्यान में विचारों को कैसे संभालें</p><span>BHAIYA'S RECORDING · YOUTUBE</span></div></div>
+          <div class="vid"><div class="thumb"><span class="play"><i>▶</i></span><b>38:11</b></div><div><p>शांत मन का विज्ञान</p><span>LIVE MEETING · 2 MAR 2025</span></div></div>
+        </div>
+      </div>
+      <div>
+        <p class="lbl">🌱 आगे देखिए</p>
+        <div class="chips" style="justify-content:flex-start;margin-top:9px">
+          <span class="chip">ध्यान का सही समय?</span><span class="chip">मंत्र कैसे चुनें?</span>
+        </div>
+      </div>
+      <div class="fb">
+        <div class="on"><i>🔊</i>सुनिए</div>
+        <div><i>👍</i>सहायक</div>
+        <div><i>👎</i>नहीं</div>
+        <div><i>↗</i>SHARE</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="inbar">
+    <div class="inmic"><svg viewBox="0 0 44 44"><use href="#micico"/></svg></div>
+    <div class="field">अपना प्रश्न लिखिए…</div>
+    <div class="send">➤</div>
+  </div>
+</div>
+<p class="caption">2 · Answer — बहता हुआ उत्तर · शब्दशः quote · videos · 🌱 आगे · सुनिए</p>
+</div>
+</div><!-- /row A -->
+
+<div class="divider"></div>
+
+<div class="optlbl"><span class="tag b">OPTION B</span>
+  <div><h2>Website theme — light & earthy</h2><p>ashaeiynn.com का ही रूप: सफ़ेद-क्रीम, मिट्टी के रंग, Elsie serif — bot और site एक परिवार लगें</p></div>
+</div>
+<div class="row">
+
+<!-- ——— OPTION B / FRAME 1 ——— -->
+<div class="wrap">
+<div class="frame light">
+  <div class="stars"></div>
+  <svg class="mandala" width="360" height="360" viewBox="0 0 360 360">
+    <g fill="none" stroke="#a8886a">
+      <circle cx="180" cy="180" r="170" stroke-width=".7" opacity=".5"/>
+      <circle cx="180" cy="180" r="140" stroke-width=".6" stroke-dasharray="2 7" opacity=".7"/>
+      <circle cx="180" cy="180" r="112" stroke-width=".6" opacity=".5"/>
+      <g opacity=".65">
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(30 180 180)"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(60 180 180)"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(90 180 180)"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(120 180 180)"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(150 180 180)"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(180 180 180)"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(210 180 180)"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(240 180 180)"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(270 180 180)"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(300 180 180)"/>
+        <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(330 180 180)"/>
+      </g>
+    </g>
+  </svg>
+  <svg class="temple" viewBox="0 0 375 190" preserveAspectRatio="none" height="190">
+    <path d="M0 190 L0 150 L30 150 L30 122 L52 122 L60 92 L68 122 L90 122 L90 150 L126 150 L126 106 L148 106 L158 62 L164 76 L170 40 L176 76 L182 62 L192 106 L214 106 L214 150 L252 150 L252 126 L270 126 L277 98 L284 126 L302 126 L302 150 L340 150 L340 160 L375 160 L375 190 Z"/>
+    <circle cx="170" cy="33" r="3.4" fill="#c1a78c" opacity=".95"/>
+    <circle cx="60" cy="86" r="2.2" fill="#c1a78c" opacity=".8"/>
+    <circle cx="277" cy="92" r="2.2" fill="#c1a78c" opacity=".8"/>
+    <g opacity=".95">
+      <ellipse cx="120" cy="176" rx="3" ry="4.5" fill="#e8953f"/>
+      <ellipse cx="240" cy="180" rx="3" ry="4.5" fill="#e8953f"/>
+      <ellipse cx="330" cy="172" rx="2.6" ry="4" fill="#e8953f"/>
+      <ellipse cx="44" cy="180" rx="2.6" ry="4" fill="#e8953f"/>
+    </g>
+  </svg>
+
+  <div class="sbar"><span>9:41</span><i>●●● ⌁ ▮</i></div>
+  <div class="head">
+    <div class="badge"><img src="logo.png" alt=""></div>
+    <div><h1>Ask Your Guide</h1><p>ASHAEIYNN · GURUDEV की शिक्षाओं से</p></div>
+  </div>
+  <div class="bless"><span class="rule"></span> जय सिया राम <span class="rule r"></span></div>
+
+  <div class="body">
+    <div class="streakrow"><span class="streak">📿 आपकी साधना — दिन 3</span><span class="streak">🔥 नियमित</span></div>
+
+    <div class="thought">
+      <h4>🪔 आज का विचार</h4>
+      <p>जैसे आपको अपने जीवन में शांति चाहिए, वैसे ही दूसरों के जीवन में भी शांति का अनुभव करें।</p>
+      <span>— दिव्य दर्शन और आध्यात्मिक अनुभव का महत्व</span>
+    </div>
+
+    <p class="greet">🙏 सुप्रभात, <b>Rohan जी</b> — वापसी पर स्वागत</p>
+    <div class="gcard">
+      <div class="gdot"><img src="logo.png" alt=""></div>
+      <div class="gbub">क्या आज आपने अपना 108 बार का जाप पूरा किया?</div>
+    </div>
+    <div class="chips"><span class="chip">जाप का सही समय क्या है?</span><span class="chip">माला कौन सी लें?</span></div>
+
+    <div class="stage">
+      <div class="halo">
+        <span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span>
+        <div class="mic"><svg viewBox="0 0 44 44"><use href="#micico2"/></svg></div>
+      </div>
+      <p class="hint">माइक को दबाइए और <b>बोलिए</b> — हिंदी या English</p>
+      <div class="stagebar"><span class="pill">भाषा: हिंदी</span><span class="ghost">⌨️ type instead</span></div>
+    </div>
+  </div>
+</div>
+<p class="caption">3 · Home — वही सब कुछ, website के हल्के-मिट्टी रंगों में</p>
+</div>
+
+<!-- ——— OPTION B / FRAME 2 ——— -->
+<div class="wrap">
+<div class="frame light">
+  <div class="stars"></div>
+  <div class="sbar"><span>9:41</span><i>●●● ⌁ ▮</i></div>
+  <div class="head">
+    <div class="badge"><img src="logo.png" alt=""></div>
+    <div><h1>Ask Your Guide</h1><p>ASHAEIYNN · GURUDEV की शिक्षाओं से</p></div>
+  </div>
+  <div class="bless"><span class="rule"></span> जय सिया राम <span class="rule r"></span></div>
+
+  <div class="body">
+    <div class="ub">ध्यान में विचार क्यों आते हैं?<time>11:15 ✓✓</time></div>
+
+    <div class="card">
+      <div class="who"><img src="logo.png" alt=""> ASHAEIYNN GUIDE <em>Bhaiya की शिक्षाओं से</em></div>
+      <p class="flow">देखो भाई, ध्यान में विचारों का आना बहुत सामान्य है — इनसे लड़ो मत। क्या होता है कि वर्षों से चंचल मन जब शांत बैठता है, तो भीतर की हलचल ऊपर आती है। बस विचारों को साक्षी भाव से देखते रहो और धीरे से अपने मंत्र पर लौट आओ। समय के साथ मन अपने आप स्थिर होने लगेगा, ठीक है?</p>
+      <div class="quote">
+        विचारों को बिना पकड़े देखते रहो — उनकी शक्ति अपने आप क्षीण हो जाती है।
+        <span>— BHAIYA की RECORDING से, शब्दशः · 12:43</span>
+      </div>
+      <div>
+        <p class="lbl">📿 देखिए</p>
+        <div class="vids" style="margin-top:9px">
+          <div class="vid"><div class="thumb"><span class="play"><i>▶</i></span><b>12:43</b></div><div><p>ध्यान में विचारों को कैसे संभालें</p><span>BHAIYA'S RECORDING · YOUTUBE</span></div></div>
+          <div class="vid"><div class="thumb"><span class="play"><i>▶</i></span><b>38:11</b></div><div><p>शांत मन का विज्ञान</p><span>LIVE MEETING · 2 MAR 2025</span></div></div>
+        </div>
+      </div>
+      <div>
+        <p class="lbl">🌱 आगे देखिए</p>
+        <div class="chips" style="justify-content:flex-start;margin-top:9px">
+          <span class="chip">ध्यान का सही समय?</span><span class="chip">मंत्र कैसे चुनें?</span>
+        </div>
+      </div>
+      <div class="fb">
+        <div class="on"><i>🔊</i>सुनिए</div>
+        <div><i>👍</i>सहायक</div>
+        <div><i>👎</i>नहीं</div>
+        <div><i>↗</i>SHARE</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="inbar">
+    <div class="inmic"><svg viewBox="0 0 44 44"><use href="#micico2"/></svg></div>
+    <div class="field">अपना प्रश्न लिखिए…</div>
+    <div class="send">➤</div>
+  </div>
+</div>
+<p class="caption">4 · Answer — सफ़ेद card पर बहता उत्तर · वही संरचना, site का रूप</p>
+</div>
+
+</div><!-- /row B -->
+
+</body>
+</html>
