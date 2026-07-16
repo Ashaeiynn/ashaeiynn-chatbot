@@ -359,7 +359,13 @@ function htmlToText(html) {
 export function teachFile(filePath, title) {
   const name = path.basename(filePath);
   const t = (title || name.replace(/\.[^.]+$/, "").replace(/^[a-z0-9]+-/, "")).trim();
-  if (MEDIA_RE.test(name)) return addJob("media", t, { path: filePath });
+  if (MEDIA_RE.test(name)) {
+    // transcription (mlx_whisper) exists only on the studio Mac — reject media
+    // uploads elsewhere immediately with a clear message, not a failed job
+    if (!existsSync(`${HOME}/Library/Python/3.9/bin/mlx_whisper`))
+      throw new Error("Videos and audios are transcribed on the studio Mac's portal — this copy studies documents, PDFs, links and text. The Mac's lessons flow here automatically.");
+    return addJob("media", t, { path: filePath });
+  }
   if (DOC_RE.test(name)) return addJob("document", t, { path: filePath });
   throw new Error("Unsupported file type: " + name);
 }
