@@ -16,6 +16,15 @@ git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
 git config user.name  >/dev/null 2>&1 || git config user.name  "Ashaeiyn Foundation"
 git config user.email >/dev/null 2>&1 || git config user.email "ashaeiynhopein@gmail.com"
 
+# One-time .env migrations — .env never syncs (secrets), but config VALUES
+# that must match everywhere are corrected here so every machine self-heals
+# at its next sync. Idempotent: matches only the exact outdated value.
+# 2026-07-17: translation helper gets its own free-tier quota bucket.
+if [ -f .env ] && grep -q "^GEMINI_LIGHT_MODEL=gemini-3.1-flash-lite" .env; then
+  sed "s/^GEMINI_LIGHT_MODEL=gemini-3\.1-flash-lite$/GEMINI_LIGHT_MODEL=gemini-2.0-flash-lite/" .env > .env.mig \
+    && mv .env.mig .env && chmod 600 .env
+fi
+
 # Commit local work first so a rebase can never lose it
 if [ -n "$(git status --porcelain)" ]; then
   git add -A && git commit -q -m "Auto-sync from $(hostname -s): $(date '+%Y-%m-%d %H:%M')"
