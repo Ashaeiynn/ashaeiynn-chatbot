@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ask Your Guide — Admin</title>
 <style>
-  :root{--gold:#34d399;--ink:#e8eaee;--dim:#9aa0ab;--bg:#050507;--card:#101016;--line:#23232c}
+  :root{--gold:#34d399;--ink:#e8eaee;--dim:#9aa0ab;--bg:#050507;--card:rgba(16,16,24,.82);--line:#23232c}
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:radial-gradient(ellipse at 20% -10%,#15151c 0%,var(--bg) 55%);min-height:100vh;
+  body{background:var(--bg);min-height:100vh;
     font:15px/1.55 -apple-system,"Segoe UI",Roboto,"Noto Sans Devanagari",sans-serif;color:var(--ink);padding-bottom:60px}
   header{display:flex;align-items:center;gap:14px;padding:18px 22px;border-bottom:1px solid var(--line);
     position:sticky;top:0;background:rgba(5,5,7,.92);backdrop-filter:blur(8px);z-index:5}
@@ -101,9 +101,39 @@
   #pw:focus{border-color:var(--gold)}
   #go{width:100%;background:var(--gold);color:#04231a;font-weight:600;border:none;padding:11px}
   #lerr{color:#ff9d76;font-size:12.5px;margin-top:10px;min-height:16px}
+
+  /* ——— the chatbot's living cosmos, behind everything ——— */
+  .acosmos{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;
+    background:radial-gradient(135% 100% at 50% 0%,#0b0b12 0%,#050507 55%,#000 100%)}
+  .acosmos .neb{position:absolute;border-radius:50%;filter:blur(30px)}
+  .acosmos .neb.a{width:420px;height:360px;left:-120px;top:4%;
+    background:radial-gradient(ellipse at 40% 45%,rgba(52,211,153,.07) 0%,rgba(255,255,255,.02) 45%,transparent 72%);
+    animation:aNeb 100s ease-in-out infinite alternate}
+  .acosmos .neb.b{width:360px;height:320px;right:-100px;bottom:6%;
+    background:radial-gradient(ellipse at 55% 50%,rgba(52,211,153,.05) 0%,rgba(217,120,50,.04) 40%,transparent 70%);
+    animation:aNeb 130s ease-in-out infinite alternate-reverse}
+  @keyframes aNeb{from{transform:translate(0,0) scale(1)}to{transform:translate(40px,26px) scale(1.15)}}
+  .acosmos .stars{position:absolute;inset:-260px 0 0 0;background-repeat:repeat}
+  .acosmos .stars.s1{background-size:260px 260px;opacity:.55;animation:aDrift1 240s linear infinite;
+    background-image:radial-gradient(1.1px 1.1px at 24px 36px,rgba(255,255,255,.5) 50%,transparent 51%),
+      radial-gradient(1px 1px at 128px 96px,rgba(255,255,255,.35) 50%,transparent 51%),
+      radial-gradient(1.3px 1.3px at 207px 166px,rgba(52,211,153,.45) 50%,transparent 51%),
+      radial-gradient(1px 1px at 72px 208px,rgba(255,255,255,.3) 50%,transparent 51%)}
+  .acosmos .stars.s2{background-size:340px 340px;opacity:.35;animation:aDrift2 380s linear infinite;
+    background-image:radial-gradient(1px 1px at 48px 128px,rgba(255,255,255,.35) 50%,transparent 51%),
+      radial-gradient(.9px .9px at 224px 64px,rgba(255,255,255,.28) 50%,transparent 51%),
+      radial-gradient(1.1px 1.1px at 296px 244px,rgba(52,211,153,.32) 50%,transparent 51%)}
+  @keyframes aDrift1{from{background-position:0 0}to{background-position:-260px 260px}}
+  @keyframes aDrift2{from{background-position:0 0}to{background-position:340px 340px}}
+  .acosmos .shoot{position:absolute;top:14%;left:-30%;width:110px;height:1.5px;border-radius:2px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.8),rgba(52,211,153,.85),transparent);
+    transform:rotate(22deg);opacity:0;animation:aShoot 21s linear infinite;animation-delay:7s}
+  @keyframes aShoot{0%,88%{opacity:0;transform:rotate(22deg) translateX(0)}90%{opacity:1}
+    100%{opacity:0;transform:rotate(22deg) translateX(140vw)}}
 </style>
 </head>
 <body>
+<div class="acosmos"><div class="neb a"></div><div class="neb b"></div><div class="stars s1"></div><div class="stars s2"></div><div class="shoot"></div></div>
 <div id="login">
   <div class="box">
     <img src="/logo.png" alt="">
