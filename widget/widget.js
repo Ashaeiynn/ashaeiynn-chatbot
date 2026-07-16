@@ -384,6 +384,86 @@
     .vcb-namego{border:none;border-radius:12px;padding:12px 26px;font-size:15px;font-weight:700;
       cursor:pointer;color:#04140c;background:linear-gradient(135deg,#5eead4,#34d399)}
     .vcb-nameskip{background:none;border:none;color:#9aa0ab;font-size:13px;cursor:pointer;padding:8px}
+
+    /* ═══ देवालय GOLD — the chosen theme (design/option-A-devotional-gold.html).
+       Pure re-skin layered over the base rules above: every feature and all
+       layout/behavior rules stay untouched; only colors, light and ornament. ═══ */
+    .vcb-panel{background:
+      radial-gradient(130% 50% at 50% -6%,rgba(217,169,79,.16) 0%,transparent 58%),
+      radial-gradient(100% 42% at 50% 110%,rgba(217,169,79,.20) 0%,transparent 55%),
+      linear-gradient(180deg,#0a110b 0%,#070b08 50%,#0a0d07 100%);
+      box-shadow:0 22px 70px rgba(5,8,4,.7),0 0 0 1px rgba(227,183,102,.26)}
+    .vcb-neb.n1{background:radial-gradient(ellipse at 40% 45%,rgba(217,169,79,.09) 0%,rgba(255,255,255,.03) 45%,transparent 72%)}
+    .vcb-neb.n2{background:radial-gradient(ellipse at 55% 50%,rgba(217,169,79,.08) 0%,rgba(154,220,180,.05) 40%,transparent 70%)}
+    .vcb-starfield{filter:sepia(.45) hue-rotate(-18deg) brightness(1.02)}
+    .vcb-shoot{background:linear-gradient(90deg,transparent,rgba(255,244,214,.85),rgba(217,169,79,.9),transparent)}
+    .vcb-solar{display:none}
+    .vcb-mandala{position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);opacity:.15;pointer-events:none;
+      animation:vcbGalaxy 900s linear infinite}
+    .vcb-temple{position:absolute;left:0;right:0;bottom:0;width:100%;pointer-events:none;opacity:.9}
+    .vcb-panel[data-mode="text"] .vcb-temple,.vcb-panel[data-has-ans] .vcb-mandala{display:none}
+    .vcb-title{font-family:Georgia,'Kohinoor Devanagari','Devanagari MT',serif;font-size:17px;letter-spacing:.4px;
+      background:linear-gradient(180deg,#f7e3ae 20%,#d9a94f 85%);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .vcb-sub{color:#a89b7d}
+    .vcb-ava{background:radial-gradient(circle at 34% 28%,#232d1d 0%,#0d130c 70%);
+      box-shadow:0 0 0 1px rgba(227,183,102,.55),0 0 0 4px rgba(227,183,102,.10),0 0 20px rgba(217,169,79,.35)}
+    .vcb-ava img{filter:sepia(1) saturate(2.1) hue-rotate(-10deg) brightness(1.16) drop-shadow(0 0 6px rgba(243,215,149,.5))}
+    .vcb-bless span{background:linear-gradient(100deg,#a97c2c 0%,#f7e3ae 28%,#d9a94f 52%,#f7e3ae 74%,#a97c2c 100%);
+      -webkit-background-clip:text;background-clip:text;color:transparent;
+      text-shadow:none;font-family:Georgia,'Kohinoor Devanagari','Devanagari MT',serif;letter-spacing:1px}
+    .vcb-bless::before{content:"✦";color:#d9a94f;font-size:10px;margin-right:12px;opacity:.85;vertical-align:2px}
+    .vcb-bless::after{content:"✦";color:#d9a94f;font-size:10px;margin-left:12px;opacity:.85;vertical-align:2px}
+    .vcb-orbbig{background:radial-gradient(circle at 33% 26%,#2b3722 0%,#121a10 52%,#080d08 100%);
+      box-shadow:0 0 0 2.5px rgba(243,215,149,.8),0 0 40px rgba(217,169,79,.42),inset 0 0 28px rgba(217,169,79,.14)}
+    .vcb-panel[data-vstate="thinking"] .vcb-orbbig::after{border-top-color:#f3d795;border-right-color:rgba(217,169,79,.4)}
+    @keyframes vcbMicPulse{0%,100%{box-shadow:0 0 0 2.5px rgba(243,215,149,.8),0 0 30px rgba(217,169,79,.35)}
+      50%{box-shadow:0 0 0 3px rgba(243,215,149,.95),0 0 60px rgba(217,169,79,.6)}}
+    @keyframes vcbRippleGlow{0%{box-shadow:0 0 0 2.5px rgba(243,215,149,.8),0 0 0 0 rgba(217,169,79,.4)}
+      100%{box-shadow:0 0 0 2.5px rgba(243,215,149,.8),0 0 0 30px rgba(217,169,79,0)}}
+    .vcb-mic-big{filter:drop-shadow(0 0 10px rgba(243,215,149,.6))}
+    .vcb-status{color:#ddd1ab;font-family:Georgia,'Kohinoor Devanagari','Devanagari MT',serif}
+    .vcb-status b{color:#f3d795}
+    .vcb-lang{border-color:rgba(227,183,102,.5);color:#f3d795;
+      background:linear-gradient(160deg,rgba(217,169,79,.13),rgba(217,169,79,.04));
+      font-family:Georgia,'Kohinoor Devanagari','Devanagari MT',serif}
+    .vcb-kbd{color:#a89b7d}
+    .vcb-you{color:#cfc3a0}
+    .vcb-live{color:#f0e3bd}
+    .vcb-ans{position:relative;background:rgba(20,30,21,.74);border:none;border-radius:18px;
+      box-shadow:inset 0 0 0 1px rgba(227,183,102,.20),0 12px 30px rgba(0,0,0,.38);
+      font-family:Georgia,'Kohinoor Devanagari','Devanagari MT',serif;font-size:15px;line-height:1.75;color:#f5edda}
+    .vcb-ans::before{content:"";position:absolute;left:-1px;top:-1px;width:20px;height:20px;pointer-events:none;
+      border-left:1.5px solid #d9a94f;border-top:1.5px solid #d9a94f;border-top-left-radius:8px;opacity:.75}
+    .vcb-ans::after{content:"";position:absolute;right:-1px;bottom:-1px;width:20px;height:20px;pointer-events:none;
+      border-right:1.5px solid #d9a94f;border-bottom:1.5px solid #d9a94f;border-bottom-right-radius:17px;opacity:.75}
+    .vcb-m.bot{background:rgba(20,30,21,.74);box-shadow:inset 0 0 0 1px rgba(227,183,102,.18);color:#f5edda;
+      font-family:Georgia,'Kohinoor Devanagari','Devanagari MT',serif;line-height:1.7}
+    .vcb-m.you{background:linear-gradient(150deg,#245741,#1c4633);color:#eafaf0}
+    .vcb-src{border-top:1px dashed rgba(227,183,102,.32);color:#a89b7d;font-family:-apple-system,'Segoe UI',Roboto,sans-serif}
+    .vcb-src a,.vcb-ans a{color:#e8c987}
+    .vcb-chip{border-color:rgba(154,220,180,.42);color:#9adcb4;background:rgba(154,220,180,.07);
+      box-shadow:0 3px 10px rgba(0,0,0,.25)}
+    .vcb-chip:hover{background:rgba(154,220,180,.15)}
+    .vcb-input{border-color:rgba(227,183,102,.32);background:rgba(15,24,16,.9);color:#f5edda}
+    .vcb-input:focus{border-color:#d9a94f}
+    .vcb-input::placeholder{color:#a89b7d}
+    .vcb-send{background:linear-gradient(140deg,#f7e3ae,#d9a94f 70%);color:#1d1503;
+      box-shadow:0 5px 16px rgba(217,169,79,.35),inset 0 1px 0 rgba(255,255,255,.5)}
+    .vcb-mic{box-shadow:0 0 0 1.5px rgba(227,183,102,.55),0 0 12px rgba(217,169,79,.25)}
+    .vcb-btn{box-shadow:0 6px 24px rgba(5,8,4,.55),0 0 0 1.5px rgba(227,183,102,.6),0 0 22px rgba(217,169,79,.35)}
+    .vcb-nudge{background:linear-gradient(135deg,#f7e3ae,#d9a94f);color:#231a04;font-weight:700}
+    .vcb-nudge::after{background:#d9a94f}
+    .vcb-splash-halo{background:radial-gradient(circle,rgba(217,169,79,.26) 0%,transparent 70%)}
+    .vcb-splash-line{background:linear-gradient(90deg,transparent,#d9a94f,transparent)}
+    .vcb-splash-hi span{background:linear-gradient(100deg,#a97c2c 0%,#f7e3ae 30%,#d9a94f 55%,#f7e3ae 76%,#a97c2c 100%);
+      -webkit-background-clip:text;background-clip:text;color:transparent}
+    .vcb-spark{background:radial-gradient(circle,#f7e3ae 0%,rgba(217,169,79,.85) 45%,transparent 75%)}
+    .vcb-namecard{background:rgba(5,7,4,.88)}
+    .vcb-namecard h4{color:#f3d795;font-family:Georgia,'Kohinoor Devanagari','Devanagari MT',serif}
+    .vcb-namecard p{color:#a89b7d}
+    .vcb-namecard input{border-color:rgba(227,183,102,.5);color:#f5edda;background:rgba(217,169,79,.07)}
+    .vcb-namecard input:focus{border-color:#d9a94f}
+    .vcb-namego{background:linear-gradient(140deg,#f7e3ae,#d9a94f 70%);color:#1d1503}
   `;
   document.head.appendChild(style);
 
@@ -407,6 +487,40 @@
       </div>
       <div class="vcb-neb n1"></div><div class="vcb-neb n2"></div><div class="vcb-neb n3"></div>
       <div class="vcb-solar"></div>
+      <svg class="vcb-mandala" width="340" height="340" viewBox="0 0 360 360" aria-hidden="true">
+        <g fill="none" stroke="#e3b766">
+          <circle cx="180" cy="180" r="170" stroke-width=".7" opacity=".5"/>
+          <circle cx="180" cy="180" r="140" stroke-width=".6" stroke-dasharray="2 7" opacity=".7"/>
+          <circle cx="180" cy="180" r="112" stroke-width=".6" opacity=".5"/>
+          <g opacity=".65">
+            <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7"/>
+            <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(30 180 180)"/>
+            <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(60 180 180)"/>
+            <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(90 180 180)"/>
+            <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(120 180 180)"/>
+            <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(150 180 180)"/>
+            <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(180 180 180)"/>
+            <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(210 180 180)"/>
+            <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(240 180 180)"/>
+            <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(270 180 180)"/>
+            <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(300 180 180)"/>
+            <path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(330 180 180)"/>
+          </g>
+        </g>
+      </svg>
+      <svg class="vcb-temple" viewBox="0 0 375 190" height="150" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0 190 L0 150 L30 150 L30 122 L52 122 L60 92 L68 122 L90 122 L90 150 L126 150 L126 106 L148 106 L158 62 L164 76 L170 40 L176 76 L182 62 L192 106 L214 106 L214 150 L252 150 L252 126 L270 126 L277 98 L284 126 L302 126 L302 150 L340 150 L340 160 L375 160 L375 190 Z"
+          fill="#020403" opacity=".92"/>
+        <circle cx="170" cy="33" r="3.4" fill="#f3d795" opacity=".95"/>
+        <circle cx="60" cy="86" r="2.2" fill="#e3b766" opacity=".8"/>
+        <circle cx="277" cy="92" r="2.2" fill="#e3b766" opacity=".8"/>
+        <g opacity=".9">
+          <ellipse cx="120" cy="176" rx="3" ry="4.5" fill="#ffb84d"/>
+          <ellipse cx="240" cy="180" rx="3" ry="4.5" fill="#ffb84d"/>
+          <ellipse cx="330" cy="172" rx="2.6" ry="4" fill="#ffb84d"/>
+          <ellipse cx="44" cy="180" rx="2.6" ry="4" fill="#ffb84d"/>
+        </g>
+      </svg>
       <span class="vcb-shoot"></span><span class="vcb-shoot sh2"></span>
     </div>
     <div class="vcb-head">
@@ -422,9 +536,9 @@
       <button class="vcb-orbbig" type="button" aria-label="Ask by voice">
         <svg class="vcb-mic-big" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs><linearGradient id="vcbMicGold" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#b8f5dc"/><stop offset="55%" stop-color="#34d399"/><stop offset="100%" stop-color="#17996a"/>
+            <stop offset="0%" stop-color="#f7e3ae"/><stop offset="55%" stop-color="#d9a94f"/><stop offset="100%" stop-color="#a97c2c"/>
           </linearGradient></defs>
-          <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" stroke="url(#vcbMicGold)" stroke-width="1.8" fill="rgba(52,211,153,.12)"/>
+          <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" stroke="url(#vcbMicGold)" stroke-width="1.8" fill="rgba(217,169,79,.12)"/>
           <path d="M19 10v1a7 7 0 0 1-14 0v-1" stroke="url(#vcbMicGold)" stroke-width="1.8" stroke-linecap="round"/>
           <line x1="12" y1="18" x2="12" y2="22" stroke="url(#vcbMicGold)" stroke-width="1.8" stroke-linecap="round"/>
           <line x1="8.5" y1="22" x2="15.5" y2="22" stroke="url(#vcbMicGold)" stroke-width="1.8" stroke-linecap="round"/>
