@@ -1617,11 +1617,20 @@
   });
   syncBell();
 
-  // one-time gentle offer, only after the seeker has received a real answer
+  // The offer returns on EVERY open until notifications are on. States:
+  // granted-but-unlinked → silently re-link, no card; default → ask card;
+  // denied → card whose Yes explains the phone's Settings path (the OS never
+  // re-shows its prompt once denied — no app can force that).
+  let bellOfferedThisOpen = false;
   function maybeOfferBell() {
-    if (!pushCapable() || journey.pushAsked || journey.push || Notification.permission !== "default") return;
-    journey.pushAsked = 1;
-    saveJourney();
+    if (!pushCapable() || bellOfferedThisOpen) return;
+    if (journey.push && Notification.permission === "granted") return; // already on
+    if (Notification.permission === "granted") {
+      pushSubscribe().catch(() => {}); // permission exists — just reconnect quietly
+      return;
+    }
+    if (panel.querySelector(".vcb-namecard")) return; // let the name moment breathe first
+    bellOfferedThisOpen = true;
     const card = document.createElement("div");
     card.className = "vcb-ans vcb-bellask";
     const p = document.createElement("p");
@@ -1631,13 +1640,24 @@
     row.className = "vcb-bellrow";
     const yes = document.createElement("button");
     yes.className = "vcb-bellyes";
-    yes.textContent = "Yes, please 🙏";
+    yes.textContent = "Allow reminders 🙏";
     const no = document.createElement("button");
     no.className = "vcb-bellno";
     no.textContent = "Not now";
     yes.addEventListener("click", () => {
-      card.remove();
-      pushSubscribe().catch(() => {});
+      yes.disabled = true;
+      pushSubscribe()
+        .then((ok) => {
+          if (ok) return card.remove();
+          if (Notification.permission === "denied") {
+            p.textContent =
+              "🔕 Notifications are blocked for this app on your phone. Open Settings → Notifications → Ask Your Guide, allow them, then tap the 🔔 at the top.";
+            row.remove();
+          } else {
+            card.remove();
+          }
+        })
+        .catch(() => card.remove());
     });
     no.addEventListener("click", () => card.remove());
     row.append(yes, no);
@@ -1663,6 +1683,8 @@
       playSplash();
       maybeAskName();
       fetchThought();
+      bellOfferedThisOpen = false;
+      maybeOfferBell();
       if (panel.dataset.mode === "text") input.focus();
       else {
         setVState("idle");
