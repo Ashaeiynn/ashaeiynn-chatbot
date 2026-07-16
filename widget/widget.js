@@ -55,6 +55,23 @@
     .vcb-panel.open{display:flex;animation:vcbPanelIn .4s cubic-bezier(.18,.89,.32,1.15)}
     @keyframes vcbPanelIn{from{opacity:0;transform:scale(.86) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
 
+    /* ——— phones: the panel becomes a full-screen app ——— */
+    @media (max-width:640px){
+      .vcb-panel{top:0;left:0;right:0;bottom:0;width:100%;height:100vh;height:100dvh;
+        border-radius:0;transform-origin:center bottom}
+      .vcb-head{padding-top:calc(12px + env(safe-area-inset-top))}
+      .vcb-form{padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+      .vcb-input{font-size:16px} /* 16px+ stops iOS zooming into the field */
+      .vcb-m{font-size:15px}
+      .vcb-btn{bottom:calc(18px + env(safe-area-inset-bottom))}
+      .vcb-nudge{bottom:calc(30px + env(safe-area-inset-bottom))}
+      /* finger-sized touch targets (≥44px) for the stage controls */
+      .vcb-kbd{font-size:15px;padding:12px 16px;min-height:44px}
+      .vcb-lang{font-size:15px;padding:12px 18px;min-height:44px}
+    }
+    /* page behind the open panel must not scroll on phones */
+    .vcb-lock,.vcb-lock body{overflow:hidden;overscroll-behavior:none}
+
     /* ——— animated universe (slow motion) ——— */
     .vcb-cosmos{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
     .vcb-neb{position:absolute;border-radius:50%;filter:blur(26px);will-change:transform}
@@ -882,6 +899,7 @@
   let greeted = false;
   function toggle(open) {
     panel.classList.toggle("open", open);
+    document.documentElement.classList.toggle("vcb-lock", open && matchMedia("(max-width:640px)").matches);
     if (!open) {
       stopSpeaking();
       if (listening) rec?.stop();
@@ -895,6 +913,15 @@
   }
   btn.addEventListener("click", () => toggle(!panel.classList.contains("open")));
   panel.querySelector(".vcb-close").addEventListener("click", () => toggle(false));
+
+  // Opened as an installed home-screen app, or on the bot's own page from a
+  // phone → open the guide immediately, app-style. Embedded on other websites
+  // (e.g. WordPress) nothing changes: visitors still tap the orb first.
+  const ownPage = (() => {
+    try { return new URL(script.src).origin === location.origin; } catch { return false; }
+  })();
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  if (standalone || (ownPage && matchMedia("(max-width:640px)").matches)) toggle(true);
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();

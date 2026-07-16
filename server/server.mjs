@@ -710,6 +710,22 @@ const server = createServer(async (req, res) => {
     return res.end(readFileSync(path.join(ROOT, "widget", "logo.png")));
   }
 
+  if (req.method === "GET" && url.pathname === "/manifest.webmanifest") {
+    res.writeHead(200, {
+      "Content-Type": "application/manifest+json",
+      "Cache-Control": "public, max-age=86400",
+    });
+    return res.end(readFileSync(path.join(ROOT, "widget", "manifest.webmanifest")));
+  }
+
+  if (req.method === "GET" && /^\/icon-(192|512)\.png$/.test(url.pathname)) {
+    res.writeHead(200, {
+      "Content-Type": "image/png",
+      "Cache-Control": "public, max-age=86400",
+    });
+    return res.end(readFileSync(path.join(ROOT, "widget", url.pathname.slice(1))));
+  }
+
   if (req.method === "GET" && url.pathname === "/widget.js") {
     res.writeHead(200, {
       "Content-Type": "application/javascript; charset=utf-8",
