@@ -1016,7 +1016,22 @@ const server = createServer(async (req, res) => {
   // ——— notifications: status+history, and manual send to everyone ———
   if (req.method === "GET" && url.pathname === "/api/admin/push") {
     if (!adminOk()) return;
-    return json(res, 200, { ready: push.pushReady(), subscribers: push.subCount(), log: push.pushLog() });
+    return json(res, 200, {
+      ready: push.pushReady(),
+      subscribers: push.subCount(),
+      log: push.pushLog(),
+      queued: push.queuedNotifications(),
+    });
+  }
+  if (req.method === "POST" && url.pathname === "/api/admin/push/cancel") {
+    if (!adminOk()) return;
+    let body = "";
+    for await (const part of req) body += part;
+    try {
+      return json(res, 200, { removed: push.cancelScheduled(String(JSON.parse(body).id || "")) });
+    } catch {
+      return json(res, 400, { error: "Invalid JSON." });
+    }
   }
   if (req.method === "POST" && url.pathname === "/api/admin/push/send") {
     if (!adminOk()) return;
@@ -1030,7 +1045,16 @@ const server = createServer(async (req, res) => {
       const title = String(p.title || "").trim().slice(0, 80) || "Ask Your Guide";
       const text = String(p.body || "").trim().slice(0, 300);
       if (!text) return json(res, 400, { error: "Message text needed." });
-      const result = await push.sendToAll(title, text, String(p.url || "").trim().slice(0, 300), "admin");
+      const link = String(p.url || "").trim().slice(0, 300);
+      // optional scheduling: datetime-local value is IST by convention
+      if (p.when) {
+        const at = new Date(String(p.when).slice(0, 16) + ":00+05:30");
+        if (isNaN(at)) return json(res, 400, { error: "Invalid schedule time." });
+        if (at.getTime() < Date.now() + 60_000)
+          return json(res, 400, { error: "Scheduled time is in the past — pick a future time or leave it empty." });
+        return json(res, 200, { scheduled: true, item: push.scheduleNotification(title, text, link, at.toISOString()) });
+      }
+      const result = await push.sendToAll(title, text, link, "admin");
       return json(res, 200, result);
     } catch (err) {
       return json(res, 503, { error: String(err?.message || "send failed") });
@@ -1228,3 +1252,7 @@ server.listen(PORT, () => {
 const whisperTick = () => push.autoWhispers(upcomingEvents(3)).catch(() => {});
 setTimeout(whisperTick, 90_000).unref?.();
 setInterval(whisperTick, 3600_000).unref?.();
+// admin-scheduled notifications: checked every minute, catch-up after restarts
+const queueTick = () => push.processQueue().catch(() => {});
+setTimeout(queueTick, 45_000).unref?.();
+setInterval(queueTick, 60_000).unref?.();

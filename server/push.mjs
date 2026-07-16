@@ -99,6 +99,36 @@ export async function sendToAll(title, body, url, source) {
   return { sent, of: all.length, removed: dead.length };
 }
 
+// ——— scheduled notifications: the admin picks the moment ———
+const QUEUE = path.join(ROOT, "data", "push-queue.json");
+export const queuedNotifications = () => load(QUEUE, []).sort((a, b) => (a.at < b.at ? -1 : 1));
+export function scheduleNotification(title, body, url, atIso) {
+  const q = load(QUEUE, []);
+  const item = { id: Date.now().toString(36), at: atIso, title, body: String(body).slice(0, 300), url: url || "" };
+  q.push(item);
+  save(QUEUE, q);
+  return item;
+}
+export function cancelScheduled(id) {
+  const q = load(QUEUE, []);
+  const left = q.filter((i) => i.id !== id);
+  if (left.length !== q.length) save(QUEUE, left);
+  return q.length - left.length;
+}
+// called every minute by the server; also catches up anything missed while down
+export async function processQueue() {
+  if (!ready) return;
+  const q = load(QUEUE, []);
+  if (!q.length) return;
+  const now = Date.now();
+  const remain = [];
+  for (const i of q) {
+    if (new Date(i.at).getTime() <= now) await sendToAll(i.title, i.body, i.url, "scheduled").catch(() => {});
+    else remain.push(i);
+  }
+  if (remain.length !== q.length) save(QUEUE, remain);
+}
+
 // ——— the automatic whispers (called hourly by the server) ———
 // upcoming = [{name, start, end}] from panchang; each fires once, after 8am IST.
 export async function autoWhispers(upcoming) {

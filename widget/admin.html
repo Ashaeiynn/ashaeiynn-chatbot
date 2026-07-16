@@ -183,8 +183,15 @@
     <input type="text" id="ntitle" placeholder="Title — e.g. 🪔 कल पूर्णिमा है" maxlength="80">
     <textarea id="nbody" placeholder="Message — short and warm (up to 300 characters)" maxlength="300" style="min-height:80px"></textarea>
     <input type="text" id="nurl" placeholder="Link (optional) — where a tap opens; empty = the guide">
+    <label style="display:block;font-size:12.5px;color:var(--dim);margin:2px 0 6px">⏰ Schedule (optional) — pick date &amp; time (IST) to deliver later; leave empty to send now</label>
+    <input type="datetime-local" id="nwhen" style="width:100%;background:#0b0b10;border:1px solid var(--line);border-radius:10px;padding:10px 13px;color:var(--ink);font-size:14px;outline:none;margin-bottom:10px;font-family:inherit;color-scheme:dark">
     <button class="gold-btn" id="nsend" style="width:100%;padding:11px">📣 Send to all</button>
     <p id="nresult" style="min-height:18px;margin-top:8px;font-size:13px"></p>
+  </div>
+  <div class="teach-card" id="nqueue-card" style="display:none">
+    <h3>⏰ Scheduled — waiting to be delivered</h3>
+    <p>These will go out automatically at their time. Cancel anytime before delivery.</p>
+    <div id="nqueue"></div>
   </div>
   <div class="teach-card">
     <h3>🗓️ Sent notifications — history</h3>
@@ -497,6 +504,32 @@
       <div class="stat"><b>${(d.log || []).length}</b><span>notifications sent</span></div>`;
     $("#nsend").disabled = !d.ready;
     if (!d.ready) $("#nresult").textContent = "⚠️ Push system not configured yet — ask Claude to finish the notifications setup";
+    const queued = d.queued || [];
+    $("#nqueue-card").style.display = queued.length ? "block" : "none";
+    $("#nqueue").innerHTML = "";
+    for (const i of queued) {
+      const el = document.createElement("div");
+      el.className = "job";
+      const when = new Date(i.at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+      el.innerHTML = `<span>⏰</span>
+        <div><div>${esc(i.title)} — ${esc(i.body)}</div>
+        <div class="d">delivers ${when} IST${i.url ? ` · link: ${esc(i.url)}` : ""}</div></div>`;
+      const cancel = document.createElement("button");
+      cancel.className = "mini danger";
+      cancel.textContent = "Cancel";
+      cancel.style.marginLeft = "auto";
+      cancel.addEventListener("click", async () => {
+        if (!confirm("Cancel this scheduled notification?")) return;
+        await fetch("/api/admin/push/cancel", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-admin-key": key() },
+          body: JSON.stringify({ id: i.id }),
+        }).catch(() => {});
+        loadNotify();
+      });
+      el.appendChild(cancel);
+      $("#nqueue").appendChild(el);
+    }
     const log = d.log || [];
     $("#nlog").innerHTML = log.length ? "" : `<div class="empty">no notifications sent yet</div>`;
     for (const e of log) {
@@ -519,21 +552,27 @@
   $("#nsend").addEventListener("click", async () => {
     const title = $("#ntitle").value.trim();
     const body = $("#nbody").value.trim();
+    const when = $("#nwhen").value;
     if (!body) { $("#nresult").textContent = "⚠️ Write a message first"; return; }
-    if (!confirm(`This notification will go to ALL 🔔 subscribed phones:\n\n${title}\n${body}\n\nSend?`)) return;
+    const confirmMsg = when
+      ? `Schedule this notification for ${when.replace("T", " at ")} IST?\n\n${title}\n${body}`
+      : `This notification will go to ALL 🔔 subscribed phones NOW:\n\n${title}\n${body}\n\nSend?`;
+    if (!confirm(confirmMsg)) return;
     $("#nsend").disabled = true;
-    $("#nresult").textContent = "Sending…";
+    $("#nresult").textContent = when ? "Scheduling…" : "Sending…";
     try {
       const r = await fetch("/api/admin/push/send", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-admin-key": key() },
-        body: JSON.stringify({ title, body, url: $("#nurl").value.trim() }),
+        body: JSON.stringify({ title, body, url: $("#nurl").value.trim(), when: when || undefined }),
       });
       const d = await r.json();
       $("#nresult").textContent = r.ok
-        ? `✅ Sent — reached ${d.sent}/${d.of} phones${d.removed ? ` (${d.removed} stale removed)` : ""}`
+        ? d.scheduled
+          ? `⏰ Scheduled — will be delivered ${when.replace("T", " at ")} IST`
+          : `✅ Sent — reached ${d.sent}/${d.of} phones${d.removed ? ` (${d.removed} stale removed)` : ""}`
         : `❌ ${d.error || "could not send"}`;
-      if (r.ok) { $("#nbody").value = ""; loadNotify(); }
+      if (r.ok) { $("#nbody").value = ""; $("#nwhen").value = ""; loadNotify(); }
     } catch {
       $("#nresult").textContent = "❌ could not reach the server";
     }
