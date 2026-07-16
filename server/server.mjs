@@ -30,6 +30,20 @@ if (process.platform === "darwin" && existsSync("/usr/bin/caffeinate")) {
     /* best effort */
   }
 }
+// Speech recognition (the widget's mic, the app's own, or /api/stt) mishears
+// brand words — spoken "गुरुदेव" arrives as "गुरुवार" (Thursday). Fix the known
+// ones so retrieval finds the right teachings. Keep in step with widget.js.
+const MISHEARD = [
+  [/गुरुवार/g, "गुरुदेव"],
+  [/\bguru\s?[vw]aa?r\b/gi, "Gurudev"],
+  [/[अआ]शा\s?[ईइय]{1,2}न/g, "Ashaeiynn"],
+  [/\basha\s?[eiy]{1,3}nn?\b/gi, "Ashaeiynn"],
+  [/पाठ\s+शाला/g, "पाठशाला"],
+  [/\bpath\s+shala\b/gi, "Pathshala"],
+  [/\bpar[ie]{0,2}ksh[ie]+t\b/gi, "Parikshit"],
+];
+const fixMishearings = (t) => MISHEARD.reduce((s, [re, ok]) => s.replace(re, ok), t);
+
 const ADMIN_KEY = process.env.ADMIN_KEY || "";
 const LIBRARY_KEY = process.env.LIBRARY_KEY || ""; // second lock: the Library tab
 
@@ -239,22 +253,7 @@ async function handleChat(req, res) {
     return json(res, 400, { error: "Invalid JSON." });
   }
 
-  // Speech recognition (the widget's mic, or the app's own) mishears brand
-  // words — spoken "गुरुदेव" arrives as "गुरुवार" (Thursday). Fix the known
-  // ones so retrieval finds the right teachings. Keep in step with widget.js.
-  const MISHEARD = [
-    [/गुरुवार/g, "गुरुदेव"],
-    [/\bguru\s?[vw]aa?r\b/gi, "Gurudev"],
-    [/[अआ]शा\s?[ईइय]{1,2}न/g, "Ashaeiynn"],
-    [/\basha\s?[eiy]{1,3}nn?\b/gi, "Ashaeiynn"],
-    [/पाठ\s+शाला/g, "पाठशाला"],
-    [/\bpath\s+shala\b/gi, "Pathshala"],
-    [/\bpar[ie]{0,2}ksh[ie]+t\b/gi, "Parikshit"],
-  ];
-  const message = MISHEARD.reduce(
-    (s, [re, ok]) => s.replace(re, ok),
-    String(payload.message ?? "").trim().slice(0, 2000),
-  );
+  const message = fixMishearings(String(payload.message ?? "").trim().slice(0, 2000));
   if (!message) return json(res, 400, { error: "Empty message." });
 
   // Recent conversation history from the widget (kept short on purpose).
@@ -469,6 +468,59 @@ async function handleChat(req, res) {
   }
 }
 
+// ——— voice fallback: transcribe a short recorded question ———
+// iOS home-screen apps can't use the browser's speech recognition (it starts
+// but hears nothing) — the widget records a few seconds of audio instead and
+// sends it here. Gemini transcribes it on the same free key.
+async function handleStt(req, res) {
+  const ip = req.socket.remoteAddress ?? "unknown";
+  if (rateLimited(ip)) return json(res, 429, { error: "Too many requests." });
+  if (!GEMINI_TTS_KEY) return json(res, 503, { error: "stt-not-configured" });
+  let body = "";
+  for await (const part of req) {
+    body += part;
+    if (body.length > 3_000_000) return json(res, 413, { error: "Recording too long." });
+  }
+  let audio = "", mime = "";
+  try {
+    const p = JSON.parse(body);
+    audio = String(p.audio || "");
+    mime = String(p.mime || "audio/mp4").split(";")[0].trim().toLowerCase();
+  } catch {
+    return json(res, 400, { error: "Invalid JSON." });
+  }
+  if (!audio) return json(res, 400, { error: "No audio." });
+  const OK_MIME = new Set(["audio/mp4", "audio/aac", "audio/mpeg", "audio/mp3", "audio/wav", "audio/ogg", "audio/webm", "audio/aiff", "audio/flac", "audio/x-m4a", "audio/m4a"]);
+  if (!OK_MIME.has(mime)) mime = "audio/mp4";
+  if (mime === "audio/x-m4a" || mime === "audio/m4a") mime = "audio/mp4";
+  try {
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(process.env.GEMINI_MODEL || "gemini-3.1-flash-lite")}:generateContent`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_TTS_KEY },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { text: "Transcribe this short voice question exactly as spoken — Hindi speech in Devanagari, English speech in English. Output ONLY the transcription, nothing else." },
+                { inlineData: { mimeType: mime, data: audio } },
+              ],
+            },
+          ],
+        }),
+      },
+    );
+    if (!r.ok) throw new Error(`stt ${r.status}`);
+    const data = await r.json();
+    const text = (data.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("") || "").trim();
+    return json(res, 200, { text: fixMishearings(text.slice(0, 2000)) });
+  } catch (err) {
+    console.error("stt error:", err?.message);
+    return json(res, 503, { error: "Couldn't hear that — please try again." });
+  }
+}
+
 // ——— personal-guide helpers (stateless: the seeker's diary lives on their device) ———
 
 // Distill the seeker's recent questions into a one-line journey summary the
@@ -559,6 +611,7 @@ const server = createServer(async (req, res) => {
   if (req.method === "POST" && url.pathname === "/api/tts") return handleTts(req, res);
   if (req.method === "POST" && url.pathname === "/api/distill") return handleDistill(req, res);
   if (req.method === "POST" && url.pathname === "/api/next-step") return handleNextStep(req, res);
+  if (req.method === "POST" && url.pathname === "/api/stt") return handleStt(req, res);
 
   // Health check — for hosting platforms and to confirm a deploy is live.
   if (req.method === "GET" && url.pathname === "/health") {

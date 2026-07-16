@@ -823,7 +823,115 @@
     }
   }
 
+  // ——— recorder fallback: record a short clip → /api/stt transcribes it ———
+  // iOS home-screen apps can't use SpeechRecognition (it starts but hears
+  // nothing — a WebKit limitation), so there we record audio and the server
+  // listens. Also kicks in anywhere recognition keeps coming back empty.
+  const canRecord = !!(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
+  const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const useRecorder = () =>
+    canRecord && ((IOS && navigator.standalone === true) || journey.sttFallback === true || !SR);
+
+  let mediaRec = null, recChunks = [], recStream = null, recTimer = null;
+  async function startRecording(target) {
+    stopSpeaking();
+    try {
+      recStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      listening = false;
+      if (target === "stage") setVState("error");
+      else input.placeholder = "Mic not available — please type…";
+      return;
+    }
+    const mime = MediaRecorder.isTypeSupported("audio/mp4")
+      ? "audio/mp4"
+      : MediaRecorder.isTypeSupported("audio/webm")
+        ? "audio/webm"
+        : "";
+    try {
+      mediaRec = new MediaRecorder(recStream, mime ? { mimeType: mime } : undefined);
+    } catch {
+      recStream.getTracks().forEach((t) => t.stop());
+      if (target === "stage") setVState("error");
+      return;
+    }
+    recChunks = [];
+    mediaRec.ondataavailable = (e) => {
+      if (e.data && e.data.size) recChunks.push(e.data);
+    };
+    mediaRec.onstop = async () => {
+      clearTimeout(recTimer);
+      recStream.getTracks().forEach((t) => t.stop());
+      listening = false;
+      micBtn.classList.remove("listening");
+      const blob = new Blob(recChunks, { type: mediaRec.mimeType || mime || "audio/mp4" });
+      if (blob.size < 1200) {
+        if (target === "stage") {
+          if (liveEl) { liveEl.remove(); liveEl = null; }
+          setVState("idle");
+        }
+        return;
+      }
+      if (target === "stage") {
+        setVState("thinking");
+        showLive("…");
+      }
+      try {
+        const text = await sttServer(blob);
+        if (liveEl) { liveEl.remove(); liveEl = null; }
+        if (target === "stage") {
+          if (text) voiceAsk(text);
+          else setVState("idle");
+        } else {
+          input.value = text;
+          input.placeholder = "Type your question…";
+          if (text) form.requestSubmit();
+        }
+      } catch {
+        if (liveEl) { liveEl.remove(); liveEl = null; }
+        if (target === "stage") setVState("error");
+        else input.placeholder = "Mic not available — please type…";
+      }
+    };
+    mediaRec.start();
+    listening = true;
+    if (target === "stage") {
+      setVState("listening");
+      showLive("🎙️ बोलिए… हो जाए तो फिर से टैप कीजिए (tap again when done)");
+    } else {
+      micBtn.classList.add("listening");
+      input.placeholder = "🎙️ बोलिए… (listening)";
+    }
+    recTimer = setTimeout(stopRecording, 12000);
+  }
+  function stopRecording() {
+    clearTimeout(recTimer);
+    try {
+      if (mediaRec && mediaRec.state === "recording") mediaRec.stop();
+    } catch { /* already stopped */ }
+  }
+  function cancelRecording() {
+    recChunks = [];
+    stopRecording();
+  }
+  async function sttServer(blob) {
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    const r = await fetch(`${API}/api/stt`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ audio: btoa(bin), mime: blob.type, lang: recLang }),
+    });
+    if (!r.ok) throw new Error("stt failed");
+    return String((await r.json()).text || "").trim();
+  }
+
   function startListening(target) {
+    if (useRecorder()) {
+      startRecording(target);
+      return;
+    }
     if (!rec) return;
     stopSpeaking();
     try {
@@ -845,12 +953,13 @@
     }
   }
 
-  if (!SR) {
-    // no speech recognition (e.g. Firefox): fall back to classic text chat
+  if (!SR && !canRecord) {
+    // no way to hear at all (very old browser): classic text chat only
     micBtn.style.display = "none";
     kbdBtn.style.display = "none";
     stage.dataset.unsupported = "1";
-  } else {
+  }
+  if (SR) {
     rec = new SR();
     rec.interimResults = true;
     rec.continuous = false;
@@ -877,19 +986,28 @@
       if (rec._target === "stage") showLive(textNow ? `🎙️ ${textNow}` : "");
       else input.value = textNow;
     };
+    let sttEmpty = 0; // consecutive voice attempts that heard nothing
     rec.onend = () => {
       listening = false;
       micBtn.classList.remove("listening");
       input.placeholder = "Type your question…";
       const fin = (rec._final || "").trim();
       if (rec._target === "stage") {
-        if (fin) voiceAsk(fin);
-        else {
+        if (fin) {
+          sttEmpty = 0;
+          voiceAsk(fin);
+        } else {
           if (liveEl) {
             liveEl.remove();
             liveEl = null;
           }
           setVState("idle");
+          // recognition keeps hearing nothing (typical on iOS): switch this
+          // device to the record-and-transcribe ear permanently
+          if (IOS && canRecord && ++sttEmpty >= 2) {
+            journey.sttFallback = true;
+            saveJourney();
+          }
         }
       } else if (input.value.trim()) {
         form.requestSubmit();
@@ -904,16 +1022,24 @@
           liveEl = null;
         }
         setVState("error");
+        if (IOS && canRecord && ++sttEmpty >= 2) {
+          journey.sttFallback = true;
+          saveJourney();
+        }
       } else if (!input.value.trim()) {
         input.placeholder = "Mic not available — please type…";
       }
     };
+  }
 
-    // the big eye: idle→listen · listening→finish · speaking→stop
+  // the big eye: idle→listen · listening→finish · speaking→stop
+  {
     orb.addEventListener("click", () => {
       const s = panel.dataset.vstate;
-      if (listening) rec.stop();
-      else if (s === "speaking") {
+      if (listening) {
+        if (mediaRec && mediaRec.state === "recording") stopRecording();
+        else rec?.stop();
+      } else if (s === "speaking") {
         stopSpeaking();
         setVState("idle");
       } else if (s !== "thinking") startListening("stage");
@@ -923,7 +1049,10 @@
     langBtn.addEventListener("click", () => {
       recLang = recLang.startsWith("hi") ? "en-IN" : "hi-IN";
       langBtn.textContent = recLang.startsWith("hi") ? "भाषा: हिंदी" : "Language: English";
-      if (listening) rec.stop();
+      if (listening) {
+        if (mediaRec && mediaRec.state === "recording") cancelRecording();
+        else rec?.stop();
+      }
     });
   }
 
@@ -932,7 +1061,7 @@
     panel.dataset.mode = m;
     if (m === "text") {
       stopSpeaking();
-      if (listening) rec?.stop();
+      if (listening) { rec?.stop(); cancelRecording(); }
       if (!greeted) {
         greeted = true;
         addMessage(
@@ -953,7 +1082,7 @@
     setMode("voice");
     startListening("stage");
   });
-  panel.dataset.mode = SR ? "voice" : "text";
+  panel.dataset.mode = SR || canRecord ? "voice" : "text";
 
   // ——— opening blessing: splash rises, then docks into the golden strip ———
   let splashTimers = [];
@@ -1045,7 +1174,7 @@
     document.documentElement.classList.toggle("vcb-lock", open && matchMedia("(max-width:640px)").matches);
     if (!open) {
       stopSpeaking();
-      if (listening) rec?.stop();
+      if (listening) { rec?.stop(); cancelRecording(); }
     }
     if (open) {
       hideNudge();
