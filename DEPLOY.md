@@ -1,5 +1,15 @@
 # Deploying the chatbot backend
 
+> **Current live deployment: https://guide.ashaeiynn.com** — the owner's Hostinger
+> VPS (200.97.172.186), shared with the OMS. Chatbot lives in `/opt/chatbot`
+> (own Node 24 at `/opt/chatbot/node`, `chatbot.service`, Caddy site file
+> `/etc/caddy/sites/chatbot.caddy`). `chatbot-update.timer` pulls from GitHub
+> every 5 min (`/opt/chatbot/update.sh` → `scripts/auto-sync.sh`), reinstalls
+> deps when the lockfile changed, and restarts on new commits — so knowledge
+> taught on the Macs goes live automatically. The VPS disk is permanent: no
+> LOG_DIR needed, corrections/questions.log survive restarts. The Render
+> deploy below is the legacy fallback.
+
 The backend is one small Node service with a local knowledge base and no external database.
 Once it's hosted at a public URL, your app calls `POST /api/chat` (see `API-INTEGRATION.md`).
 
