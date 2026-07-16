@@ -16,6 +16,7 @@ const PORT = Number(process.env.PORT || 3111);
 const FALLBACK =
   process.env.FALLBACK_MESSAGE ||
   "I don't have that information in our video library yet. Please contact us directly.";
+const FALLBACK_HI = "मेरे पास अभी वीडियो लाइब्रेरी में यह जानकारी उपलब्ध नहीं है। कृपया हमसे सीधे संपर्क करें।";
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 const MAX_HISTORY_TURNS = 6;
 
@@ -480,6 +481,15 @@ async function handleChat(req, res) {
         help = he[1].toLowerCase();
         answer = answer.slice(0, he.index).trimEnd();
       }
+    }
+
+    // Deterministic refusal rule: an answer WITHOUT a Source line is a refusal,
+    // an identity reply, or otherwise not grounded teaching — it must never be
+    // decorated with Watch links, follow-up chips, or conversation extras.
+    // (Handoffs and link requests are the deliberate exceptions.)
+    if (!help && !wantsLink && !/source\s*[:：]/i.test(answer)) {
+      writeLog({ ...logEntry, answer, refusal: true });
+      return json(res, 200, { answer, sources: [] });
     }
 
     // Top sources so the widget can link to the exact video moments.

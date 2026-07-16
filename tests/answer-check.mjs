@@ -14,6 +14,9 @@ const BASE = `http://localhost:${process.env.PORT || 3111}`;
 const FALLBACK = process.env.FALLBACK_MESSAGE || "";
 
 async function ask(q) {
+  // pace the suite: each question costs ~2 model calls (translation + answer),
+  // and the free tier caps requests per minute — don't let the test itself 429
+  await new Promise((s) => setTimeout(s, 9000));
   const res = await fetch(`${BASE}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -23,12 +26,16 @@ async function ask(q) {
   return res.json();
 }
 
-// A grounded answer always ends with a "Source:" line (prompt rule); the fallback never
-// carries one (and may be translated into the visitor's language). So the source line is
-// the reliable discriminator.
+// A grounded answer always ends with a "Source:" line (prompt rule) and carries
+// sources[]. A refusal never does: since the conversational persona, off-topic
+// questions may get either the canonical fallback OR a short in-character
+// refusal ("मैं यहाँ सोने के भाव बताने के लिए नहीं हूँ…") — both are correct as
+// long as there is NO source line, NO sources array, and no long fabrication.
 const hasSource = (a) => /source\s*:/i.test(a);
-const isFallback = (a) =>
-  !hasSource(a) && (a.trim().length < 300 || (FALLBACK && a.includes(FALLBACK.slice(0, 40))));
+const isFallback = (a, sources) =>
+  !hasSource(a) &&
+  !(sources || []).length &&
+  (a.trim().length < 600 || (FALLBACK && a.includes(FALLBACK.slice(0, 40))));
 
 let pass = 0;
 let fail = 0;
@@ -36,7 +43,7 @@ let fail = 0;
 console.log("=== ON-TOPIC (expect a grounded answer) ===");
 for (const { q, lang } of onTopic) {
   const r = await ask(q);
-  const ok = !r.error && r.answer && !isFallback(r.answer);
+  const ok = !r.error && r.answer && !isFallback(r.answer, r.sources);
   console.log(`  ${ok ? "✓" : "✗"} (${lang}) ${q}`);
   if (r.error) console.log(`      error: ${r.error}`);
   else console.log(`      ${r.answer.slice(0, 120).replace(/\n/g, " ")}${r.sources?.length ? `  [${r.sources.length} source]` : "  [NO SOURCE]"}`);
@@ -46,7 +53,7 @@ for (const { q, lang } of onTopic) {
 console.log("\n=== OFF-TOPIC (expect the fallback) ===");
 for (const { q, lang } of offTopic) {
   const r = await ask(q);
-  const ok = !r.error && isFallback(r.answer);
+  const ok = !r.error && isFallback(r.answer, r.sources);
   console.log(`  ${ok ? "✓" : "✗"} (${lang}) ${q}`);
   if (!ok && r.answer) console.log(`      LEAKED: ${r.answer.slice(0, 120).replace(/\n/g, " ")}`);
   ok ? pass++ : fail++;
