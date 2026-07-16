@@ -316,7 +316,19 @@ async function extractDocText(filePath) {
     ]);
   }
   if (/\.(txt|md)$/i.test(filePath)) return readFileSync(filePath, "utf8");
-  // docx / doc / rtf / html → macOS textutil
+  if (/\.html?$/i.test(filePath)) return htmlToText(readFileSync(filePath, "utf8"));
+  if (/\.docx$/i.test(filePath)) {
+    // .docx is a zip of XML — extract text with python3, works on Mac AND the
+    // Linux VPS alike (textutil, used below, exists only on macOS).
+    return captureProcess("python3", [
+      "-c",
+      'import sys, zipfile, re, html\nxml = zipfile.ZipFile(sys.argv[1]).read("word/document.xml").decode("utf-8", "ignore")\nxml = re.sub(r"<w:tab[^>]*/>", "\\t", xml)\nxml = re.sub(r"</w:p>", "\\n\\n", xml)\nprint(html.unescape(re.sub(r"<[^>]+>", "", xml)))',
+      filePath,
+    ]);
+  }
+  // legacy .doc / .rtf → macOS textutil only; elsewhere fail with a clear message
+  if (!existsSync("/usr/bin/textutil"))
+    throw new Error("Old Word (.doc) and RTF files need the studio Mac's portal — or save the file as PDF/.docx and upload it again.");
   const out = filePath + ".extracted.txt";
   await runProcess("/usr/bin/textutil", ["-convert", "txt", "-output", out, filePath]);
   const text = readFileSync(out, "utf8");

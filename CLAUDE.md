@@ -84,8 +84,10 @@ chatbot.service, Caddy site /etc/caddy/sites/chatbot.caddy; OMS untouched).
 chatbot-update.timer syncs from GitHub every 5 min via scripts/auto-sync.sh
 (deploy key currently read-only — teach-on-server can't push back yet).
 VPS disk is permanent: questions.log/corrections survive restarts, no LOG_DIR
-needed. Legacy: ashaeiynn-chatbot.onrender.com (Render free) still auto-deploys
-+ keep-alive Action pings it — retire both once the owner confirms.
+needed. Render retired 2026-07-16 (keep-alive Action removed; owner deletes the
+service in the Render dashboard). Teach-on-VPS: docx via python3 zip-extract,
+PDF via pypdf, txt/md/html/links/text natively; .doc/.rtf and audio/video stay
+Mac-only (textutil / mlx_whisper).
 Owner's real .env is installed on the VPS and this MacBook (2026-07-16): fully
 live — Gemini answers + natural voice working end-to-end on guide.ashaeiynn.com.
 Pending: owner's app integrates via API-INTEGRATION.md; retire Render (owner's
