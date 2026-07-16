@@ -10,7 +10,7 @@ import { ROOT } from "./env.mjs";
 import { searchMulti, formatTimestamp, thoughtCandidate } from "./retrieve.mjs";
 import { warmup } from "./embed.mjs";
 import { buildSystemPrompt, buildContextBlock } from "./prompt.mjs";
-import { complete, PROVIDER, ACTIVE_MODEL, keyConfigured, LlmAuthError, LlmRateLimitError } from "./llm.mjs";
+import { complete, PROVIDER, ACTIVE_MODEL, keyConfigured, BACKUP_CONFIGURED, failover, LlmAuthError, LlmRateLimitError } from "./llm.mjs";
 
 const PORT = Number(process.env.PORT || 3111);
 const FALLBACK =
@@ -779,6 +779,7 @@ const server = createServer(async (req, res) => {
       // true only on the studio Mac, where whisper transcription is installed
       teachMedia: existsSync(`${process.env.HOME}/Library/Python/3.9/bin/mlx_whisper`),
       apiKeyConfigured,
+      backup: BACKUP_CONFIGURED ? { ready: true, lastUsed: failover.at, answers: failover.count } : false,
       naturalVoice: TTS_KEY ? "elevenlabs" : GEMINI_TTS_KEY ? "gemini" : false,
       knowledgeBase: existsSync(path.join(ROOT, "data", "knowledge.db")) ? "built" : "missing",
     });

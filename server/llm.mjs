@@ -1,6 +1,9 @@
 // Unified access to the answering AI — one function, two providers.
 // Set CHAT_PROVIDER in .env to "gemini" (Google, free tier) or "anthropic"
 // (Claude, prepaid credits); nothing else in the codebase needs to change.
+// FAILOVER: when Gemini is the provider AND an ANTHROPIC_API_KEY is present,
+// any Gemini failure (daily quota, outage) silently retries on Claude — the
+// prepaid key is a hard-capped tank, so worst case is bounded pennies.
 import Anthropic from "@anthropic-ai/sdk";
 
 export const PROVIDER = (process.env.CHAT_PROVIDER || "anthropic").toLowerCase();
@@ -11,20 +14,64 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 // quota bucket, so they don't eat into the answer model's requests-per-minute.
 const GEMINI_LIGHT_MODEL = process.env.GEMINI_LIGHT_MODEL || "gemini-flash-lite-latest";
 const ANTHROPIC_MODEL = process.env.CHAT_MODEL || "claude-haiku-4-5";
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || "";
 
 export const ACTIVE_MODEL = PROVIDER === "gemini" ? GEMINI_MODEL : ANTHROPIC_MODEL;
-export const keyConfigured =
-  PROVIDER === "gemini" ? Boolean(GEMINI_KEY) : Boolean(process.env.ANTHROPIC_API_KEY);
+export const keyConfigured = PROVIDER === "gemini" ? Boolean(GEMINI_KEY) : Boolean(ANTHROPIC_KEY);
+export const BACKUP_CONFIGURED = PROVIDER === "gemini" && Boolean(ANTHROPIC_KEY);
+// When the backup last answered (null = never) — /health shows it so an
+// extended Gemini outage is visible to the owner.
+export const failover = { at: null, count: 0 };
 
-const anthropic = new Anthropic();
+let _anthropic = null;
+const anthropicClient = () => (_anthropic ??= new Anthropic());
 
 export class LlmAuthError extends Error {}
 export class LlmRateLimitError extends Error {}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+async function completeAnthropic({ system, messages, maxTokens, cacheSystem }) {
+  try {
+    const response = await anthropicClient().messages.create({
+      model: ANTHROPIC_MODEL,
+      max_tokens: maxTokens,
+      system: cacheSystem
+        ? [{ type: "text", text: system, cache_control: { type: "ephemeral" } }]
+        : system,
+      messages,
+    });
+    return response.content
+      .filter((b) => b.type === "text")
+      .map((b) => b.text)
+      .join("")
+      .trim();
+  } catch (err) {
+    if (err instanceof Anthropic.AuthenticationError) throw new LlmAuthError(err.message);
+    if (err instanceof Anthropic.RateLimitError) throw new LlmRateLimitError(err.message);
+    throw err;
+  }
+}
+
 export async function complete({ system, messages, maxTokens = 1024, cacheSystem = false, light = false, retry = true }) {
   if (PROVIDER === "gemini") {
+    try {
+      return await completeGemini({ system, messages, maxTokens, light, retry });
+    } catch (err) {
+      if (!ANTHROPIC_KEY) throw err;
+      // Gemini is down or out of quota — the backup answers so members
+      // never see "busy". Logged so the owner can spot extended outages.
+      console.error(`failover → ${ANTHROPIC_MODEL} (gemini: ${String(err?.message || err).slice(0, 80)})`);
+      failover.at = new Date().toISOString();
+      failover.count++;
+      return completeAnthropic({ system, messages, maxTokens, cacheSystem });
+    }
+  }
+  return completeAnthropic({ system, messages, maxTokens, cacheSystem });
+}
+
+async function completeGemini({ system, messages, maxTokens, light, retry }) {
+  {
     const model = light ? GEMINI_LIGHT_MODEL : GEMINI_MODEL;
     const body = {
       system_instruction: { parts: [{ text: system }] },
@@ -64,25 +111,5 @@ export async function complete({ system, messages, maxTokens = 1024, cacheSystem
         .join("")
         .trim();
     }
-  }
-
-  try {
-    const response = await anthropic.messages.create({
-      model: ANTHROPIC_MODEL,
-      max_tokens: maxTokens,
-      system: cacheSystem
-        ? [{ type: "text", text: system, cache_control: { type: "ephemeral" } }]
-        : system,
-      messages,
-    });
-    return response.content
-      .filter((b) => b.type === "text")
-      .map((b) => b.text)
-      .join("")
-      .trim();
-  } catch (err) {
-    if (err instanceof Anthropic.AuthenticationError) throw new LlmAuthError(err.message);
-    if (err instanceof Anthropic.RateLimitError) throw new LlmRateLimitError(err.message);
-    throw err;
   }
 }

@@ -100,5 +100,10 @@ PDF via pypdf, txt/md/html/links/text natively; .doc/.rtf and audio/video stay
 Mac-only (textutil / mlx_whisper).
 Owner's real .env is installed on the VPS and this MacBook (2026-07-16): fully
 live — Gemini answers + natural voice working end-to-end on guide.ashaeiynn.com.
+Failover (2026-07-17): ANTHROPIC_API_KEY (fresh "chatbot-backup" key) added to
+.env on VPS+MacBook — any Gemini failure silently retries on claude-haiku-4-5
+(llm.mjs); /health shows backup.lastUsed/answers. Balance ~$0.80 — owner may
+top up at console.anthropic.com. iMac .env lacks the backup key (fine — iMac
+is studio only).
 Pending: owner's app integrates via API-INTEGRATION.md; retire Render (owner's
 call); VPS deploy key still read-only (teach-on-live can't push back yet).
