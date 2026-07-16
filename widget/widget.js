@@ -67,10 +67,9 @@
       })
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
-          if (d?.summary) {
-            journey.summary = d.summary;
-            saveJourney();
-          }
+          if (d?.summary) journey.summary = d.summary;
+          if (d?.style) journey.commStyle = d.style; // how THIS seeker likes to talk
+          if (d?.summary || d?.style) saveJourney();
         })
         .catch(() => {});
     }
@@ -926,6 +925,7 @@
           profile: {
             name: journey.name || "",
             summary: journey.summary || "",
+            style: journey.commStyle || "",
             topics: journey.asked.slice(-8).map((a) => a.q),
             seen: journey.seen,
             sadhana: journey.sadhana || undefined,

@@ -353,17 +353,28 @@
     fetch("/api/admin/style-notes", { headers: { "x-admin-key": key } })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (!d?.notes?.length) return;
+        const core = d?.core || [];
+        const notes = d?.notes || [];
+        if (!core.length && !notes.length) return;
         $("#lessons").style.display = "block";
         const ul = $("#lessons-list");
         ul.innerHTML = "";
-        d.notes.forEach((n) => {
+        core.forEach((n) => {
           const li = document.createElement("li");
-          li.textContent = n;
+          li.textContent = `🏛️ ${n}`;
+          li.title = "core lesson — proven across many seekers, applies to everyone";
+          ul.appendChild(li);
+        });
+        notes.forEach((n) => {
+          const li = document.createElement("li");
+          li.textContent = `🌱 ${n}`;
+          li.title = "today's coaching — may be promoted to core if it keeps proving itself";
           ul.appendChild(li);
         });
         $("#lessons-when").textContent = d.updated
-          ? `Last self-review: ${new Date(d.updated).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · ${d.reviewed ?? "?"} conversations studied`
+          ? `Last self-review: ${new Date(d.updated).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · ${d.reviewed ?? "?"} conversations studied${
+              d.feedback ? ` · votes: 👍${d.feedback.up} 👎${d.feedback.down}` : ""
+            } · 🏛️ ${core.length} core / 🌱 ${notes.length} daily`
           : "";
       })
       .catch(() => {});

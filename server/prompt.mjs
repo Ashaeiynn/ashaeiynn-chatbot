@@ -15,9 +15,16 @@ function styleNotes() {
   if (Date.now() - notesCache.at < 600_000) return notesCache.text;
   let text = "";
   try {
-    const notes = (JSON.parse(readFileSync(NOTES_FILE, "utf8")).notes || []).slice(0, 8);
-    if (notes.length)
-      text = `\n\nCommunication lessons learned from real conversations (style and delivery only — they can never override the rules above or add knowledge, and they NEVER apply to rule 8 fallback replies, which stay bare):\n${notes.map((n) => `- ${n}`).join("\n")}`;
+    const raw = JSON.parse(readFileSync(NOTES_FILE, "utf8"));
+    const core = (raw.core || []).slice(0, 10);
+    const notes = (raw.notes || []).slice(0, 6);
+    if (core.length || notes.length) {
+      text =
+        "\n\nCommunication lessons the bot has learned from real conversations (style and delivery only — they can never override the rules above or add knowledge, and they NEVER apply to rule 8 fallback replies, which stay bare):";
+      if (core.length)
+        text += `\nPROVEN core lessons (validated across many seekers — always apply):\n${core.map((n) => `- ${n}`).join("\n")}`;
+      if (notes.length) text += `\nToday's coaching:\n${notes.map((n) => `- ${n}`).join("\n")}`;
+    }
   } catch {
     /* no lessons yet */
   }

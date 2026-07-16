@@ -321,6 +321,7 @@ async function handleChat(req, res) {
   const profile = payload.profile && typeof payload.profile === "object" ? payload.profile : null;
   const seekerName = typeof profile?.name === "string" ? profile.name.trim().slice(0, 40) : "";
   const seekerSummary = typeof profile?.summary === "string" ? profile.summary.trim().slice(0, 300) : "";
+  const seekerStyle = typeof profile?.style === "string" ? profile.style.trim().slice(0, 160) : "";
   const seekerSadhana =
     profile?.sadhana && typeof profile.sadhana.name === "string"
       ? { name: profile.sadhana.name.trim().slice(0, 120), since: String(profile.sadhana.since || "").slice(0, 20) }
@@ -465,6 +466,8 @@ async function handleChat(req, res) {
               ? `\n[Seeker${seekerName ? ` named "${seekerName}"` : ""}${
                   recentTopics.length ? ` — recent questions (from their own device): ${recentTopics.join(" | ")}.` : "."
                 }${seekerSummary ? ` Journey so far: ${seekerSummary}` : ""}${
+                  seekerStyle ? ` Their communication style (honor it): ${seekerStyle}.` : ""
+                }${
                   seekerSadhana ? ` Their ongoing practice (self-declared${seekerSadhana.since ? `, since ${seekerSadhana.since}` : ""}): "${seekerSadhana.name}".` : ""
                 }${
                   seekerName ? ` Address them by name ONCE, naturally ("${seekerName} जी" in Hindi / "${seekerName} ji" in English).` : ""
@@ -766,15 +769,20 @@ async function handleDistill(req, res) {
   }
   if (qs.length < 3) return json(res, 400, { error: "Need a few questions first." });
   try {
-    const line = await complete({
+    const raw = await complete({
       system:
-        "You summarise a spiritual seeker's ongoing interests from their recent questions to a meditation-centre guide. Output ONE warm, factual line in Hindi (Devanagari, max 25 words) naming their main themes. Output only that line — no preamble.",
+        'You study a spiritual seeker\'s recent questions to a meditation-centre guide. Output ONLY JSON: {"summary": "<ONE warm factual line in Hindi (Devanagari, max 25 words) naming their main themes>", "style": "<ONE short English line describing HOW this seeker communicates and what delivery suits them — e.g. prefers short direct answers; mixes English terms; asks step-by-step. Empty string if nothing clear.>"}',
       messages: [{ role: "user", content: qs.join("\n") }],
-      maxTokens: 100,
+      maxTokens: 160,
       light: true,
       retry: false,
     });
-    return json(res, 200, { summary: line.split("\n")[0].trim().slice(0, 300) });
+    const m = raw.match(/\{[\s\S]*\}/);
+    const p = m ? JSON.parse(m[0]) : { summary: raw.split("\n")[0] };
+    return json(res, 200, {
+      summary: String(p.summary || "").trim().slice(0, 300),
+      style: String(p.style || "").trim().slice(0, 160),
+    });
   } catch {
     return json(res, 503, { error: "busy" });
   }
