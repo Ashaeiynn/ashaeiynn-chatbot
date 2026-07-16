@@ -23,7 +23,7 @@ fi
 
 git fetch -q origin 2>/dev/null || exit 0   # offline → catch up next run
 
-if git pull --rebase -q origin main 2>/dev/null; then
+if git pull --rebase -q origin main >/dev/null 2>&1; then
   git push -q origin main 2>/dev/null
   exit 0
 fi
