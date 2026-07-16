@@ -464,6 +464,50 @@
     .vcb-namecard input{border-color:rgba(227,183,102,.5);color:#f5edda;background:rgba(217,169,79,.07)}
     .vcb-namecard input:focus{border-color:#d9a94f}
     .vcb-namego{background:linear-gradient(140deg,#f7e3ae,#d9a94f 70%);color:#1d1503}
+
+    /* ——— Phase 2: quote, video cards, feedback, streak ——— */
+    .vcb-quote{position:relative;margin-top:10px;border-radius:13px;padding:11px 13px 9px 36px;
+      font-style:italic;color:#f2e5bf;font-size:14px;line-height:1.65;
+      background:linear-gradient(150deg,rgba(217,169,79,.12),rgba(217,169,79,.03));
+      box-shadow:inset 0 0 0 1px rgba(227,183,102,.35)}
+    .vcb-quote::before{content:"❝";position:absolute;left:11px;top:4px;font-size:24px;color:#d9a94f;
+      font-style:normal;font-family:Georgia,serif}
+    .vcb-quote span{display:block;font-style:normal;font-size:10.5px;color:#a89b7d;margin-top:6px;letter-spacing:.4px}
+    .vcb-quote span a{color:#e8c987;text-decoration:none}
+    .vcb-lbl{color:#d9a94f;font-size:10.5px;letter-spacing:1.6px;font-weight:600;
+      display:flex;align-items:center;gap:8px;margin-top:11px;
+      font-family:-apple-system,'Segoe UI',Roboto,sans-serif}
+    .vcb-lbl::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(227,183,102,.4),transparent)}
+    .vcb-vids{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+    .vcb-vid{display:flex;gap:10px;align-items:center;border-radius:13px;padding:8px;
+      background:rgba(13,21,14,.85);box-shadow:inset 0 0 0 1px rgba(227,183,102,.16);
+      text-decoration:none;color:inherit}
+    a.vcb-vid:hover{box-shadow:inset 0 0 0 1px rgba(227,183,102,.45)}
+    .vcb-thumb{width:82px;height:50px;border-radius:8px;flex-shrink:0;position:relative;overflow:hidden;
+      background:linear-gradient(130deg,#33290f 0%,#1a2013 55%,#10160e 100%)}
+    .vcb-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.9}
+    .vcb-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:23px;height:23px;
+      border-radius:50%;background:rgba(8,10,6,.68);display:flex;align-items:center;justify-content:center;
+      font-style:normal;color:#f3d795;font-size:9px;box-shadow:0 0 0 1.5px rgba(243,215,149,.8)}
+    .vcb-thumb b{position:absolute;right:4px;bottom:4px;font-size:8.5px;background:rgba(0,0,0,.78);color:#fff;
+      border-radius:4px;padding:1px 5px;font-weight:600;z-index:1}
+    .vcb-vmeta{min-width:0}
+    .vcb-vmeta p{font-size:12.5px;line-height:1.45;color:#e9dfc6;margin:0;
+      font-family:-apple-system,'Segoe UI',Roboto,sans-serif;
+      display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .vcb-fb{display:flex;justify-content:space-around;border-top:1px solid rgba(227,183,102,.18);
+      padding-top:9px;margin-top:11px}
+    .vcb-fbb{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;
+      cursor:pointer;color:#a89b7d;font-size:10px;letter-spacing:.3px;padding:2px 8px;
+      font-family:-apple-system,'Segoe UI',Roboto,sans-serif}
+    .vcb-fbb i{font-style:normal;font-size:15px}
+    .vcb-fbb em{font-style:normal}
+    .vcb-fbb.on{color:#f3d795}
+    .vcb-fbb:disabled{opacity:.45;cursor:default}
+    .vcb-fbb.on:disabled{opacity:1}
+    .vcb-streak{align-self:center;display:flex;align-items:center;gap:7px;border-radius:999px;
+      padding:7px 14px;font-size:12px;color:#f3d795;background:rgba(217,169,79,.09);
+      box-shadow:inset 0 0 0 1px rgba(227,183,102,.4);animation:vcbMsgIn .3s ease both}
   `;
   document.head.appendChild(style);
 
@@ -919,41 +963,7 @@
       const ans = document.createElement("div");
       ans.className = "vcb-ans";
       ans.textContent = data.answer;
-      if (data.sources?.length) {
-        const src = document.createElement("div");
-        src.className = "vcb-src";
-        src.append("Watch: ");
-        data.sources.forEach((s, i) => {
-          if (i > 0) src.append(" · ");
-          if (s.url) {
-            const a = document.createElement("a");
-            a.href = s.url;
-            a.target = "_blank";
-            a.rel = "noopener";
-            a.textContent = srcLabel(s);
-            src.appendChild(a);
-          } else {
-            src.append(srcLabel(s));
-          }
-        });
-        ans.appendChild(src);
-      }
-      if (data.suggest) {
-        const sug = document.createElement("div");
-        sug.className = "vcb-src";
-        sug.append("🌱 आगे देखिए: ");
-        if (data.suggest.url) {
-          const a = document.createElement("a");
-          a.href = data.suggest.url;
-          a.target = "_blank";
-          a.rel = "noopener";
-          a.textContent = `${data.suggest.title} (${data.suggest.timestamp})`;
-          sug.appendChild(a);
-        } else {
-          sug.append(`${data.suggest.title} (${data.suggest.timestamp})`);
-        }
-        ans.appendChild(sug);
-      }
+      enrichAnswer(ans, data, text);
       capAdd(ans);
       if (data.followups?.length) capAdd(chipsEl(data.followups));
       panel.dataset.hasAns = "1";
@@ -1362,47 +1372,148 @@
     return wrap;
   }
 
-  function addMessage(role, text, sources, suggest) {
+  function addMessage(role, text, extras, questionText) {
     const el = document.createElement("div");
     el.className = `vcb-m ${role}`;
     el.textContent = text;
-    if (sources?.length) {
-      const src = document.createElement("div");
-      src.className = "vcb-src";
-      src.append("Watch: ");
-      sources.forEach((s, i) => {
-        if (i > 0) src.append(" · ");
-        if (s.url) {
-          const a = document.createElement("a");
-          a.href = s.url;
-          a.target = "_blank";
-          a.rel = "noopener";
-          a.textContent = srcLabel(s);
-          src.appendChild(a);
-        } else {
-          src.append(srcLabel(s));
-        }
-      });
-      el.appendChild(src);
+    if (extras) enrichAnswer(el, extras, questionText || "");
+    msgs.appendChild(el);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  // ——— rich answer extras: शब्दशः quote · video cards · 🌱 · feedback ———
+  function ytThumb(url) {
+    const m = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{6,})/.exec(url || "");
+    return m ? `https://img.youtube.com/vi/${m[1]}/mqdefault.jpg` : null;
+  }
+  function enrichAnswer(el, data, questionText) {
+    if (data.quote) {
+      const q = document.createElement("div");
+      q.className = "vcb-quote";
+      q.append(data.quote.text);
+      const cite = document.createElement("span");
+      const citeText = `— Bhaiya के शब्द, शब्दशः · ${data.quote.timestamp}`;
+      if (data.quote.url) {
+        const a = document.createElement("a");
+        a.href = data.quote.url;
+        a.target = "_blank";
+        a.rel = "noopener";
+        a.textContent = citeText;
+        cite.appendChild(a);
+      } else {
+        cite.textContent = citeText;
+      }
+      q.appendChild(cite);
+      el.appendChild(q);
     }
-    if (suggest) {
+    if (data.sources?.length) {
+      const lbl = document.createElement("div");
+      lbl.className = "vcb-lbl";
+      lbl.textContent = "📿 देखिए";
+      el.appendChild(lbl);
+      const vids = document.createElement("div");
+      vids.className = "vcb-vids";
+      data.sources.slice(0, 3).forEach((s) => {
+        const row = document.createElement(s.url ? "a" : "div");
+        row.className = "vcb-vid";
+        if (s.url) {
+          row.href = s.url;
+          row.target = "_blank";
+          row.rel = "noopener";
+        }
+        const th = document.createElement("div");
+        th.className = "vcb-thumb";
+        const img = s.url && ytThumb(s.url);
+        if (img) {
+          const im = document.createElement("img");
+          im.src = img;
+          im.loading = "lazy";
+          im.alt = "";
+          th.appendChild(im);
+        }
+        const play = document.createElement("i");
+        play.className = "vcb-play";
+        play.textContent = s.url ? (img || /vimeo|youtu/.test(s.url) ? "▶" : "📖") : "📖";
+        th.appendChild(play);
+        if (s.timestamp) {
+          const b = document.createElement("b");
+          b.textContent = s.timestamp;
+          th.appendChild(b);
+        }
+        const meta = document.createElement("div");
+        meta.className = "vcb-vmeta";
+        const p = document.createElement("p");
+        p.textContent = s.title;
+        meta.appendChild(p);
+        row.append(th, meta);
+        vids.appendChild(row);
+      });
+      el.appendChild(vids);
+    }
+    if (data.suggest) {
       const sug = document.createElement("div");
       sug.className = "vcb-src";
       sug.append("🌱 आगे देखिए: ");
-      if (suggest.url) {
+      if (data.suggest.url) {
         const a = document.createElement("a");
-        a.href = suggest.url;
+        a.href = data.suggest.url;
         a.target = "_blank";
         a.rel = "noopener";
-        a.textContent = `${suggest.title} (${suggest.timestamp})`;
+        a.textContent = `${data.suggest.title} (${data.suggest.timestamp})`;
         sug.appendChild(a);
       } else {
-        sug.append(`${suggest.title} (${suggest.timestamp})`);
+        sug.append(`${data.suggest.title} (${data.suggest.timestamp})`);
       }
       el.appendChild(sug);
     }
-    msgs.appendChild(el);
-    msgs.scrollTop = msgs.scrollHeight;
+    if (data.answer && questionText) {
+      const fb = document.createElement("div");
+      fb.className = "vcb-fb";
+      const mk = (icon, label) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "vcb-fbb";
+        const i = document.createElement("i");
+        i.textContent = icon;
+        const t = document.createElement("em");
+        t.textContent = label;
+        b.append(i, t);
+        return b;
+      };
+      const listen = mk("🔊", "सुनिए");
+      listen.addEventListener("click", () => {
+        stopSpeaking();
+        speak(data.answer, () => {});
+      });
+      const up = mk("👍", "सहायक");
+      const down = mk("👎", "नहीं");
+      const vote = (helpful, btn) => {
+        fetch(`${API}/api/feedback`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ q: questionText, helpful }),
+        }).catch(() => {});
+        up.disabled = down.disabled = true;
+        btn.classList.add("on");
+      };
+      up.addEventListener("click", () => vote(true, up));
+      down.addEventListener("click", () => vote(false, down));
+      fb.append(listen, up, down);
+      if (navigator.share) {
+        const share = mk("↗", "share");
+        share.addEventListener("click", () => {
+          navigator
+            .share({
+              title: "Ask Your Guide — Ashaeiynn",
+              text: `🙏 ${questionText}\n\n${data.answer.slice(0, 400)}…\n`,
+              url: API,
+            })
+            .catch(() => {});
+        });
+        fb.appendChild(share);
+      }
+      el.appendChild(fb);
+    }
   }
 
   let greeted = false;
@@ -1421,6 +1532,14 @@
       if (panel.dataset.mode === "text") input.focus();
       else {
         setVState("idle");
+        // the guide honors the seeker's own practice — a quiet day-count strip
+        if (journey.sadhana?.since && !panel.querySelector(".vcb-streak")) {
+          const days = Math.max(1, Math.floor((Date.now() - new Date(journey.sadhana.since).getTime()) / 864e5) + 1);
+          const st = document.createElement("div");
+          st.className = "vcb-streak";
+          st.textContent = `📿 आपकी साधना — दिन ${days}`;
+          capAdd(st);
+        }
         if (cameBack && !welcomedBack) {
           welcomedBack = true;
           const w = document.createElement("div");
@@ -1488,7 +1607,7 @@
         journey.thoughtSeen = t.date;
         saveJourney();
         if (panel.dataset.mode === "text") {
-          addMessage("bot", `🙏 आज का विचार — ${t.text}`, t.url ? [{ title: t.title, timestamp: "", url: t.url }] : undefined);
+          addMessage("bot", `🙏 आज का विचार — ${t.text}`, t.url ? { sources: [{ title: t.title, timestamp: "", url: t.url }] } : undefined);
         } else {
           const box = document.createElement("div");
           box.className = "vcb-ans";
@@ -1575,7 +1694,7 @@
     try {
       const data = await askServer(text);
       typing.remove();
-      addMessage("bot", data.answer, data.sources, data.suggest);
+      addMessage("bot", data.answer, data, text);
       if (data.followups?.length) {
         msgs.appendChild(chipsEl(data.followups));
         msgs.scrollTop = msgs.scrollHeight;

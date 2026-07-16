@@ -460,7 +460,24 @@ async function handleChat(req, res) {
     let checkin = "";
     let sadhana = null; // seeker declared/changed a practice ("-" = stopped)
     let help = ""; // "screening" | "contact" — this needs a human, attach links
-    for (let pass = 0; pass < 3; pass++) {
+    let quote = null; // verbatim Bhaiya line, verified against the excerpt below
+    for (let pass = 0; pass < 4; pass++) {
+      const qu = answer.match(/\n\s*(?:उद्धरण|quote)\s*[:：]\s*(.+?)\s*~\s*(\d{1,2})\s*$/i);
+      if (qu) {
+        const norm = (s) => s.replace(/["“”'’]/g, "").replace(/\s+/g, " ").trim();
+        const c = chunks[Number(qu[2]) - 1];
+        const text = qu[1].trim().slice(0, 260);
+        // only a true word-for-word line from a real recording earns the frame
+        if (c && !c.title.startsWith("Bhaiya's approved answer") && norm(c.content).includes(norm(text))) {
+          quote = {
+            text,
+            title: c.title,
+            timestamp: formatTimestamp(c.start_seconds),
+            url: c.url ? `${c.url}#t=${Math.floor(c.start_seconds)}s` : null,
+          };
+        }
+        answer = answer.slice(0, qu.index).trimEnd();
+      }
       const fu = answer.match(/\n\s*(?:सुझाव|suggestions?)\s*[:：]\s*([^\n]+)\s*$/i);
       if (fu) {
         followups = fu[1].split("|").map((s) => s.trim()).filter(Boolean).slice(0, 3);
@@ -550,6 +567,7 @@ async function handleChat(req, res) {
       ...(followups.length ? { followups } : {}),
       ...(checkin ? { checkin } : {}),
       ...(sadhana ? { sadhana } : {}),
+      ...(quote ? { quote } : {}),
     });
   } catch (err) {
     if (err instanceof LlmAuthError) {
@@ -769,6 +787,27 @@ const server = createServer(async (req, res) => {
   if (req.method === "POST" && url.pathname === "/api/next-step") return handleNextStep(req, res);
   if (req.method === "POST" && url.pathname === "/api/stt") return handleStt(req, res);
   if (req.method === "GET" && url.pathname === "/api/thought") return handleThought(req, res);
+  // one-tap answer feedback (सहायक / नहीं) — logged for the admin's review
+  if (req.method === "POST" && url.pathname === "/api/feedback") {
+    const ip = req.socket.remoteAddress ?? "unknown";
+    if (rateLimited(ip)) return json(res, 429, { error: "Too many requests." });
+    let body = "";
+    for await (const part of req) {
+      body += part;
+      if (body.length > 5_000) return json(res, 413, { error: "Too long." });
+    }
+    try {
+      const p = JSON.parse(body);
+      writeLog({
+        at: new Date().toISOString(),
+        feedback: p.helpful ? "up" : "down",
+        q: String(p.q || "").slice(0, 400),
+      });
+      return json(res, 200, { ok: true });
+    } catch {
+      return json(res, 400, { error: "Invalid JSON." });
+    }
+  }
 
   // Health check — for hosting platforms and to confirm a deploy is live.
   if (req.method === "GET" && url.pathname === "/health") {
