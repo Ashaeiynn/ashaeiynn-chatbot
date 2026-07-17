@@ -705,7 +705,7 @@
     const d = await r.json();
     $("#nstats").innerHTML = `
       <div class="stat"><b>${d.ready ? "🟢" : "🔴"}</b><span>${d.ready ? "system ready" : "setup pending"}</span></div>
-      <div class="stat" id="nsubstat" style="cursor:pointer" title="See who is subscribed"><b>${d.subscribers}</b><span>🔔 subscribed phones →</span></div>
+      <div class="stat" id="nsubstat" style="cursor:pointer" title="See who is subscribed"><b>${d.subscribers}</b><span>🔔 subscribed users →</span></div>
       <div class="stat"><b>${(d.log || []).length}</b><span>notifications sent</span></div>`;
     $("#nsubstat").addEventListener("click", () => {
       uFilter = "subscribed";

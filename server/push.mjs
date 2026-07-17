@@ -82,7 +82,10 @@ function validSubs() {
   }
   return load(SUBS, []).filter((s) => s.uid && ids.has(s.uid));
 }
-export const subCount = () => validSubs().length;
+// count PEOPLE, not channels: reinstalls leave stale device-subscriptions
+// behind (swept automatically when a send finds them dead) and one seeker may
+// have two devices — the admin sees users, delivery still reaches every device
+export const subCount = () => subUids().length;
 export const subUids = () => [...new Set(validSubs().map((s) => s.uid))];
 export function removeByUid(uid) {
   if (!uid) return 0;
