@@ -1007,11 +1007,17 @@ const server = createServer(async (req, res) => {
     }
     try {
       const p = JSON.parse(body);
-      writeLog({
-        at: new Date().toISOString(),
-        feedback: p.helpful ? "up" : "down",
-        q: String(p.q || "").slice(0, 400),
-      });
+      // two kinds of notes: a vote on an answer, or "a suggested video/article
+      // was actually opened" (anonymous — feeds the nightly recommendation study)
+      if (p.opened) {
+        writeLog({ at: new Date().toISOString(), reco: "opened", title: String(p.title || "").slice(0, 120) });
+      } else {
+        writeLog({
+          at: new Date().toISOString(),
+          feedback: p.helpful ? "up" : "down",
+          q: String(p.q || "").slice(0, 400),
+        });
+      }
       return json(res, 200, { ok: true });
     } catch {
       return json(res, 400, { error: "Invalid JSON." });

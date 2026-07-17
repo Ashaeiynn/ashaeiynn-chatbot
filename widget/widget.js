@@ -912,7 +912,13 @@
   );
 
   // ——— shared: ask the backend one question ———
+  // When a tap on a chip triggers the ask, this labels it (followup/thought)
+  // so the nightly study can learn which suggestions seekers actually accept.
+  // Consumed once by askServer — it wins over the mode label (voice/text).
+  let chipVia = "";
   async function askServer(text, via) {
+    const askedVia = chipVia || via || "text";
+    chipVia = "";
     let resp, data;
     try {
       resp = await fetch(`${API}/api/chat`, {
@@ -924,7 +930,7 @@
         body: JSON.stringify({
           message: text,
           history,
-          via: via || "text",
+          via: askedVia,
           lang: recLang,
           profile: {
             uid: journey.uid || "",
@@ -958,7 +964,7 @@
     }
     // a notification-opener isn't something the seeker asked — keep it out of
     // their topics diary (the conversation that follows is recorded normally)
-    if (via !== "notification") recordAsk(text);
+    if (askedVia !== "notification") recordAsk(text);
     if (data.sources?.length) recordSeen(data.sources.map((s) => s.title));
     if (data.suggest) recordSeen([data.suggest.title]);
     return data;
@@ -1479,8 +1485,18 @@
     maybeAskName();
     return true;
   }
-  function askChip(q) {
+  // Anonymous one-way note: "a suggested video/article was actually opened" —
+  // the nightly study uses it to learn which recommendations land. No uid.
+  function recoOpened(title) {
+    const body = JSON.stringify({ opened: true, title: String(title || "").slice(0, 120) });
+    try {
+      if (!navigator.sendBeacon || !navigator.sendBeacon(`${API}/api/feedback`, body))
+        fetch(`${API}/api/feedback`, { method: "POST", body, keepalive: true }).catch(() => {});
+    } catch { /* best-effort */ }
+  }
+  function askChip(q, via) {
     if (needSignup()) return;
+    chipVia = via || "followup";
     if (panel.dataset.mode === "text") {
       input.value = q;
       form.requestSubmit();
@@ -1606,6 +1622,7 @@
         a.target = "_blank";
         a.rel = "noopener";
         a.textContent = `${data.suggest.title} (${data.suggest.timestamp})`;
+        a.addEventListener("click", () => recoOpened(data.suggest.title));
         sug.appendChild(a);
       } else {
         sug.append(`${data.suggest.title} (${data.suggest.timestamp})`);
@@ -1974,7 +1991,7 @@
         src.textContent = "👆 tap करें — इस विचार पर guide से बात कीजिए";
         box.appendChild(src);
         box.addEventListener("click", () => {
-          askChip(`आज का विचार: "${t.text.slice(0, 140)}" — इसे और गहराई से समझाइए`);
+          askChip(`आज का विचार: "${t.text.slice(0, 140)}" — इसे और गहराई से समझाइए`, "thought");
         });
         if (panel.dataset.mode === "text") {
           msgs.appendChild(box);
@@ -2010,6 +2027,7 @@
           a.target = "_blank";
           a.rel = "noopener";
           a.textContent = `${d.suggest.title} (${d.suggest.timestamp})`;
+          a.addEventListener("click", () => recoOpened(d.suggest.title));
           box.appendChild(a);
         } else {
           box.append(`${d.suggest.title} (${d.suggest.timestamp})`);

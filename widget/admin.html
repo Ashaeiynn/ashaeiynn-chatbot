@@ -226,6 +226,12 @@
     <p id="ldaily-empty" class="empty" style="padding:16px 0">First self-review runs tonight at 3 AM.</p>
   </div>
   <div class="teach-card">
+    <h3>🔭 Observations — patterns across seekers</h3>
+    <p>What the nightly study noticed about people, timing, recommendations and knowledge gaps — grounded in the day's counted facts. Insights for you, never new teachings.</p>
+    <ul id="lobs" style="color:var(--ink);font-size:13.5px;line-height:1.9;margin:0 0 0 20px"></ul>
+    <p id="lobs-empty" class="empty" style="padding:16px 0">Observations appear after tonight's self-review.</p>
+  </div>
+  <div class="teach-card">
     <h3>📈 Growth — night by night</h3>
     <p>Each night: how many conversations it studied, what seekers voted, and how its mind changed.</p>
     <div id="lhist"><div class="empty">The diary begins after the first review.</div></div>
@@ -419,6 +425,7 @@
   const isSmallTalk = (e) =>
     e.chat ||
     e.feedback ||
+    e.reco ||
     /^(hi+|hell?o+|hey+|हे?ै?लो|हाय|ok(ay)?|ठीक( है)?|thanks?( you)?|thank u|bye|good (morning|night|evening)|नमस्ते|नमस्कार|प्रणाम|राम\s*राम|जय\s*(श्री\s*)?(सिया\s*|सीता\s*)?राम( जी)?|jai?\s*(shree\s*|shri\s*)?(siya\s*|sita\s*)?ram( ji)?|जय\s*गुरुदेव|jai?\s*gurudev|धन्यवाद|शुक्रिया|कैसे हो|कैसे हैं( आप)?|आप कैसे हैं|how are you|what'?s up)[\s!,.?🙏❤️♥️]*$/i.test(
       (e.q || "").trim(),
     );
@@ -707,6 +714,21 @@
       $("#ldaily").appendChild(li);
     });
     $("#ldaily-empty").style.display = daily.length ? "none" : "block";
+    const obs = cur.observations || [];
+    $("#lobs").innerHTML = "";
+    obs.forEach((n) => {
+      const li = document.createElement("li");
+      li.textContent = n;
+      $("#lobs").appendChild(li);
+    });
+    // recommendation outcomes ride along under the observations
+    if (cur.recos && (cur.recos.followups || cur.recos.thought || cur.recos.opened)) {
+      const li = document.createElement("li");
+      li.style.color = "var(--gold2)";
+      li.textContent = `Recommendations acted on yesterday: ${cur.recos.followups} follow-up questions tapped · ${cur.recos.thought} thought-of-the-day explored · ${cur.recos.opened} videos/articles opened.`;
+      $("#lobs").appendChild(li);
+    }
+    $("#lobs-empty").style.display = $("#lobs").children.length ? "none" : "block";
     $("#lhist").innerHTML = hist.length ? "" : `<div class="empty">The diary begins after the first review.</div>`;
     let prevCore = null;
     const chrono = (d.history || []); // oldest → newest, for change detection
