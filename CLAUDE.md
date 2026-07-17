@@ -105,5 +105,16 @@ Failover (2026-07-17): ANTHROPIC_API_KEY (fresh "chatbot-backup" key) added to
 (llm.mjs); /health shows backup.lastUsed/answers. Balance ~$0.80 — owner may
 top up at console.anthropic.com. iMac .env lacks the backup key (fine — iMac
 is studio only).
+iOS ear (2026-07-17): the iOS home-screen app transcribes voice via /api/stt
+→ Groq whisper-large-v3-turbo ONLY (GROQ_API_KEY in .env, MacBook+VPS) — NEVER
+Gemini, by owner's cost rule; Groq failure returns the error, no fall-through.
+Other callers (rare non-iOS recorder fallbacks) keep the Gemini chain. Android
+transcribes on-device. /health shows iosEar. Verified live with real audio.
+Admin Users tab (2026-07-17): second lock, same password as Library
+(x-library-key header on /api/admin/users + user-update; one unlock opens
+both tabs per session). Admin CSS: [hidden]{display:none!important}.
+VPS ops note: the repo lives at /opt/chatbot/app and pulls run AS USER
+chatbot (deploy key is theirs) — root `git pull` fails; to force-deploy run
+`/opt/chatbot/update.sh` (skips while a teach job is studying).
 Pending: owner's app integrates via API-INTEGRATION.md; retire Render (owner's
 call); VPS deploy key still read-only (teach-on-live can't push back yet).
