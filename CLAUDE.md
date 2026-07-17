@@ -9,6 +9,17 @@ Owner (Parikshit) is non-technical: explain simply, do the work for him, verify 
 - `API-INTEGRATION.md` — API contract for the owner's separate app (built on another laptop)
 - `DEPLOY.md` — Render/Docker go-live steps · `LAPTOP-SETUP.md` — new-machine setup
 
+## Work journal (cross-machine chat memory)
+`WORKLOG.md` is the shared memory of all Claude sessions across all machines.
+- Session start: read its newest day to know what other machines did.
+- During/at end of a session: append a timestamped (IST) summary of significant
+  work under today's date (newest day first) — decisions and WHY, not chatter.
+- NEVER put secrets, keys, passwords, or raw transcripts in it. It syncs via git.
+Seekers' bot chats live ONLY on the VPS (data/questions.log, gitignored for
+privacy — never push user chats to GitHub). Any machine can mirror them locally
+with `bash scripts/pull-chats.sh` (merges live log into local, time-sorted);
+the live admin at guide.ashaeiynn.com/admin is the realtime view from anywhere.
+
 ## Sync protocol (multiple computers share this repo via GitHub)
 Hooks in `.claude/settings.json` run `scripts/auto-sync.sh`: pull on session start,
 auto commit+push after every turn. Offline failures are silent (sync catches up later).
