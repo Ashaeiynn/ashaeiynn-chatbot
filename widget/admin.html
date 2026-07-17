@@ -569,10 +569,14 @@
     for (const u of list) {
       const el = document.createElement("div");
       el.className = "job";
+      el.style.alignItems = "center";
       el.innerHTML = `<span>${dot[u.status] || "❔"}</span>
-        <div style="flex:1;min-width:0"><div>${esc(u.name)} <span style="color:var(--gold2)">“${esc(u.nick)}”</span>${u.member ? " ⭐" : ""}</div>
-        <div class="d">📱 ${esc(u.whatsapp)} · ✉️ ${esc(u.email)}</div>
-        <div class="d">joined ${day(u.at)} · last seen ${day(u.lastSeen)}${u.deletedReason ? ` · ${esc(u.deletedReason)}` : ""}</div></div>`;
+        <div style="display:flex;gap:16px;align-items:center;flex:1;min-width:0;flex-wrap:wrap">
+          <span style="white-space:nowrap;font-weight:600">${esc(u.name)} <span style="color:var(--gold2);font-weight:400">“${esc(u.nick)}”</span>${u.member ? " ⭐" : ""}</span>
+          <span class="d" style="white-space:nowrap">📱 ${esc(u.whatsapp)}</span>
+          <span class="d" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">✉️ ${esc(u.email)}</span>
+          <span class="d" style="white-space:nowrap">joined ${day(u.at)} · seen ${day(u.lastSeen)}${u.deletedReason ? ` · ${esc(u.deletedReason)}` : ""}</span>
+        </div>`;
       const mem = document.createElement("button");
       mem.className = "mini";
       mem.textContent = u.member ? "⭐ Member" : "☆ Mark member";
@@ -585,7 +589,7 @@
         updateUser(u.id, { deleted: u.status !== "deleted" });
       });
       const btns = document.createElement("div");
-      btns.style.cssText = "display:flex;flex-direction:column;gap:6px;margin-left:auto;flex-shrink:0";
+      btns.style.cssText = "display:flex;gap:6px;margin-left:auto;flex-shrink:0";
       btns.append(mem, del);
       el.appendChild(btns);
       $("#ulist").appendChild(el);
