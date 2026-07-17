@@ -13,6 +13,15 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-17 (MacBook Pro session, with the owner)
 
+- **08:0x** Corrections became LEARNED knowledge, not canned replies: removed the
+  verbatim early-return (it gave 3 different users the identical text and skipped
+  name/style/followups). Same-meaning matches (≥0.9) now inject the correction as
+  THE answer with strict adapt-don't-alter orders; related (0.8–0.9) stays
+  highest-authority excerpt (rule 7b in prompt.mjs). Log flags: corrected (same
+  meaning) / guided (related); admin badges ✏️/✍️ with explanation lines. Also:
+  ✅ label previously showed only on the exact edited question — now every answer
+  that used a correction is labeled.
+
 - **07:42** Questions tab now shows the CORRECTED answer on corrected questions
   (not the old reply) with a ✅ note; corrected entries excluded from the
   "knowledge gap" count. Verified live: correction system works cross-wording +

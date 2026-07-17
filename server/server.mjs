@@ -386,27 +386,17 @@ async function handleChat(req, res) {
   const hinglishHits = (message.toLowerCase().match(/\b(kya|kaun|kaise|kyu|kyon|kab|kahan|batao|bataiye|mujhe|humko|nahi|nahin|hota|hoti|hai|hain|karna|kare|krna|wala|wali|bhejo|bhej|matlab)\b/g) || []).length;
   const wantsHindi = spokenHindi || isDevanagari || hinglishHits >= 1;
 
-  // Bhaiya-approved answers: a question meaning the same as an edited one gets
-  // the approved answer verbatim (when its language fits); a similar one will see
-  // it below as the highest-authority excerpt.
+  // Bhaiya-approved answers: the bot LEARNS the correction, it doesn't parrot
+  // it. A same-meaning question gets the approved answer as THE answer — full
+  // substance, every specific point — but composed freshly for this seeker
+  // (their name, language, style, follow-ups). A merely similar question sees
+  // it as the highest-authority excerpt. (Owner's rule 2026-07-17: no verbatim
+  // replies — same core for everyone, spoken the way each seeker understands.)
   let approved = null;
   try {
     approved = await matchCorrection(message);
   } catch {
     /* corrections are best-effort */
-  }
-  if (approved && approved.score >= DIRECT_MATCH && /[ऀ-ॿ]/.test(approved.answer) === wantsHindi) {
-    writeLog({
-      at: new Date().toISOString(),
-      q: message,
-      via: payload.via,
-      lang: payload.lang,
-      hi: wantsHindi,
-      corrected: true,
-      top: [],
-      answer: approved.answer,
-    });
-    return json(res, 200, { answer: approved.answer, sources: [], corrected: true });
   }
 
   // Search transcripts for the question (plus a bit of recent context for follow-ups).
@@ -442,12 +432,18 @@ async function handleChat(req, res) {
     Number(process.env.RETRIEVE_K || 12),
   );
 
-  // A similar (but not same-meaning) approved answer joins the excerpts at the
-  // top — the model treats Bhaiya's own edit as the most authoritative teaching.
+  // The approved answer joins the excerpts at the top — the model treats
+  // Bhaiya's own edit as the most authoritative teaching (rule 7b). When the
+  // seeker's question means the SAME thing, it is told so explicitly: the
+  // correction IS the answer, delivered whole, adapted to this seeker.
   if (approved) {
     chunks.unshift({
       title: "Bhaiya's approved answer (admin-edited)",
-      content: `Question it was written for: ${approved.q}\nApproved answer: ${approved.answer}`,
+      content: `Question it was written for: ${approved.q}\n${
+        approved.score >= DIRECT_MATCH
+          ? "(The seeker's current question means the SAME as that one. This approved answer IS the answer: deliver its COMPLETE teaching — every specific point and instruction — freshly worded for this seeker and their language, adding nothing and dropping nothing.)\n"
+          : ""
+      }Approved answer: ${approved.answer}`,
       start_seconds: 0,
       url: null,
       score: approved.score,
@@ -465,10 +461,9 @@ async function handleChat(req, res) {
     lang: payload.lang,
     hi: wantsHindi,
     ...(seekerMember ? { member: true } : {}),
-    // this answer was composed WITH the admin's corrected answer as the
-    // highest-authority excerpt (same-meaning matches return it verbatim
-    // earlier and carry corrected:true instead)
-    ...(approved ? { guided: true } : {}),
+    // corrected = same-meaning match (the correction IS the answer, adapted);
+    // guided = related match (the correction was the highest-authority source)
+    ...(approved ? (approved.score >= DIRECT_MATCH ? { corrected: true } : { guided: true }) : {}),
     top: chunks.slice(0, 3).map((c) => ({ t: c.title, s: Number(c.score?.toFixed(3)) })),
   };
 

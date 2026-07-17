@@ -509,7 +509,7 @@
         <div class="meta"><span class="badge goldb">${when(e.at)}</span>${badges}</div>
         <div class="q">${esc(e.q)}</div>
         <div class="a${aText.length > 260 ? " long" : ""}">${esc(aText)}</div>
-        ${edited || e.corrected ? `<div class="src" style="color:var(--gold2)">✅ Your corrected answer — the bot now gives this to every user who asks this, in any wording.</div>` : e.guided ? `<div class="src" style="color:var(--gold2)">✍️ Shaped by your corrected answer for a similar question — the correction was the highest-authority source here.</div>` : ""}
+        ${edited || e.corrected ? `<div class="src" style="color:var(--gold2)">✅ Taught by your corrected answer — every user asking this (in any wording) gets its full teaching, freshly worded for them, core unchanged.</div>` : e.guided ? `<div class="src" style="color:var(--gold2)">✍️ Shaped by your corrected answer for a similar question — the correction was the highest-authority source here.</div>` : ""}
         ${srcs ? `<div class="src">📚 matched: ${esc(srcs)}</div>` : ""}
         <div style="margin-top:9px"><button class="mini" data-ed>✏️ Edit answer</button></div>`;
       card.querySelector(".a").addEventListener("click", (ev) => ev.currentTarget.classList.toggle("open"));
