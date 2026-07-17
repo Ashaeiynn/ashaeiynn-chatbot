@@ -596,10 +596,19 @@ async function handleChat(req, res) {
     // chips and check-in so the dialogue breathes; sources stay empty.
     // (Handoffs and link requests are the deliberate exceptions.)
     if (!help && !wantsLink && !/source\s*[:：]/i.test(answer)) {
+      // Safety net INSIDE the bare path: an answer that points to a mentor or
+      // screening must still carry the human door — and ONLY that (members get
+      // contact, never a screening pitch; no teaching links on handoffs).
+      const contacts = [];
+      if (/mentor|मेंटर|मेन्टर|screening|स्क्रीनिंग/i.test(answer)) {
+        const wanted = seekerMember ? ["Contact Ashaeiynn"] : ["Book a screening", "Contact Ashaeiynn"];
+        for (const l of linkDirectory().filter((l) => wanted.includes(l.title)))
+          contacts.push({ title: l.title, timestamp: "", url: l.url });
+      }
       writeLog({ ...logEntry, answer, refusal: true, ...(chat ? { chat: true } : {}) });
       return json(res, 200, {
         answer,
-        sources: [],
+        sources: contacts,
         ...(followups.length ? { followups } : {}),
         ...(checkin ? { checkin } : {}),
         ...(sadhana ? { sadhana } : {}),
