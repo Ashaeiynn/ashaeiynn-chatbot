@@ -1720,8 +1720,12 @@
     syncBell();
   }
   bellBtn?.addEventListener("click", () => {
-    if (journey.push && Notification.permission === "granted") pushUnsubscribe();
-    else pushSubscribe().catch(() => {});
+    if (journey.push && Notification.permission === "granted") {
+      pushUnsubscribe();
+      return;
+    }
+    if (needSignup()) return; // identity first, doorbell second
+    pushSubscribe().catch(() => {});
   });
   syncBell();
 
@@ -1732,6 +1736,7 @@
   let bellOfferedThisOpen = false;
   function maybeOfferBell() {
     if (!pushCapable() || bellOfferedThisOpen) return;
+    if (!journey.uid) return; // sign-up comes first; the offer follows identity
     if (journey.push && Notification.permission === "granted") return; // already on
     if (Notification.permission === "granted") {
       pushSubscribe().catch(() => {}); // permission exists — just reconnect quietly

@@ -9,7 +9,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { ROOT } from "./env.mjs";
-import { markDeleted } from "./users.mjs";
+import { markDeleted, listUsers } from "./users.mjs";
 
 const SUBS = path.join(ROOT, "data", "push-subs.json");
 const LOG = path.join(ROOT, "data", "push-log.json");
@@ -69,8 +69,21 @@ export function removeSub(endpoint) {
   if (left.length !== all.length) save(SUBS, left);
   return all.length - left.length;
 }
-export const subCount = () => load(SUBS, []).length;
-export const subUids = () => [...new Set(load(SUBS, []).map((s) => s.uid).filter(Boolean))];
+// Only subscriptions belonging to a REGISTERED, non-deleted user count or
+// receive anything. Anonymous ones (pre-registration installs) stay dormant
+// on disk — they self-heal to an identity when that phone opens the app
+// after signing up (same endpoint gets its uid attached).
+function validSubs() {
+  let ids;
+  try {
+    ids = new Set(listUsers().filter((u) => !u.deleted).map((u) => u.id));
+  } catch {
+    return [];
+  }
+  return load(SUBS, []).filter((s) => s.uid && ids.has(s.uid));
+}
+export const subCount = () => validSubs().length;
+export const subUids = () => [...new Set(validSubs().map((s) => s.uid))];
 export function removeByUid(uid) {
   if (!uid) return 0;
   const all = load(SUBS, []);
@@ -87,7 +100,7 @@ const forLog = (v) => (v && typeof v === "object" ? `${v.hi || ""}${v.en ? ` | E
 
 export async function sendToAll(title, body, url, source) {
   if (!ready) throw new Error("push-not-configured");
-  const all = load(SUBS, []);
+  const all = validSubs(); // registered users only
   let sent = 0;
   const dead = [];
   for (const s of all) {
