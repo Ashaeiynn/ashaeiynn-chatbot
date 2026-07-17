@@ -280,6 +280,7 @@ async function handleTts(req, res) {
 }
 
 async function handleChat(req, res) {
+  const t0 = Date.now();
   const ip = req.socket.remoteAddress ?? "unknown";
   if (rateLimited(ip, "chat", RATE_LIMIT.max)) {
     return json(res, 429, { error: "Too many messages — please wait a few minutes." });
@@ -312,7 +313,7 @@ async function handleChat(req, res) {
             typeof m?.content === "string" &&
             m.content.trim(),
         )
-        .map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }))
+        .map((m) => ({ role: m.role, content: m.content.slice(0, 700) }))
     : [];
 
   // Personal-guide context card from the visitor's OWN device (widget diary or
@@ -384,15 +385,20 @@ async function handleChat(req, res) {
   let translated = null;
   if (apiKeyConfigured) {
     try {
-      const line = await complete({
-        system:
-          "You translate search queries. Translate the question into Hindi if it is mainly English, or into English if it is mainly Hindi. Output ONLY the translated question itself — never answer it, never explain.",
-        messages: [{ role: "user", content: message }],
-        maxTokens: 150,
-        light: true,
-        retry: false, // best-effort helper — never make the visitor wait on retries
-      });
-      translated = line.split("\n")[0].trim() || null; // first line only — belt & suspenders
+      // Time-boxed: the translation improves cross-language recall but must
+      // never hold the seeker hostage — 1.2s or we search without it.
+      const line = await Promise.race([
+        complete({
+          system:
+            "You translate search queries. Translate the question into Hindi if it is mainly English, or into English if it is mainly Hindi. Output ONLY the translated question itself — never answer it, never explain.",
+          messages: [{ role: "user", content: message }],
+          maxTokens: 150,
+          light: true,
+          retry: false, // best-effort helper — never make the visitor wait on retries
+        }),
+        new Promise((resolve) => setTimeout(() => resolve(""), 1200)),
+      ]);
+      translated = (line || "").split("\n")[0].trim() || null; // first line only
     } catch {
       /* translation is best-effort — search proceeds with the original question */
     }
@@ -456,7 +462,7 @@ async function handleChat(req, res) {
     let answer = await complete({
       system: buildSystemPrompt(FALLBACK),
       cacheSystem: true,
-      maxTokens: 1024,
+      maxTokens: 700,
       messages: [
         ...history,
         {
@@ -609,7 +615,7 @@ async function handleChat(req, res) {
       break;
     }
 
-    writeLog({ ...logEntry, answer });
+    writeLog({ ...logEntry, answer, ms: Date.now() - t0 });
     json(res, 200, {
       answer,
       sources,
@@ -669,7 +675,7 @@ async function handleStt(req, res) {
   for (const m of tryMimes) {
     try {
       const r = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(process.env.GEMINI_MODEL || "gemini-3.1-flash-lite")}:generateContent`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(process.env.GEMINI_LIGHT_MODEL || process.env.GEMINI_MODEL || "gemini-2.0-flash-lite")}:generateContent`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_TTS_KEY },
