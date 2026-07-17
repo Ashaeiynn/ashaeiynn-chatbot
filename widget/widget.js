@@ -757,6 +757,29 @@
   let naturalVoice = false; // does the server offer a human voice? (probed at load)
   fetch(`${API}/health`).then((r) => r.json()).then((h) => (naturalVoice = !!h.naturalVoice)).catch(() => {});
   let currentAudio = null;
+
+  // ——— keep the phone screen awake while the bot is answering or speaking ———
+  // A locked screen suspends the page and cuts the reply off mid-way. We hold a
+  // Screen Wake Lock whenever a request is in flight OR the voice is playing,
+  // and release it the moment both are done. No-op where the API is unsupported.
+  let wakeLock = null, reqInFlight = false, speakingNow = false;
+  async function updateWake() {
+    const busy = reqInFlight || speakingNow;
+    try {
+      if (busy && !wakeLock && "wakeLock" in navigator && document.visibilityState === "visible") {
+        wakeLock = await navigator.wakeLock.request("screen");
+        wakeLock.addEventListener?.("release", () => { wakeLock = null; });
+      } else if (!busy && wakeLock) {
+        const wl = wakeLock;
+        wakeLock = null;
+        wl.release().catch(() => {});
+      }
+    } catch {
+      wakeLock = null;
+    }
+  }
+  // the OS drops the lock when the tab hides — re-take it when we're back and still busy
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") updateWake(); });
   // ONE reusable player for all spoken answers: iOS grants sound permission
   // per-element at tap time — a fresh `new Audio()` created later is muted in
   // home-screen apps. This element gets blessed on the first tap and reused.
@@ -836,12 +859,16 @@
     const done = () => {
       if (!doneCalled) {
         doneCalled = true;
+        speakingNow = false;
+        updateWake(); // answer finished speaking — let the screen sleep again
         onDone && onDone();
       }
     };
     if (!voiceReplies) return done();
     const clean = cleanForSpeech(text);
     if (!clean) return done();
+    speakingNow = true;
+    updateWake(); // hold the screen awake for the whole spoken answer
 
     // Human voice from the server when available, browser voice otherwise.
     // Mic conversations always get the natural voice; typed chats use the free
@@ -919,6 +946,8 @@
       currentAudio = null;
     }
     if ("speechSynthesis" in window) speechSynthesis.cancel();
+    speakingNow = false;
+    updateWake();
   };
 
   function setVoiceReplies(on) {
@@ -958,6 +987,8 @@
   async function askServer(text, via) {
     const askedVia = chipVia || via || "text";
     chipVia = "";
+    reqInFlight = true;
+    updateWake(); // hold the screen while the answer is being generated
     let resp, data;
     try {
       resp = await fetch(`${API}/api/chat`, {
@@ -988,8 +1019,12 @@
       });
       data = await resp.json();
     } catch {
+      reqInFlight = false;
+      updateWake();
       throw new Error("Sorry, I couldn't reach the server. Please try again.");
     }
+    reqInFlight = false;
+    updateWake();
     if (!resp.ok) throw new Error(data.error || "Sorry, something went wrong. Please try again.");
     if (typeof data.credits === "number") renderCredits(data.credits); // keep the 🪙 coin fresh
     sessionAsks++;
