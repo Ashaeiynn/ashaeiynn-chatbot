@@ -105,6 +105,12 @@ export function setFlags(id, patch) {
   return u;
 }
 
+// look a user up by id (for member checks at question/feedback/suggest time)
+export function byId(id) {
+  if (!id) return null;
+  return load().find((u) => u.id === id) || null;
+}
+
 export function listUsers() {
   const now = Date.now();
   return load()

@@ -6,6 +6,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { teachFile, teachLink, teachText, forget, publicJobs, jobTotals, uploadsDir } from "./teach.mjs";
 import { matchCorrection, addCorrection, removeCorrection, listCorrections, DIRECT_MATCH } from "./corrections.mjs";
+import { addSuggestion, listSuggestions, getSuggestion, removeSuggestion, pendingCount } from "./suggestions.mjs";
 import { ROOT } from "./env.mjs";
 import { searchMulti, formatTimestamp, thoughtCandidate } from "./retrieve.mjs";
 
@@ -35,6 +36,7 @@ let users = {
     throw new Error("Sign-up is unavailable right now — please try again shortly.");
   },
   touch: () => {},
+  byId: () => null,
   markDeleted: () => {},
   setFlags: () => null,
   listUsers: () => [],
@@ -519,7 +521,7 @@ async function handleChat(req, res) {
               : ""
           }${
             seekerMember
-              ? `\n[MEMBER: this seeker is a verified Ashaeiynn member — they already belong to the family and have their own mentor. NEVER suggest booking a screening or joining Ashaeiynn to them. For personal matters (rule 15) send them to THEIR OWN mentor: "अपने mentor से बात कीजिए — वे आपको जानते हैं". Otherwise simply answer from Bhaiya's teachings.]`
+              ? `\n[MEMBER: this seeker is a verified Ashaeiynn member — they already belong to the family and have their own mentor. NEVER suggest booking a screening or joining Ashaeiynn to them. For personal matters (rule 15) send them to THEIR OWN mentor: "अपने mentor से बात कीजिए — वे आपको जानते हैं". Otherwise simply answer from Bhaiya's teachings. IF (and only if) this member indicates a PREVIOUS answer of yours was wrong or incomplete — they say so outright, or their message clearly contradicts/re-asks because it didn't land — then: humbly acknowledge (never argue), answer again as best you can from the excerpts, and gently invite them to share Bhaiya's correct teaching so our team can review it — e.g. "अगर आप जानते हैं कि Bhaiya इसे कैसे समझाते हैं, तो बताइए — मैं हमारी team तक पहुँचा दूँगा।" Then add a final line exactly: सुधार: 1 (the app turns this into a box for them to type the correct answer; never shown as text). Do this ONLY on a genuine wrong-answer signal, never on a normal follow-up or a first question.]`
               : profile?.uid
                 ? `\n[NOT YET A MEMBER: this seeker has not joined Ashaeiynn yet. For personal matters (rule 15) guide them to book a screening at ashaeiynn.com. And when a moment is genuinely right — deep interest, a personal ask, a practice they want to begin — you may warmly mention ONCE in the conversation that their own journey with Ashaeiynn can begin with a screening. Inviting, never pushy, never in every answer.]`
                 : ""
@@ -551,7 +553,13 @@ async function handleChat(req, res) {
     let help = ""; // "screening" | "contact" — this needs a human, attach links
     let quote = null; // verbatim Bhaiya line, verified against the excerpt below
     let chat = false; // rule-4b conversational turn, not a knowledge question
+    let inviteFix = false; // member signalled the answer was wrong — offer a correction box
     for (let pass = 0; pass < 4; pass++) {
+      const sd = answer.match(/\n\s*(?:सुधार|correction)\s*[:：]\s*1?\s*$/i);
+      if (sd) {
+        inviteFix = true;
+        answer = answer.slice(0, sd.index).trimEnd();
+      }
       const va = answer.match(/\n\s*(?:वार्ता|chat)\s*[:：]\s*1?\s*$/i);
       if (va) {
         chat = true;
@@ -611,13 +619,15 @@ async function handleChat(req, res) {
         for (const l of linkDirectory().filter((l) => wanted.includes(l.title)))
           contacts.push({ title: l.title, timestamp: "", url: l.url });
       }
-      writeLog({ ...logEntry, answer, refusal: true, ...(chat ? { chat: true } : {}) });
+      writeLog({ ...logEntry, answer, refusal: true, ...(chat ? { chat: true } : {}), ...(inviteFix && seekerMember ? { inviteFix: true } : {}) });
       return json(res, 200, {
         answer,
         sources: contacts,
         ...(followups.length ? { followups } : {}),
         ...(checkin ? { checkin } : {}),
         ...(sadhana ? { sadhana } : {}),
+        // only a MEMBER is invited to teach a correction (server-gated)
+        ...(inviteFix && seekerMember ? { correctionInvite: true } : {}),
       });
     }
 
@@ -695,6 +705,8 @@ async function handleChat(req, res) {
     // seatbelt: a quote marker the parser didn't recognize must never reach
     // the seeker as raw text (the framed quote uses data.quote, not this line)
     shown = shown.replace(/\n\s*(?:उद्धरण|quote)\s*[:：][^\n]*/gi, "").trimEnd();
+    shown = shown.replace(/\n\s*(?:सुधार|correction)\s*[:：]\s*1?\s*$/gi, "").trimEnd();
+    if (inviteFix && seekerMember) writeLog({ at: new Date().toISOString(), q: message, flaggedWrong: true, member: true });
     json(res, 200, {
       answer: shown,
       sources,
@@ -703,6 +715,8 @@ async function handleChat(req, res) {
       ...(checkin ? { checkin } : {}),
       ...(sadhana ? { sadhana } : {}),
       ...(quote ? { quote } : {}),
+      // only a MEMBER is invited to teach a correction (server-gated)
+      ...(inviteFix && seekerMember ? { correctionInvite: true } : {}),
     });
   } catch (err) {
     if (err instanceof LlmAuthError) {
@@ -1081,14 +1095,56 @@ const server = createServer(async (req, res) => {
       // was actually opened" (anonymous — feeds the nightly recommendation study)
       if (p.opened) {
         writeLog({ at: new Date().toISOString(), reco: "opened", title: String(p.title || "").slice(0, 120) });
-      } else {
-        writeLog({
-          at: new Date().toISOString(),
-          feedback: p.helpful ? "up" : "down",
-          q: String(p.q || "").slice(0, 400),
-        });
+        return json(res, 200, { ok: true });
       }
-      return json(res, 200, { ok: true });
+      writeLog({
+        at: new Date().toISOString(),
+        feedback: p.helpful ? "up" : "down",
+        q: String(p.q || "").slice(0, 400),
+      });
+      // A member tapping 👎 is an explicit "this was wrong" — invite them to
+      // teach the correction (members only; the box only appears if we say so).
+      let invite = false;
+      if (!p.helpful && p.uid) {
+        try {
+          const u = users.byId?.(String(p.uid).slice(0, 40));
+          invite = !!(u && u.member && !u.deleted);
+        } catch { /* registry best-effort */ }
+      }
+      return json(res, 200, { ok: true, ...(invite ? { invite: true } : {}) });
+    } catch {
+      return json(res, 400, { error: "Invalid JSON." });
+    }
+  }
+
+  // A MEMBER suggests the correct answer for a question the bot got wrong.
+  // Stored PENDING — never touches the knowledge base until the admin approves.
+  if (req.method === "POST" && url.pathname === "/api/suggest") {
+    const ip = req.socket.remoteAddress ?? "unknown";
+    if (rateLimited(ip, "light", 60)) return json(res, 429, { error: "Too many requests." });
+    let body = "";
+    for await (const part of req) {
+      body += part;
+      if (body.length > 12_000) return json(res, 413, { error: "Too long." });
+    }
+    try {
+      const p = JSON.parse(body);
+      const uid = String(p.uid || "").slice(0, 40);
+      // members only — verify server-side, never trust the client
+      let u = null;
+      try {
+        u = uid ? users.byId?.(uid) : null;
+      } catch { /* registry best-effort */ }
+      if (!u || !u.member || u.deleted) return json(res, 403, { error: "members-only" });
+      const item = addSuggestion({
+        q: p.q,
+        botAnswer: p.answer,
+        suggestion: p.suggestion,
+        uid,
+        nick: u.nick || u.name || "",
+        member: true,
+      });
+      return item ? json(res, 200, { ok: true }) : json(res, 400, { error: "Nothing to suggest." });
     } catch {
       return json(res, 400, { error: "Invalid JSON." });
     }
@@ -1356,6 +1412,39 @@ const server = createServer(async (req, res) => {
   if (req.method === "DELETE" && url.pathname === "/api/admin/correction") {
     if (!adminOk()) return;
     return json(res, 200, { removed: await removeCorrection(url.searchParams.get("id")) });
+  }
+
+  // ——— seeker-suggested corrections: the admin's approval gate ———
+  if (req.method === "GET" && url.pathname === "/api/admin/suggestions") {
+    if (!adminOk()) return;
+    return json(res, 200, { items: listSuggestions() });
+  }
+  if (req.method === "POST" && url.pathname === "/api/admin/suggestion") {
+    if (!adminOk()) return;
+    let body = "";
+    for await (const part of req) {
+      body += part;
+      if (body.length > 100_000) return json(res, 413, { error: "Too long." });
+    }
+    try {
+      const p = JSON.parse(body);
+      const s = getSuggestion(String(p.id || ""));
+      if (!s) return json(res, 404, { error: "Suggestion not found." });
+      if (p.action === "approve") {
+        // the admin's (possibly edited) text becomes a real approved answer —
+        // the SAME pipeline as the admin's own edits, so the bot learns it
+        const text = String(p.answer || s.suggestion || "").trim();
+        if (!text) return json(res, 400, { error: "Nothing to approve — add the correct answer first." });
+        const item = await addCorrection(s.q, text);
+        removeSuggestion(s.id);
+        return json(res, 200, { approved: true, item });
+      }
+      // reject
+      removeSuggestion(s.id);
+      return json(res, 200, { rejected: true });
+    } catch (err) {
+      return json(res, 400, { error: String(err?.message || err).slice(0, 200) });
+    }
   }
 
   // ——— library: everything the bot has studied (extra password on top of admin) ———

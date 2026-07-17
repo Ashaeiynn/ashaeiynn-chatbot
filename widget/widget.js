@@ -540,6 +540,12 @@
       font-family:inherit}
     .vcb-bellyes{background:linear-gradient(140deg,#f7e3ae,#d9a94f 70%);color:#1d1503;font-weight:700}
     .vcb-bellno{background:none;color:#a89b7d;box-shadow:inset 0 0 0 1px rgba(227,183,102,.3)}
+    .vcb-fixbox{display:flex;flex-direction:column;gap:9px;margin-top:11px;padding:12px;
+      border-radius:13px;background:rgba(227,183,102,.06);box-shadow:inset 0 0 0 1px rgba(227,183,102,.22)}
+    .vcb-fixbox p{margin:0;font-size:13px;line-height:1.6;color:#d8cdb3}
+    .vcb-fixbox textarea{width:100%;box-sizing:border-box;min-height:76px;resize:vertical;
+      border:1px solid rgba(227,183,102,.3);border-radius:10px;background:rgba(0,0,0,.25);
+      color:#f3ecd9;font-family:inherit;font-size:14px;padding:9px 11px;outline:none}
   `;
   document.head.appendChild(style);
 
@@ -1651,16 +1657,20 @@
       const up = mk("👍", "सहायक");
       const down = mk("👎", "नहीं");
       const vote = (helpful, btn) => {
-        fetch(`${API}/api/feedback`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ q: questionText, helpful }),
-        }).catch(() => {});
         up.disabled = down.disabled = true;
         btn.classList.add("on");
+        return fetch(`${API}/api/feedback`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ q: questionText, helpful, uid: journey.uid || "" }),
+        }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
       };
       up.addEventListener("click", () => vote(true, up));
-      down.addEventListener("click", () => vote(false, down));
+      down.addEventListener("click", () => {
+        // a member's 👎 is an explicit "this was wrong" — the server replies
+        // with invite:true for members, opening the "teach the right answer" box
+        vote(false, down).then((d) => { if (d?.invite) offerCorrection(el, questionText, data.answer); });
+      });
       fb.append(listen, up, down);
       if (navigator.share) {
         const share = mk("↗", "share");
@@ -1677,6 +1687,54 @@
       }
       el.appendChild(fb);
     }
+    // the bot (server-gated to members) invited a correction — show the box
+    if (data.correctionInvite && questionText) offerCorrection(el, questionText, data.answer);
+  }
+
+  // The "teach the right answer" box — shown only when the server invites it
+  // (members only). What the member types is sent as a PENDING suggestion; it
+  // never changes what the bot teaches until the admin approves it.
+  function offerCorrection(el, questionText, answer) {
+    if (el.querySelector(".vcb-fixbox")) return; // already offered on this answer
+    const box = document.createElement("div");
+    box.className = "vcb-fixbox";
+    const p = document.createElement("p");
+    p.textContent = "🙏 अगर यह उत्तर सही नहीं था और आप जानते हैं कि Bhaiya इसे कैसे समझाते हैं, तो नीचे लिखिए — हमारी team देखकर आगे बढ़ाएगी।";
+    const ta = document.createElement("textarea");
+    ta.placeholder = "सही उत्तर यहाँ लिखिए…";
+    ta.maxLength = 3000;
+    const row = document.createElement("div");
+    row.className = "vcb-bellrow";
+    const send = document.createElement("button");
+    send.className = "vcb-bellyes";
+    send.textContent = "भेजिए 🙏";
+    const skip = document.createElement("button");
+    skip.className = "vcb-bellno";
+    skip.textContent = "रहने दीजिए";
+    send.addEventListener("click", () => {
+      const suggestion = ta.value.trim();
+      if (!suggestion) { ta.focus(); return; }
+      send.disabled = true;
+      fetch(`${API}/api/suggest`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ q: questionText, answer: answer || "", suggestion, uid: journey.uid || "" }),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          box.innerHTML = "";
+          const done = document.createElement("p");
+          done.textContent = d?.ok
+            ? "🙏 धन्यवाद — आपका सुझाव team तक पहुँच गया। स्वीकृति के बाद guide इसे सीख लेगा।"
+            : "अभी भेजा नहीं जा सका — थोड़ी देर बाद फिर कोशिश कीजिए।";
+          box.appendChild(done);
+        })
+        .catch(() => { send.disabled = false; });
+    });
+    skip.addEventListener("click", () => box.remove());
+    row.append(send, skip);
+    box.append(p, ta, row);
+    el.appendChild(box);
   }
 
   // ——— notifications: the guide's doorbell (rare whispers, never noise) ———

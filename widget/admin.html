@@ -41,6 +41,7 @@
   #controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center}
   .chip{border-radius:999px;padding:6px 14px;font-size:13px}
   .chip.on{background:linear-gradient(140deg,var(--gold2),var(--gold) 70%);color:#231a04;border-color:var(--gold);font-weight:600}
+  .chip.hasnew:not(.on){border-color:var(--gold);color:var(--gold2);box-shadow:0 0 0 1px var(--gold) inset,0 0 12px rgba(217,169,79,.25)}
   #search{flex:1;min-width:160px;background:var(--card);border:1px solid var(--line);border-radius:999px;
     padding:8px 16px;color:var(--ink);font-size:13.5px;outline:none}
   #search:focus{border-color:var(--gold)}
@@ -371,6 +372,7 @@
     <button class="chip" data-f="hi">हिंदी</button>
     <button class="chip" data-f="en">English</button>
     <button class="chip" data-f="corrected">✏️ Corrected</button>
+    <button class="chip" data-f="suggestions" id="sugchip">📝 Suggestions</button>
     <input type="date" id="qdate" title="Show one day only"
       style="background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 14px;color:var(--ink);font-size:13px;outline:none;color-scheme:dark">
     <input id="search" placeholder="Search a question…">
@@ -391,12 +393,24 @@
   }).catch(() => {});
   let entries = [], filter = "all", query = "";
   let corrections = [];
+  let suggestions = [];
   const corrFor = (q) => corrections.find((c) => c.q.trim() === String(q || "").trim());
   async function loadCorr() {
     try {
       const r = await fetch("/api/admin/corrections", { headers: { "x-admin-key": localStorage.getItem("adminKey") || "" } });
       if (r.ok) corrections = (await r.json()).items || [];
     } catch { /* best-effort */ }
+  }
+  async function loadSuggestions() {
+    try {
+      const r = await fetch("/api/admin/suggestions", { headers: { "x-admin-key": localStorage.getItem("adminKey") || "" } });
+      if (r.ok) suggestions = (await r.json()).items || [];
+    } catch { /* best-effort */ }
+    const chip = $("#sugchip");
+    if (chip) {
+      chip.textContent = suggestions.length ? `📝 Suggestions (${suggestions.length})` : "📝 Suggestions";
+      chip.classList.toggle("hasnew", suggestions.length > 0);
+    }
   }
 
   // correction-taught entries are never "unanswered" — the approved answer IS the answer
@@ -415,6 +429,7 @@
     }
     entries = (await r.json()).entries || [];
     await loadCorr();
+    await loadSuggestions();
     $("#login").style.display = "none";
     render();
     loadJobs(); // pick up any study work still running (shows the ● on the Teach tab)
@@ -445,6 +460,48 @@
       <div class="stat"><b>${base.length ? Math.round(vN / base.length * 100) : 0}%</b><span>by voice</span></div>
       <div class="stat warn"><b>${un}</b><span>unanswered</span></div>`;
     $("#sub").textContent = `last ${base.length} knowledge questions · newest first`;
+
+    // "Suggestions" — members' proposed corrections, awaiting the admin's blessing
+    if (filter === "suggestions") {
+      $("#list").innerHTML = suggestions.length ? "" : `<div class="empty">No seeker suggestions right now. When a ⭐ member tells the bot an answer was wrong and shares the correct one, it lands here for your approval.</div>`;
+      for (const s of suggestions) {
+        const card = document.createElement("div");
+        card.className = "qa";
+        const head = document.createElement("div");
+        head.className = "meta";
+        head.innerHTML = `<span class="badge goldb">📝 suggested ${when(s.at)}</span><span class="badge">${esc(s.nick || "member")}</span>`;
+        const q = document.createElement("div"); q.className = "q"; q.textContent = s.q;
+        const botLbl = document.createElement("div"); botLbl.style.cssText = "font-size:11.5px;color:var(--dim);margin:8px 0 3px"; botLbl.textContent = "What the bot answered:";
+        const bot = document.createElement("div"); bot.className = "a"; bot.textContent = s.botAnswer || "(not captured)";
+        bot.addEventListener("click", () => bot.classList.toggle("open"));
+        const sugLbl = document.createElement("div"); sugLbl.style.cssText = "font-size:11.5px;color:var(--gold2);margin:10px 0 3px"; sugLbl.textContent = "The member's correct answer (edit before approving if you wish):";
+        const ta = document.createElement("textarea");
+        ta.style.cssText = "width:100%;box-sizing:border-box;min-height:120px;background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-family:inherit;font-size:14px;padding:10px;outline:none";
+        ta.value = s.suggestion || "";
+        const row = document.createElement("div");
+        row.style.cssText = "margin-top:9px;display:flex;gap:8px;flex-wrap:wrap";
+        const ok = document.createElement("button"); ok.className = "gold-btn"; ok.textContent = "✅ Approve — bot learns this";
+        const no = document.createElement("button"); no.className = "mini danger"; no.textContent = "🗑️ Reject";
+        const act = async (action) => {
+          ok.disabled = no.disabled = true;
+          const r = await fetch("/api/admin/suggestion", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-admin-key": key() },
+            body: JSON.stringify({ id: s.id, action, answer: ta.value }),
+          }).catch(() => null);
+          if (!r || !r.ok) { ok.disabled = no.disabled = false; alert((r && (await r.json()).error) || "Could not save — try again."); return; }
+          await loadSuggestions();
+          if (action === "approve") await loadCorr();
+          render();
+        };
+        ok.addEventListener("click", () => act("approve"));
+        no.addEventListener("click", () => { if (confirm("Reject this suggestion? It will be discarded.")) act("reject"); });
+        row.append(ok, no);
+        card.append(head, q, botLbl, bot, sugLbl, ta, row);
+        $("#list").appendChild(card);
+      }
+      return;
+    }
 
     // "Corrected" filter shows the saved approved answers themselves
     if (filter === "corrected") {
