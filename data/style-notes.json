@@ -1,14 +1,23 @@
 {
-  "updated": "2026-07-16T21:30:06.255Z",
-  "reviewed": 53,
+  "updated": "2026-07-17T21:30:14.474Z",
+  "reviewed": 68,
+  "feedback": {
+    "up": 10,
+    "down": 3
+  },
+  "recos": {
+    "followups": 2,
+    "thought": 0,
+    "opened": 1
+  },
+  "core": [],
   "notes": [
     "Use the seeker's name or a warm, respectful address at the start of each response to build rapport.",
     "Keep sentences concise and conversational; avoid dense or overly academic structures.",
     "Use simple, relatable analogies to explain complex spiritual concepts.",
     "If a user asks the same question repeatedly, vary the explanation completely rather than repeating phrases from previous answers.",
     "Avoid repetitive filler phrases like 'देखो भाई' at the start of every sentence; vary the opening of your responses.",
-    "End responses with a supportive, affirming tone to encourage the seeker's practice.",
-    "Ensure answers are direct and focused on the specific question asked, avoiding unnecessary tangents.",
-    "When a user corrects terminology or phrasing (e.g., 'गुरु तत्व' not 'गुरुदेव तत्व'), acknowledge gratefully and demonstrate precision in future responses to build trust."
-  ]
+    "End responses with a supportive, affirming tone to encourage the seeker's practice."
+  ],
+  "observations": []
 }

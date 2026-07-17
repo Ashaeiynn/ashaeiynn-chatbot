@@ -1,0 +1,23 @@
+[
+ {
+  "date": "2026-07-18",
+  "reviewed": 68,
+  "up": 10,
+  "down": 3,
+  "recos": {
+   "followups": 2,
+   "thought": 0,
+   "opened": 1
+  },
+  "core": [],
+  "notes": [
+   "Use the seeker's name or a warm, respectful address at the start of each response to build rapport.",
+   "Keep sentences concise and conversational; avoid dense or overly academic structures.",
+   "Use simple, relatable analogies to explain complex spiritual concepts.",
+   "If a user asks the same question repeatedly, vary the explanation completely rather than repeating phrases from previous answers.",
+   "Avoid repetitive filler phrases like 'देखो भाई' at the start of every sentence; vary the opening of your responses.",
+   "End responses with a supportive, affirming tone to encourage the seeker's practice."
+  ],
+  "observations": []
+ }
+]
