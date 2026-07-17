@@ -13,6 +13,14 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-17 (MacBook Pro session, with the owner)
 
+- **~21:40** Credits FINAL model = pay-as-you-use (owner's call after seeing premium-voice
+  cost ~₹75-140/user/day). Reverted the daily-refill: persistent single `credits` balance,
+  NO reset. New seekers start with WELCOME_CREDITS=100; every response spends 1 (errors free);
+  admin tops up in Users tab (persistent). Out-of-credits msg back to "contact team".
+  migrateToPersistent() folded daily model (dailyLeft+bonus) into one balance + deleted daily
+  fields. Verified live: 5 users on persistent balance, top-up works, Rohan reset to 100.
+  Subscription/payment still deferred.
+
 - **~21:00** Credits switched to a DAILY model (owner's call): every seeker gets
   100 free questions/day, auto-refilled per IST day (lazy refill() on first
   interaction — no cron). Admin "Add credits" now grants a PERSISTENT bonus that
