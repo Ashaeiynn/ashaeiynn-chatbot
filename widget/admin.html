@@ -667,7 +667,7 @@
       <div class="stat"><b>${c("inactive")}</b><span>🟡 inactive (15+ days)</span></div>
       <div class="stat"><b>${c("deleted")}</b><span>🔴 deleted</span></div>
       <div class="stat"><b>${uAll.filter((u) => u.member).length}</b><span>⭐ members</span></div>
-      <div class="stat"><b>100</b><span>🪙 free questions / day</span></div>`;
+      <div class="stat"><b>${uAll.reduce((n, u) => n + (u.credits || 0), 0).toLocaleString("en-IN")}</b><span>🪙 credits held</span></div>`;
     renderUsers();
   }
   function renderUsers() {
@@ -742,7 +742,7 @@
     loadUsers();
   }
   async function addCredits(u) {
-    const raw = prompt(`Add EXTRA credits for ${u.name} (now 🪙 ${(u.credits || 0).toLocaleString("en-IN")} available).\n\nEveryone already gets 100 free questions each day (auto-refills). These extra credits carry over day to day, on top of the daily 100.\n\nHow many extra credits to add?`, "100");
+    const raw = prompt(`Add credits for ${u.name} (now 🪙 ${(u.credits || 0).toLocaleString("en-IN")}).\n\nEach question the seeker asks costs 1 credit. Credits do not reset — the seeker uses them up as they go, and you top them up here. New seekers start with 100.\n\nHow many credits to add?`, "100");
     if (raw === null) return;
     const amount = Math.floor(Number(raw));
     if (!amount || amount <= 0) { alert("Please enter a positive whole number."); return; }
