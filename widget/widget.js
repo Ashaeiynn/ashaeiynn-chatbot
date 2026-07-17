@@ -731,10 +731,13 @@
   const langBtn = panel.querySelector(".vcb-lang");
   const kbdBtn = panel.querySelector(".vcb-kbd");
   const creditEl = panel.querySelector(".vcb-credit");
+  // Credit system paused (owner's call — will implement later). While off the
+  // 🪙 coin never shows and no balance is fetched. Flip to true to re-enable.
+  const CREDITS_ON = false;
   // the 🪙 coin: show the seeker's questions-left, gold normally, amber when low
   function renderCredits(n) {
     if (!creditEl) return;
-    if (typeof n !== "number" || !journey.uid) { creditEl.hidden = true; return; }
+    if (!CREDITS_ON || typeof n !== "number" || !journey.uid) { creditEl.hidden = true; return; }
     journey.credits = n;
     saveJourney();
     creditEl.hidden = false;
@@ -743,7 +746,7 @@
   }
   // refresh from the server (e.g. on open, after an admin top-up between sessions)
   function refreshCredits() {
-    if (!journey.uid) return;
+    if (!CREDITS_ON || !journey.uid) return;
     fetch(`${API}/api/credits?uid=${encodeURIComponent(journey.uid)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (d && typeof d.credits === "number") renderCredits(d.credits); })

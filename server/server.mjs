@@ -56,6 +56,10 @@ const FALLBACK =
   "I don't have that information in our video library yet. Please contact us directly.";
 const FALLBACK_HI = "मेरे पास अभी वीडियो लाइब्रेरी में यह जानकारी उपलब्ध नहीं है। कृपया हमसे सीधे संपर्क करें।";
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
+// Credit system paused (owner's call — will implement later). While off: no
+// charging, no out-of-credits block, no balance in responses. All the credit
+// code stays intact; flip this to true to re-enable instantly.
+const CREDITS_ON = false;
 const MAX_HISTORY_TURNS = 6;
 
 const apiKeyConfigured = keyConfigured;
@@ -358,8 +362,10 @@ async function handleChat(req, res) {
   try {
     const u = users.touch(seekerUid);
     seekerMember = !!u?.member;
-    // pay-as-you-use balance (persistent; admin tops it up)
-    if (u) seekerCredits = users.credits(seekerUid);
+    // pay-as-you-use balance (persistent; admin tops it up). Left null while the
+    // credit system is paused → the gate, the deduction, and the balance-in-
+    // response below all treat this caller as uncharged.
+    if (u && CREDITS_ON) seekerCredits = users.credits(seekerUid);
   } catch {
     /* registry is best-effort */
   }

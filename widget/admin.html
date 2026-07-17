@@ -605,6 +605,9 @@
   $("#search").addEventListener("input", (e) => { query = e.target.value; render(); });
   $("#qdate").addEventListener("input", render);
 
+  // Credit system paused (owner's call — will implement later). While off, all
+  // credit UI (stat, column, Add-credits button) is hidden. Flip to re-enable.
+  const CREDITS_ON = false;
   // ——— Teach the bot ———
   const key = () => localStorage.getItem("adminKey") || "";
   document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
@@ -667,7 +670,7 @@
       <div class="stat"><b>${c("inactive")}</b><span>🟡 inactive (15+ days)</span></div>
       <div class="stat"><b>${c("deleted")}</b><span>🔴 deleted</span></div>
       <div class="stat"><b>${uAll.filter((u) => u.member).length}</b><span>⭐ members</span></div>
-      <div class="stat"><b>${uAll.reduce((n, u) => n + (u.credits || 0), 0).toLocaleString("en-IN")}</b><span>🪙 credits held</span></div>`;
+      ${CREDITS_ON ? `<div class="stat"><b>${uAll.reduce((n, u) => n + (u.credits || 0), 0).toLocaleString("en-IN")}</b><span>🪙 credits held</span></div>` : ""}`;
     renderUsers();
   }
   function renderUsers() {
@@ -690,7 +693,7 @@
     table.className = "utable";
     table.innerHTML = `<thead><tr>
       <th>Name</th><th>Nickname</th><th>WhatsApp</th><th>Email</th>
-      <th>Joined</th><th>Last seen</th><th>Status</th><th style="text-align:right">Credits</th><th style="text-align:right">Actions</th>
+      <th>Joined</th><th>Last seen</th><th>Status</th>${CREDITS_ON ? `<th style="text-align:right">Credits</th>` : ""}<th style="text-align:right">Actions</th>
     </tr></thead>`;
     const tbody = document.createElement("tbody");
     for (const u of list) {
@@ -703,14 +706,17 @@
         <td class="dim">${day(u.at)}</td>
         <td class="dim">${day(u.lastSeen)}</td>
         <td><span class="ustat ${u.status}" ${u.deletedReason ? `title="${esc(u.deletedReason)}"` : ""}>${label[u.status] || u.status}</span>${u.subscribed ? " 🔔" : ""}</td>
-        <td style="text-align:right;font-weight:600;color:var(--gold2)">🪙 ${(u.credits || 0).toLocaleString("en-IN")}</td>`;
+        ${CREDITS_ON ? `<td style="text-align:right;font-weight:600;color:var(--gold2)">🪙 ${(u.credits || 0).toLocaleString("en-IN")}</td>` : ""}`;
       const td = document.createElement("td");
       td.style.textAlign = "right";
-      const addc = document.createElement("button");
-      addc.className = "mini";
-      addc.textContent = "🪙 Add credits";
-      addc.title = "Add question-credits for this seeker";
-      addc.addEventListener("click", () => addCredits(u));
+      if (CREDITS_ON) {
+        const addc = document.createElement("button");
+        addc.className = "mini";
+        addc.textContent = "🪙 Add credits";
+        addc.title = "Add question-credits for this seeker";
+        addc.addEventListener("click", () => addCredits(u));
+        td.appendChild(addc);
+      }
       const mem = document.createElement("button");
       mem.className = "mini";
       mem.style.marginLeft = "6px";
@@ -725,7 +731,7 @@
         if (u.status !== "deleted" && !confirm(`Delete ${u.name}? They can sign up again anytime.`)) return;
         updateUser(u.id, { deleted: u.status !== "deleted" });
       });
-      td.append(addc, mem, del);
+      td.append(mem, del);
       tr.appendChild(td);
       tbody.appendChild(tr);
     }
