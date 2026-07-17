@@ -393,7 +393,7 @@
   const isSmallTalk = (e) =>
     e.chat ||
     e.feedback ||
-    /^(hi+|hello|hey|ok(ay)?|thanks?( you)?|bye|good (morning|night|evening)|नमस्ते|नमस्कार|राम राम|जय सिया राम|jai? siya? ram|धन्यवाद|शुक्रिया|कैसे हो|कैसे हैं( आप)?|how are you)[\s!,.?🙏]*$/i.test(
+    /^(hi+|hell?o+|hey+|हे?ै?लो|हाय|ok(ay)?|ठीक( है)?|thanks?( you)?|thank u|bye|good (morning|night|evening)|नमस्ते|नमस्कार|प्रणाम|राम\s*राम|जय\s*(श्री\s*)?(सिया\s*|सीता\s*)?राम( जी)?|jai?\s*(shree\s*|shri\s*)?(siya\s*|sita\s*)?ram( ji)?|जय\s*गुरुदेव|jai?\s*gurudev|धन्यवाद|शुक्रिया|कैसे हो|कैसे हैं( आप)?|आप कैसे हैं|how are you|what'?s up)[\s!,.?🙏❤️♥️]*$/i.test(
       (e.q || "").trim(),
     );
 
