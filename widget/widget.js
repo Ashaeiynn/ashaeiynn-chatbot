@@ -1191,7 +1191,9 @@
     const r = await fetch(`${API}/api/stt`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ audio: btoa(bin), mime: blob.type, lang: recLang }),
+      // the iOS home-screen app announces itself — the server gives it the
+      // dedicated Whisper ear (Groq); every other caller keeps the Gemini ear
+      body: JSON.stringify({ audio: btoa(bin), mime: blob.type, lang: recLang, src: IOS && navigator.standalone === true ? "ios-app" : "web" }),
     });
     if (!r.ok) {
       const d = await r.json().catch(() => ({}));

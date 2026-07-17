@@ -676,17 +676,19 @@ async function handleChat(req, res) {
 async function handleStt(req, res) {
   const ip = req.socket.remoteAddress ?? "unknown";
   if (rateLimited(ip, "stt", 40)) return json(res, 429, { error: "Too many requests." });
-  if (!GEMINI_TTS_KEY) return json(res, 503, { error: "stt-not-configured" });
+  if (!GEMINI_TTS_KEY && !process.env.GROQ_API_KEY) return json(res, 503, { error: "stt-not-configured" });
   let body = "";
   for await (const part of req) {
     body += part;
     if (body.length > 3_000_000) return json(res, 413, { error: "Recording too long." });
   }
-  let audio = "", mime = "";
+  let audio = "", mime = "", lang = "", src = "";
   try {
     const p = JSON.parse(body);
     audio = String(p.audio || "");
     mime = String(p.mime || "audio/mp4").split(";")[0].trim().toLowerCase();
+    lang = String(p.lang || "");
+    src = String(p.src || "");
   } catch {
     return json(res, 400, { error: "Invalid JSON." });
   }
@@ -698,10 +700,39 @@ async function handleStt(req, res) {
   // label but accepts under another — try both before giving up, and if both
   // fail, surface Gemini's real reason so the phone screen shows it.
   const tryMimes = mime === "audio/mp4" ? ["audio/mp4", "audio/aac"] : [mime, "audio/mp4"];
+  let lastDetail = "";
+  // The iOS home-screen app (and ONLY it — everyone else keeps the Gemini ear
+  // untouched) hears through Groq's Whisper first: a dedicated speech model,
+  // faster, with its own roomy quota. Gemini below remains its fallback.
+  if (src === "ios-app" && process.env.GROQ_API_KEY) {
+    try {
+      const fd = new FormData();
+      const ext = mime.includes("webm") ? "webm" : mime.includes("wav") ? "wav" : mime.includes("ogg") ? "ogg" : "m4a";
+      fd.append("file", new Blob([Buffer.from(audio, "base64")], { type: mime }), `voice.${ext}`);
+      fd.append("model", "whisper-large-v3-turbo");
+      fd.append("temperature", "0");
+      const l = lang.toLowerCase();
+      if (l.startsWith("hi")) fd.append("language", "hi");
+      else if (l.startsWith("en")) fd.append("language", "en");
+      const r = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+        body: fd,
+      });
+      if (r.ok) {
+        const text = String((await r.json()).text || "").trim();
+        if (text) return json(res, 200, { text: fixMishearings(text.slice(0, 2000)) });
+        lastDetail = "groq: empty transcription";
+      } else {
+        lastDetail = `groq ${r.status}: ${(await r.text()).slice(0, 80)}`;
+      }
+    } catch (err) {
+      lastDetail = "groq: " + String(err?.message || err).slice(0, 120);
+    }
+  }
   // two models = two separate quota pools; when one is exhausted (429) the
   // other often still has room — try both before giving up
   const models = [...new Set([process.env.GEMINI_LIGHT_MODEL, process.env.GEMINI_MODEL, "gemini-2.0-flash-lite"].filter(Boolean))];
-  let lastDetail = "";
   for (const model of models)
   for (const m of tryMimes) {
     try {
@@ -991,6 +1022,8 @@ const server = createServer(async (req, res) => {
       apiKeyConfigured,
       backup: BACKUP_CONFIGURED ? { ready: true, lastUsed: failover.at, answers: failover.count } : false,
       naturalVoice: TTS_KEY ? "elevenlabs" : GEMINI_TTS_KEY ? "gemini" : false,
+      // the iOS home-screen app's dedicated ear (Whisper via Groq)
+      iosEar: process.env.GROQ_API_KEY ? "groq-whisper" : "gemini",
       knowledgeBase: existsSync(path.join(ROOT, "data", "knowledge.db")) ? "built" : "missing",
     });
   }
