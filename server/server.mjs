@@ -638,7 +638,16 @@ async function handleChat(req, res) {
           contacts.push({ title: l.title, timestamp: "", url: l.url });
       }
       writeLog({ ...logEntry, answer, refusal: true, ...(chat ? { chat: true } : {}), ...(inviteFix && seekerMember ? { inviteFix: true } : {}) });
-      // conversation, greetings and off-topic refusals are FREE — no credit spent
+      // owner's rule: EVERY response costs one credit — greetings, small talk
+      // and off-topic refusals included (only outright errors are free)
+      let bareBalance = seekerCredits;
+      if (seekerUid && seekerCredits !== null) {
+        try {
+          bareBalance = users.spendCredit(seekerUid, 1);
+        } catch {
+          /* registry best-effort */
+        }
+      }
       return json(res, 200, {
         answer,
         sources: contacts,
@@ -647,7 +656,7 @@ async function handleChat(req, res) {
         ...(sadhana ? { sadhana } : {}),
         // only a MEMBER is invited to teach a correction (server-gated)
         ...(inviteFix && seekerMember ? { correctionInvite: true } : {}),
-        ...(seekerCredits !== null ? { credits: seekerCredits } : {}),
+        ...(bareBalance !== null ? { credits: bareBalance } : {}),
       });
     }
 
@@ -727,10 +736,10 @@ async function handleChat(req, res) {
     shown = shown.replace(/\n\s*(?:उद्धरण|quote)\s*[:：][^\n]*/gi, "").trimEnd();
     shown = shown.replace(/\n\s*(?:सुधार|correction)\s*[:：]\s*1?\s*$/gi, "").trimEnd();
     if (inviteFix && seekerMember) writeLog({ at: new Date().toISOString(), q: message, flaggedWrong: true, member: true });
-    // A real teaching answer costs ONE credit. Handoffs to a mentor (help set)
-    // are a redirect, not a teaching — those stay free.
+    // Every response costs ONE credit (owner's rule) — teaching answers,
+    // handoffs, link replies alike. Only outright errors (the catch below) are free.
     let balance = seekerCredits;
-    if (seekerUid && seekerCredits !== null && !help) {
+    if (seekerUid && seekerCredits !== null) {
       try {
         balance = users.spendCredit(seekerUid, 1);
       } catch {
