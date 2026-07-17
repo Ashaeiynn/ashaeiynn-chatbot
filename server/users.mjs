@@ -10,6 +10,9 @@ import { ROOT } from "./env.mjs";
 
 const FILE = path.join(ROOT, "data", "users.json");
 const ACTIVE_DAYS = 15;
+// Every seeker (existing and new) starts with this many question-credits.
+// No payment gateway yet: the ONLY way to add more is the admin's Users tab.
+export const WELCOME_CREDITS = 1000;
 
 const load = () => {
   try {
@@ -55,6 +58,7 @@ export function register({ name, nick, whatsapp, email }) {
     email,
     member: false,
     deleted: false,
+    credits: WELCOME_CREDITS, // every new seeker's welcome grant
     at: new Date().toISOString(),
     lastSeen: new Date().toISOString(),
   };
@@ -62,6 +66,45 @@ export function register({ name, nick, whatsapp, email }) {
   save(all);
   return u;
 }
+
+// ——— credits: the seeker's question balance ———
+export function credits(id) {
+  const u = byId(id);
+  return u ? Number(u.credits || 0) : 0;
+}
+// admin tops a seeker up (Users tab) — amount is any positive whole number
+export function addCredits(id, amount) {
+  const n = Math.floor(Number(amount) || 0);
+  if (!n || n < 0) return null;
+  const all = load();
+  const u = all.find((x) => x.id === id);
+  if (!u) return null;
+  u.credits = Number(u.credits || 0) + n;
+  save(all);
+  return u.credits;
+}
+// one credit spent per real answer (see server.mjs); never goes below zero
+export function spendCredit(id, n = 1) {
+  const all = load();
+  const u = all.find((x) => x.id === id);
+  if (!u) return null;
+  u.credits = Math.max(0, Number(u.credits || 0) - n);
+  save(all);
+  return u.credits;
+}
+// one-time grant: give every EXISTING seeker (from before credits existed)
+// the welcome balance. Idempotent — only touches records with no credits field,
+// so a seeker who legitimately reached 0 is never re-granted.
+(function grantExisting() {
+  const all = load();
+  let changed = false;
+  for (const u of all)
+    if (typeof u.credits !== "number") {
+      u.credits = WELCOME_CREDITS;
+      changed = true;
+    }
+  if (changed) save(all);
+})();
 
 // every question refreshes lastSeen (and revives a wrongly-deleted user);
 // returns the record so the caller can see flags like member at question time

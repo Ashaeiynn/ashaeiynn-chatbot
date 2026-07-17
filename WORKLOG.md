@@ -13,6 +13,18 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-17 (MacBook Pro session, with the owner)
 
+- **~20:30** CREDITS shipped (admin-topup only, NO payment gateway — owner declined
+  Razorpay for now). users.mjs: WELCOME_CREDITS=1000, register() grants it, one-time
+  grantExisting() migration gives 1000 to all pre-credit users, credits()/addCredits()/
+  spendCredit(). Server: out-of-credits gate BEFORE any AI call (warm "contact team"
+  msg, since seekers can't self-recharge); 1 credit spent per real teaching answer
+  (FREE: errors, greetings/small-talk, off-topic refusals, mentor handoffs); chat +
+  signup responses return `credits`; GET /api/credits?uid; POST /api/admin/user-credits
+  (usersOk lock). Uniform — members ARE charged too (owner said give everyone 1000; no
+  members-free exception). Widget: 🪙 coin in header beneath 🔔🔇× (per mockup), amber
+  when ≤10, refreshed on open + after each answer. Admin Users tab: credits column +
+  🪙 Add credits button (prompt amount) + "credits held" stat.
+
 - **~19:00** Member-suggested corrections shipped (owner chose MEMBERS-ONLY).
   Flow: bot detects a member says an answer was wrong (LLM emits `सुधार: 1`,
   server-gated to members → correctionInvite) OR a member taps 👎 (/api/feedback

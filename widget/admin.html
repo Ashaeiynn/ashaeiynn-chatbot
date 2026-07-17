@@ -666,7 +666,8 @@
       <div class="stat"><b>${c("active")}</b><span>🟢 active (≤15 days)</span></div>
       <div class="stat"><b>${c("inactive")}</b><span>🟡 inactive (15+ days)</span></div>
       <div class="stat"><b>${c("deleted")}</b><span>🔴 deleted</span></div>
-      <div class="stat"><b>${uAll.filter((u) => u.member).length}</b><span>⭐ members</span></div>`;
+      <div class="stat"><b>${uAll.filter((u) => u.member).length}</b><span>⭐ members</span></div>
+      <div class="stat"><b>${uAll.reduce((n, u) => n + (u.credits || 0), 0).toLocaleString("en-IN")}</b><span>🪙 credits held</span></div>`;
     renderUsers();
   }
   function renderUsers() {
@@ -689,7 +690,7 @@
     table.className = "utable";
     table.innerHTML = `<thead><tr>
       <th>Name</th><th>Nickname</th><th>WhatsApp</th><th>Email</th>
-      <th>Joined</th><th>Last seen</th><th>Status</th><th style="text-align:right">Actions</th>
+      <th>Joined</th><th>Last seen</th><th>Status</th><th style="text-align:right">Credits</th><th style="text-align:right">Actions</th>
     </tr></thead>`;
     const tbody = document.createElement("tbody");
     for (const u of list) {
@@ -701,11 +702,18 @@
         <td class="em" title="${esc(u.email)}">${esc(u.email)}</td>
         <td class="dim">${day(u.at)}</td>
         <td class="dim">${day(u.lastSeen)}</td>
-        <td><span class="ustat ${u.status}" ${u.deletedReason ? `title="${esc(u.deletedReason)}"` : ""}>${label[u.status] || u.status}</span>${u.subscribed ? " 🔔" : ""}</td>`;
+        <td><span class="ustat ${u.status}" ${u.deletedReason ? `title="${esc(u.deletedReason)}"` : ""}>${label[u.status] || u.status}</span>${u.subscribed ? " 🔔" : ""}</td>
+        <td style="text-align:right;font-weight:600;color:var(--gold2)">🪙 ${(u.credits || 0).toLocaleString("en-IN")}</td>`;
       const td = document.createElement("td");
       td.style.textAlign = "right";
+      const addc = document.createElement("button");
+      addc.className = "mini";
+      addc.textContent = "🪙 Add credits";
+      addc.title = "Add question-credits for this seeker";
+      addc.addEventListener("click", () => addCredits(u));
       const mem = document.createElement("button");
       mem.className = "mini";
+      mem.style.marginLeft = "6px";
       mem.textContent = u.member ? "⭐ Member" : "☆ Member";
       mem.title = u.member ? "Remove member badge" : "Mark as Ashaeiynn member";
       mem.addEventListener("click", () => updateUser(u.id, { member: !u.member }));
@@ -717,7 +725,7 @@
         if (u.status !== "deleted" && !confirm(`Delete ${u.name}? They can sign up again anytime.`)) return;
         updateUser(u.id, { deleted: u.status !== "deleted" });
       });
-      td.append(mem, del);
+      td.append(addc, mem, del);
       tr.appendChild(td);
       tbody.appendChild(tr);
     }
@@ -731,6 +739,19 @@
       headers: { "Content-Type": "application/json", "x-admin-key": key(), "x-library-key": sessionStorage.getItem("libKey") || "" },
       body: JSON.stringify({ id, ...patch }),
     }).catch(() => {});
+    loadUsers();
+  }
+  async function addCredits(u) {
+    const raw = prompt(`Add credits for ${u.name} (currently 🪙 ${(u.credits || 0).toLocaleString("en-IN")}).\nEach question the seeker asks costs 1 credit.\n\nHow many credits to add?`, "1000");
+    if (raw === null) return;
+    const amount = Math.floor(Number(raw));
+    if (!amount || amount <= 0) { alert("Please enter a positive whole number."); return; }
+    const r = await fetch("/api/admin/user-credits", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-key": key(), "x-library-key": sessionStorage.getItem("libKey") || "" },
+      body: JSON.stringify({ id: u.id, amount }),
+    }).catch(() => null);
+    if (!r || !r.ok) { alert((r && (await r.json()).error) || "Could not add credits — try again."); return; }
     loadUsers();
   }
 

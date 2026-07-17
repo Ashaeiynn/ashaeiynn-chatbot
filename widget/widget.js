@@ -190,6 +190,12 @@
       background:linear-gradient(135deg,rgba(10,10,14,.92),rgba(0,0,0,.85));
       backdrop-filter:blur(6px);border-bottom:1px solid rgba(52,211,153,.22)}
     .vcb-head-left{display:flex;align-items:center;gap:11px}
+    .vcb-head-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-top:-2px}
+    .vcb-head-btns{display:flex;align-items:center;gap:8px}
+    .vcb-credit{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;
+      color:#b8f5dc;border:1px solid rgba(52,211,153,.45);border-radius:999px;padding:2px 9px;white-space:nowrap;
+      background:rgba(52,211,153,.08)}
+    .vcb-credit.low{color:#ffcf8a;border-color:rgba(255,184,77,.6);background:rgba(255,184,77,.1)}
     .vcb-ava{width:36px;height:36px;border-radius:50%;flex-shrink:0;font-size:17px;
       display:flex;align-items:center;justify-content:center;color:#b8f5dc;
       background:radial-gradient(circle at 35% 30%,#1c1c26,#0a0a10);
@@ -412,6 +418,8 @@
     .vcb-title{font-family:Georgia,'Kohinoor Devanagari','Devanagari MT',serif;font-size:17px;letter-spacing:.4px;
       background:linear-gradient(180deg,#f7e3ae 20%,#d9a94f 85%);-webkit-background-clip:text;background-clip:text;color:transparent}
     .vcb-sub{color:#a89b7d}
+    .vcb-credit{color:#f3d795;border-color:rgba(227,183,102,.5);background:linear-gradient(160deg,rgba(217,169,79,.16),rgba(217,169,79,.05))}
+    .vcb-credit.low{color:#ffcf8a;border-color:rgba(255,184,77,.65);background:rgba(255,184,77,.12)}
     .vcb-ava{background:radial-gradient(circle at 34% 28%,#232d1d 0%,#0d130c 70%);
       box-shadow:0 0 0 1px rgba(227,183,102,.55),0 0 0 4px rgba(227,183,102,.10),0 0 20px rgba(217,169,79,.35)}
     .vcb-ava img{filter:sepia(1) saturate(2.1) hue-rotate(-10deg) brightness(1.16) drop-shadow(0 0 6px rgba(243,215,149,.5))}
@@ -610,7 +618,10 @@
         <div class="vcb-ava"><img src="${API}/logo.png?v=3" alt=""/></div>
         <div><div class="vcb-title">${TITLE}</div><div class="vcb-sub">Ashaeiynn · answers from the teachings</div></div>
       </div>
-      <div><button class="vcb-bell" aria-label="Reminders" title="Reminders on special occasions">🔔</button><button class="vcb-voice" aria-label="Voice replies" title="Voice replies">🔇</button><button class="vcb-close" aria-label="Close">×</button></div>
+      <div class="vcb-head-right">
+        <div class="vcb-head-btns"><button class="vcb-bell" aria-label="Reminders" title="Reminders on special occasions">🔔</button><button class="vcb-voice" aria-label="Voice replies" title="Voice replies">🔇</button><button class="vcb-close" aria-label="Close">×</button></div>
+        <span class="vcb-credit" title="प्रश्न शेष · questions left" hidden>🪙 <b>0</b></span>
+      </div>
     </div>
     <div class="vcb-bless"><span>${SPLASH}</span></div>
     <div class="vcb-stage">
@@ -719,6 +730,25 @@
   const statusEl = panel.querySelector(".vcb-status");
   const langBtn = panel.querySelector(".vcb-lang");
   const kbdBtn = panel.querySelector(".vcb-kbd");
+  const creditEl = panel.querySelector(".vcb-credit");
+  // the 🪙 coin: show the seeker's questions-left, gold normally, amber when low
+  function renderCredits(n) {
+    if (!creditEl) return;
+    if (typeof n !== "number" || !journey.uid) { creditEl.hidden = true; return; }
+    journey.credits = n;
+    saveJourney();
+    creditEl.hidden = false;
+    creditEl.querySelector("b").textContent = n.toLocaleString("en-IN");
+    creditEl.classList.toggle("low", n <= 10);
+  }
+  // refresh from the server (e.g. on open, after an admin top-up between sessions)
+  function refreshCredits() {
+    if (!journey.uid) return;
+    fetch(`${API}/api/credits?uid=${encodeURIComponent(journey.uid)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d && typeof d.credits === "number") renderCredits(d.credits); })
+      .catch(() => {});
+  }
 
   const hasDevanagari = (t) => /[ऀ-ॿ]/.test(t);
   let naturalVoice = false; // does the server offer a human voice? (probed at load)
@@ -958,6 +988,7 @@
       throw new Error("Sorry, I couldn't reach the server. Please try again.");
     }
     if (!resp.ok) throw new Error(data.error || "Sorry, something went wrong. Please try again.");
+    if (typeof data.credits === "number") renderCredits(data.credits); // keep the 🪙 coin fresh
     sessionAsks++;
     history.push({ role: "user", content: text }, { role: "assistant", content: data.answer });
     if (history.length > 12) history.splice(0, history.length - 12);
@@ -1884,6 +1915,8 @@
       bellOfferedThisOpen = false;
       maybeOfferBell();
       notifWelcome();
+      if (typeof journey.credits === "number") renderCredits(journey.credits); // instant from cache
+      refreshCredits(); // then the live figure from the server
       if (panel.dataset.mode === "text") input.focus();
       else {
         setVState("idle");
@@ -2009,6 +2042,7 @@
         journey.uid = d.uid;
         journey.name = d.nick;
         saveJourney();
+        if (typeof d.credits === "number") renderCredits(d.credits); // welcome balance
         card.remove();
         // now that they have an identity, offer the doorbell straight away —
         // no waiting for a reopen (it then returns every open until allowed)

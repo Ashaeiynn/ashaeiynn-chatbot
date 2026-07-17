@@ -37,6 +37,9 @@ let users = {
   },
   touch: () => {},
   byId: () => null,
+  credits: () => 0,
+  addCredits: () => null,
+  spendCredit: () => null,
   markDeleted: () => {},
   setFlags: () => null,
   listUsers: () => [],
@@ -350,9 +353,12 @@ async function handleChat(req, res) {
   // belongs (has their own mentor — never pitch screening/joining); everyone
   // else may be warmly invited toward a screening when the moment is natural.
   let seekerMember = false;
+  const seekerUid = typeof profile?.uid === "string" ? profile.uid.slice(0, 30) : "";
+  let seekerCredits = null; // null = anonymous/test caller (never charged)
   try {
-    const u = users.touch(typeof profile?.uid === "string" ? profile.uid.slice(0, 30) : "");
+    const u = users.touch(seekerUid);
     seekerMember = !!u?.member;
+    if (u) seekerCredits = Number(u.credits || 0);
   } catch {
     /* registry is best-effort */
   }
@@ -387,6 +393,17 @@ async function handleChat(req, res) {
   const isDevanagari = /[ऀ-ॿ]/.test(message);
   const hinglishHits = (message.toLowerCase().match(/\b(kya|kaun|kaise|kyu|kyon|kab|kahan|batao|bataiye|mujhe|humko|nahi|nahin|hota|hoti|hai|hain|karna|kare|krna|wala|wali|bhejo|bhej|matlab)\b/g) || []).length;
   const wantsHindi = spokenHindi || isDevanagari || hinglishHits >= 1;
+
+  // Out of credits → a warm stop BEFORE spending any AI. Only registered
+  // seekers with a real balance are gated; anonymous/test callers pass through.
+  if (seekerUid && seekerCredits !== null && seekerCredits <= 0) {
+    const outMsg = wantsHindi
+      ? "🙏 आपके प्रश्न-credits अभी समाप्त हो गए हैं। और प्रश्न पूछने के लिए कृपया Ashaeiynn team से संपर्क कीजिए — वे आपके credits बढ़ा देंगे।"
+      : "🙏 Your question-credits are finished for now. To ask more, please reach out to the Ashaeiynn team — they'll add credits for you.";
+    const contact = linkDirectory().filter((l) => l.title === "Contact Ashaeiynn").map((l) => ({ title: l.title, timestamp: "", url: l.url }));
+    writeLog({ at: new Date().toISOString(), q: message, via: payload.via, noCredits: true });
+    return json(res, 200, { answer: outMsg, sources: contact, credits: 0, noCredits: true });
+  }
 
   // Bhaiya-approved answers: the bot LEARNS the correction, it doesn't parrot
   // it. A same-meaning question gets the approved answer as THE answer — full
@@ -620,6 +637,7 @@ async function handleChat(req, res) {
           contacts.push({ title: l.title, timestamp: "", url: l.url });
       }
       writeLog({ ...logEntry, answer, refusal: true, ...(chat ? { chat: true } : {}), ...(inviteFix && seekerMember ? { inviteFix: true } : {}) });
+      // conversation, greetings and off-topic refusals are FREE — no credit spent
       return json(res, 200, {
         answer,
         sources: contacts,
@@ -628,6 +646,7 @@ async function handleChat(req, res) {
         ...(sadhana ? { sadhana } : {}),
         // only a MEMBER is invited to teach a correction (server-gated)
         ...(inviteFix && seekerMember ? { correctionInvite: true } : {}),
+        ...(seekerCredits !== null ? { credits: seekerCredits } : {}),
       });
     }
 
@@ -707,6 +726,16 @@ async function handleChat(req, res) {
     shown = shown.replace(/\n\s*(?:उद्धरण|quote)\s*[:：][^\n]*/gi, "").trimEnd();
     shown = shown.replace(/\n\s*(?:सुधार|correction)\s*[:：]\s*1?\s*$/gi, "").trimEnd();
     if (inviteFix && seekerMember) writeLog({ at: new Date().toISOString(), q: message, flaggedWrong: true, member: true });
+    // A real teaching answer costs ONE credit. Handoffs to a mentor (help set)
+    // are a redirect, not a teaching — those stay free.
+    let balance = seekerCredits;
+    if (seekerUid && seekerCredits !== null && !help) {
+      try {
+        balance = users.spendCredit(seekerUid, 1);
+      } catch {
+        /* registry best-effort */
+      }
+    }
     json(res, 200, {
       answer: shown,
       sources,
@@ -717,6 +746,7 @@ async function handleChat(req, res) {
       ...(quote ? { quote } : {}),
       // only a MEMBER is invited to teach a correction (server-gated)
       ...(inviteFix && seekerMember ? { correctionInvite: true } : {}),
+      ...(balance !== null ? { credits: balance } : {}),
     });
   } catch (err) {
     if (err instanceof LlmAuthError) {
@@ -1058,10 +1088,17 @@ const server = createServer(async (req, res) => {
     }
     try {
       const u = users.register(JSON.parse(body));
-      return json(res, 200, { uid: u.id, nick: u.nick });
+      return json(res, 200, { uid: u.id, nick: u.nick, credits: Number(u.credits || 0) });
     } catch (err) {
       return json(res, 400, { error: String(err?.message || "Could not sign up.") });
     }
+  }
+
+  // the widget reads the seeker's live balance on open (so the 🪙 coin is fresh
+  // even after the admin tops them up between sessions)
+  if (req.method === "GET" && url.pathname === "/api/credits") {
+    const uid = String(url.searchParams.get("uid") || "").slice(0, 40);
+    return json(res, 200, { credits: uid ? users.credits(uid) : 0 });
   }
   if (req.method === "POST" && (url.pathname === "/api/push/subscribe" || url.pathname === "/api/push/unsubscribe")) {
     const ip = req.socket.remoteAddress ?? "unknown";
@@ -1373,6 +1410,21 @@ const server = createServer(async (req, res) => {
       const p = JSON.parse(body);
       const u = users.setFlags(String(p.id || ""), p);
       return u ? json(res, 200, { ok: true }) : json(res, 404, { error: "User not found." });
+    } catch {
+      return json(res, 400, { error: "Invalid JSON." });
+    }
+  }
+  // admin adds question-credits to a seeker (Users tab) — the only way to top up
+  if (req.method === "POST" && url.pathname === "/api/admin/user-credits") {
+    if (!usersOk()) return;
+    let body = "";
+    for await (const part of req) body += part;
+    try {
+      const p = JSON.parse(body);
+      const amount = Math.floor(Number(p.amount) || 0);
+      if (amount <= 0 || amount > 1_000_000) return json(res, 400, { error: "Enter a positive amount." });
+      const bal = users.addCredits(String(p.id || ""), amount);
+      return bal !== null ? json(res, 200, { ok: true, credits: bal }) : json(res, 404, { error: "User not found." });
     } catch {
       return json(res, 400, { error: "Invalid JSON." });
     }
