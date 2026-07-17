@@ -95,13 +95,20 @@ export async function searchMulti(questions, limit = 8) {
 
 // आज का विचार: one substantive passage per day, the SAME for everyone —
 // picked deterministically from the whole knowledge by the date key.
-export function thoughtCandidate(dayKey) {
+// Returns up to `n` candidate passages for the day's thought, deterministic by
+// date but spread across the knowledge base — so if the first is a garbled
+// transcript the caller can move on to the next and still get a clean thought.
+export function thoughtCandidate(dayKey, n = 8) {
   const good = load().filter((c) => c.content.length >= 250 && c.content.length <= 900);
-  if (!good.length) return null;
+  if (!good.length) return [];
   let h = 0;
   for (const ch of dayKey) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const c = good[h % good.length];
-  return { content: c.content, title: c.title, url: c.url, start_seconds: c.start_seconds };
+  const out = [];
+  for (let i = 0; i < Math.min(n, good.length); i++) {
+    const c = good[(h + i * 7919) % good.length]; // prime stride → varied passages
+    out.push({ content: c.content, title: c.title, url: c.url, start_seconds: c.start_seconds });
+  }
+  return out;
 }
 
 export function formatTimestamp(seconds) {

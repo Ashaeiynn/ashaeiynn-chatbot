@@ -930,33 +930,52 @@ async function handleThought(req, res) {
   } catch {
     /* no saved thought yet */
   }
-  const c = thoughtCandidate(date);
-  if (!c) return json(res, 200, {});
-  let text = "";
+  const candidates = thoughtCandidate(date);
+  if (!candidates.length) return json(res, 200, {});
+  // A garbled transcript makes the model REFUSE ("this passage is corrupted…")
+  // — reject any such meta-commentary, and any answer that isn't real Hindi,
+  // then move on to the next passage. This guarantees a clean daily thought.
+  const looksBad = (t) => {
+    if (!t || t.trim().length < 12) return true;
+    if (/corrupt|fragment|garbled|poorly transcribed|provide a clear|clearer passage|cannot (extract|provide|generate)|coherent|logical continuity|no clear meaning|repetitive phrases|incomplete sentence|as an ai|i'?m sorry|i cannot|does not contain|unable to/i.test(t)) return true;
+    if ((t.match(/[ऀ-ॿ]/g) || []).length < 6) return true; // essentially no Hindi → off-script
+    return false;
+  };
+  let text = "", chosen = null;
   if (apiKeyConfigured) {
-    try {
-      text = (
-        await complete({
-          system:
-            "From the given passage of a guru's spoken teaching, extract ONE short self-contained thought — 2 to 3 sentences, at most 60 words — in the passage's OWN words and language (Hindi stays Hindi in Devanagari), only lightly cleaned of filler for reading. It must stand alone beautifully, like a daily thought. Output ONLY the thought.",
-          messages: [{ role: "user", content: c.content.slice(0, 1500) }],
-          maxTokens: 160,
-          light: true,
-          retry: false,
-        })
-      )
-        .trim()
-        .slice(0, 400);
-    } catch {
-      /* fall back to a raw excerpt */
+    for (const c of candidates) {
+      let t = "";
+      try {
+        t = (
+          await complete({
+            system:
+              "You are given a rough passage from a guru's SPOKEN teaching (auto-transcribed, so it may be messy). Write ONE short, self-contained, uplifting daily thought — 2 to 3 sentences, at most 60 words — in simple spoken Hindi (Devanagari), true to what the passage is about. Output ONLY the thought itself. NEVER mention or comment on the passage or its quality; if it reads messy, still give a beautiful short thought in the same spirit. No English, no preamble, no meta-commentary.",
+            messages: [{ role: "user", content: c.content.slice(0, 1500) }],
+            maxTokens: 160,
+            light: true,
+            retry: false,
+          })
+        )
+          .trim()
+          .slice(0, 400);
+      } catch {
+        continue;
+      }
+      if (!looksBad(t)) {
+        text = t;
+        chosen = c;
+        break;
+      }
     }
   }
-  if (!text) text = c.content.slice(0, 220).trim() + "…";
+  // Nothing clean today → skip the thought entirely rather than show garbage or
+  // invent content (the widget simply omits the card). Not cached, so it retries.
+  if (!text) return json(res, 200, {});
   const data = {
     date,
     text,
-    title: c.title,
-    url: c.url ? `${c.url}#t=${Math.floor(c.start_seconds || 0)}s` : null,
+    title: chosen.title,
+    url: chosen.url ? `${chosen.url}#t=${Math.floor(chosen.start_seconds || 0)}s` : null,
   };
   try {
     writeFileSync(THOUGHT_FILE, JSON.stringify(data, null, 2));

@@ -619,7 +619,7 @@
         <div><div class="vcb-title">${TITLE}</div><div class="vcb-sub">Ashaeiynn · answers from the teachings</div></div>
       </div>
       <div class="vcb-head-right">
-        <div class="vcb-head-btns"><button class="vcb-bell" aria-label="Reminders" title="Reminders on special occasions">🔔</button><button class="vcb-voice" aria-label="Voice replies" title="Voice replies">🔇</button><button class="vcb-close" aria-label="Close">×</button></div>
+        <div class="vcb-head-btns"><button class="vcb-bell" aria-label="Reminders" title="Reminders on special occasions">🔔</button><button class="vcb-voice" aria-label="Voice replies" title="Voice replies">🔇</button></div>
         <span class="vcb-credit" title="प्रश्न शेष · questions left" hidden>🪙 <b>0</b></span>
       </div>
     </div>
@@ -2135,7 +2135,8 @@
       .catch(() => {});
   }
   btn.addEventListener("click", () => toggle(!panel.classList.contains("open")));
-  panel.querySelector(".vcb-close").addEventListener("click", () => toggle(false));
+  // the × close button was removed (not needed inside the app / full-screen guide)
+  panel.querySelector(".vcb-close")?.addEventListener("click", () => toggle(false));
 
   // Opened as an installed home-screen app, or on the bot's own page from a
   // phone → open the guide immediately, app-style. Embedded on other websites
