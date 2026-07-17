@@ -13,6 +13,9 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-17 (MacBook Pro session, with the owner)
 
+- **08:2x** Gendered address: male seekers = भाई, female = बहन (judged from the
+  sign-up name; unclear = जी / neutral openers). prompt.mjs rule 2 + the
+  per-question seeker note in server.mjs.
 - **08:0x** Corrections became LEARNED knowledge, not canned replies: removed the
   verbatim early-return (it gave 3 different users the identical text and skipped
   name/style/followups). Same-meaning matches (≥0.9) now inject the correction as

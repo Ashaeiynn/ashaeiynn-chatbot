@@ -510,7 +510,7 @@ async function handleChat(req, res) {
                 }${
                   seekerSadhana ? ` Their ongoing practice (self-declared${seekerSadhana.since ? `, since ${seekerSadhana.since}` : ""}): "${seekerSadhana.name}".` : ""
                 }${
-                  seekerName ? ` Address them by name ONCE, naturally ("${seekerName} जी" in Hindi / "${seekerName} ji" in English).` : ""
+                  seekerName ? ` Address them by name ONCE, naturally — judge gender from the name: clearly male → "${seekerName} भाई" ("${seekerName} bhai" in English), clearly female → "${seekerName} बहन" ("${seekerName} behen"), unsure → "${seekerName} जी". Keep the same भाई/बहन form ANYWHERE you address them in this answer — never call a sister भाई.` : ""
                 } Where it fits naturally, connect the answer to their ongoing journey in one warm phrase; never list their history back to them.${
                   leftover
                     ? ` FRESH conversation — their previous one (${leftover.when || "पिछली बार"}) ended around: "${leftover.q}". Answer the CURRENT question fully and cleanly first. If the current question is a DIFFERENT topic, you may close with ONE short warm bridge offering the old thread back ("वैसे ${leftover.when || "पिछली बार"} हम इस बारे में बात कर रहे थे — चाहें तो वहीं से आगे बढ़ें?") and make ONE of the सुझाव questions that continuation. If it's the same topic, continue naturally with no bridge. Never let the old thread hijack the new answer.`
