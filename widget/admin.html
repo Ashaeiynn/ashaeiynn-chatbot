@@ -399,8 +399,8 @@
     } catch { /* best-effort */ }
   }
 
-  // corrected entries are never "unanswered" — the approved answer IS the answer
-  const isUnanswered = (e) => !e.corrected && !corrFor(e.q) && (e.error || (e.answer && !/Source\s*:/.test(e.answer) && !e.testMode));
+  // correction-taught entries are never "unanswered" — the approved answer IS the answer
+  const isUnanswered = (e) => !e.corrected && !e.guided && !corrFor(e.q) && (e.error || (e.answer && !/Source\s*:/.test(e.answer) && !e.testMode));
   const when = (iso) => new Date(iso).toLocaleString("en-IN",
     { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 

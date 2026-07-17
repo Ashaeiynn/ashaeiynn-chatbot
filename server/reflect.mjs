@@ -76,7 +76,9 @@ for (const e of chats) {
   else buckets["night (22-4)"]++;
 }
 const knowledgeQs = chats.filter((e) => !e.chat);
-const gaps = knowledgeQs.filter((e) => e.answer && !e.answer.includes("Source:"));
+// answers taught by the admin's corrections have no Source line by design —
+// they are the OPPOSITE of a knowledge gap, never count them as one
+const gaps = knowledgeQs.filter((e) => e.answer && !e.answer.includes("Source:") && !e.corrected && !e.guided);
 const norm = (s) => String(s).toLowerCase().replace(/[^\p{L}\p{N} ]/gu, "").replace(/\s+/g, " ").trim();
 const seenQ = new Map();
 for (const e of knowledgeQs) seenQ.set(norm(e.q), (seenQ.get(norm(e.q)) || 0) + 1);
