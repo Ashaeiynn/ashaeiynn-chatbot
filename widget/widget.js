@@ -1696,6 +1696,7 @@
       body: JSON.stringify({ subscription: sub.toJSON(), lang: recLang && recLang.startsWith("en") ? "en" : "hi", uid: journey.uid || "" }),
     }).catch(() => {});
     journey.push = 1;
+    journey.pushLinked = journey.uid || ""; // which identity this phone's doorbell belongs to
     saveJourney();
     syncBell();
     return true;
@@ -1737,7 +1738,11 @@
   function maybeOfferBell() {
     if (!pushCapable() || bellOfferedThisOpen) return;
     if (!journey.uid) return; // sign-up comes first; the offer follows identity
-    if (journey.push && Notification.permission === "granted") return; // already on
+    if (journey.push && Notification.permission === "granted") {
+      // subscribed under an older (or no) identity? re-link it silently
+      if (journey.pushLinked !== journey.uid) pushSubscribe().catch(() => {});
+      return;
+    }
     if (Notification.permission === "granted") {
       pushSubscribe().catch(() => {}); // permission exists — just reconnect quietly
       return;
