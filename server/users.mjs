@@ -63,18 +63,20 @@ export function register({ name, nick, whatsapp, email }) {
   return u;
 }
 
-// every question refreshes lastSeen (and revives a wrongly-deleted user)
+// every question refreshes lastSeen (and revives a wrongly-deleted user);
+// returns the record so the caller can see flags like member at question time
 export function touch(uid) {
-  if (!uid) return;
+  if (!uid) return null;
   const all = load();
   const u = all.find((x) => x.id === uid);
-  if (!u) return;
+  if (!u) return null;
   u.lastSeen = new Date().toISOString();
   if (u.deleted) {
     u.deleted = false;
     delete u.deletedReason;
   }
   save(all);
+  return u;
 }
 
 export function markDeleted(uid, reason) {

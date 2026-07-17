@@ -338,8 +338,13 @@ async function handleChat(req, res) {
   // the app). Used once for this answer, never stored — the server keeps no
   // per-person memory by design.
   const profile = payload.profile && typeof payload.profile === "object" ? payload.profile : null;
+  // Membership decides the invitation path: an admin-marked ⭐ member already
+  // belongs (has their own mentor — never pitch screening/joining); everyone
+  // else may be warmly invited toward a screening when the moment is natural.
+  let seekerMember = false;
   try {
-    users.touch(typeof profile?.uid === "string" ? profile.uid.slice(0, 30) : "");
+    const u = users.touch(typeof profile?.uid === "string" ? profile.uid.slice(0, 30) : "");
+    seekerMember = !!u?.member;
   } catch {
     /* registry is best-effort */
   }
@@ -453,6 +458,7 @@ async function handleChat(req, res) {
     via: payload.via,
     lang: payload.lang,
     hi: wantsHindi,
+    ...(seekerMember ? { member: true } : {}),
     top: chunks.slice(0, 3).map((c) => ({ t: c.title, s: Number(c.score?.toFixed(3)) })),
   };
 
@@ -506,6 +512,12 @@ async function handleChat(req, res) {
                     : ""
                 }]`
               : ""
+          }${
+            seekerMember
+              ? `\n[MEMBER: this seeker is a verified Ashaeiynn member — they already belong to the family and have their own mentor. NEVER suggest booking a screening or joining Ashaeiynn to them. For personal matters (rule 15) send them to THEIR OWN mentor: "अपने mentor से बात कीजिए — वे आपको जानते हैं". Otherwise simply answer from Bhaiya's teachings.]`
+              : profile?.uid
+                ? `\n[NOT YET A MEMBER: this seeker has not joined Ashaeiynn yet. For personal matters (rule 15) guide them to book a screening at ashaeiynn.com. And when a moment is genuinely right — deep interest, a personal ask, a practice they want to begin — you may warmly mention ONCE in the conversation that their own journey with Ashaeiynn can begin with a screening. Inviting, never pushy, never in every answer.]`
+                : ""
           }${
             wantsLink
               ? `\n[The seeker asked for a link. The app automatically shows tappable links right below your answer (the sources, and the requested channel/page). Warmly point there — "नीचे लिंक दिया है, tap करके देखिए" in Hindi or "the link is right below" in English — never say you cannot share links, and never read a URL out loud.]`
@@ -621,6 +633,9 @@ async function handleChat(req, res) {
     // the model forgot its सहायता marker, an answer that points the seeker to
     // a mentor or screening should always carry the links.
     if (!help && /mentor|मेंटर|मेन्टर|screening|स्क्रीनिंग/i.test(answer)) help = "screening";
+    // members never see "Book a screening" — they already belong; their human
+    // door is Ashaeiynn contact (their own mentor)
+    if (help === "screening" && seekerMember) help = "contact";
     if (help) {
       const wanted = help === "screening" ? ["Book a screening", "Contact Ashaeiynn"] : ["Contact Ashaeiynn"];
       for (const l of linkDirectory().filter((l) => wanted.includes(l.title))) {

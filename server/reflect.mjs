@@ -38,7 +38,7 @@ const sample = chats
   .slice(-120)
   .map(
     (e) =>
-      `Q${e.via === "notification" ? " (seeker arrived by tapping a notification — judge the opener's warmth)" : e.via === "voice" ? " (spoken)" : ""}: ${e.q}\nA: ${String(e.answer || e.error || "").slice(0, 400)}`,
+      `Q${e.member ? " (Ashaeiynn member)" : ""}${e.via === "notification" ? " (seeker arrived by tapping a notification — judge the opener's warmth)" : e.via === "voice" ? " (spoken)" : ""}: ${e.q}\nA: ${String(e.answer || e.error || "").slice(0, 400)}`,
   )
   .join("\n---\n");
 
@@ -86,7 +86,7 @@ const thoughtTaken = chats.filter((e) => e.via === "thought").length;
 const hindiShare = chats.length ? Math.round((100 * chats.filter((e) => /[ऀ-ॿ]/.test(e.q)).length) / chats.length) : 0;
 const statsBlock = `
 Counted facts about today (already computed — use them, do not re-derive):
-- ${chats.length} conversations (${knowledgeQs.length} knowledge questions, ${chats.length - knowledgeQs.length} small talk/greetings), ${hindiShare}% in Hindi
+- ${chats.length} conversations (${knowledgeQs.length} knowledge questions, ${chats.length - knowledgeQs.length} small talk/greetings), ${hindiShare}% in Hindi, ${chats.filter((e) => e.member).length} from Ashaeiynn members
 - activity by time of day (IST): ${Object.entries(buckets).map(([k, v]) => `${k}: ${v}`).join(", ")}
 - suggested follow-up questions tapped: ${followupTaken} · "आज का विचार" explored: ${thoughtTaken} · suggested videos/articles opened: ${recosOpened.length}${recosOpened.length ? ` (${[...new Set(recosOpened.map((r) => r.title))].slice(0, 4).join(" | ")})` : ""}
 - knowledge questions answered WITHOUT a source (gaps in the knowledge base): ${gaps.length}${gaps.length ? `\n  ${gaps.slice(0, 5).map((e) => e.q.slice(0, 90)).join("\n  ")}` : ""}
