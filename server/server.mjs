@@ -661,32 +661,43 @@ async function handleStt(req, res) {
   const OK_MIME = new Set(["audio/mp4", "audio/aac", "audio/mpeg", "audio/mp3", "audio/wav", "audio/ogg", "audio/webm", "audio/aiff", "audio/flac", "audio/x-m4a", "audio/m4a"]);
   if (!OK_MIME.has(mime)) mime = "audio/mp4";
   if (mime === "audio/x-m4a" || mime === "audio/m4a") mime = "audio/mp4";
-  try {
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(process.env.GEMINI_MODEL || "gemini-3.1-flash-lite")}:generateContent`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_TTS_KEY },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: "Transcribe this short voice question exactly as spoken — Hindi speech in Devanagari, English speech in English. Output ONLY the transcription, nothing else." },
-                { inlineData: { mimeType: mime, data: audio } },
-              ],
-            },
-          ],
-        }),
-      },
-    );
-    if (!r.ok) throw new Error(`stt ${r.status}`);
-    const data = await r.json();
-    const text = (data.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("") || "").trim();
-    return json(res, 200, { text: fixMishearings(text.slice(0, 2000)) });
-  } catch (err) {
-    console.error("stt error:", err?.message);
-    return json(res, 503, { error: "Couldn't hear that — please try again." });
+  // iOS records a "fragmented" MP4 that Gemini sometimes rejects under one
+  // label but accepts under another — try both before giving up, and if both
+  // fail, surface Gemini's real reason so the phone screen shows it.
+  const tryMimes = mime === "audio/mp4" ? ["audio/mp4", "audio/aac"] : [mime, "audio/mp4"];
+  let lastDetail = "";
+  for (const m of tryMimes) {
+    try {
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(process.env.GEMINI_MODEL || "gemini-3.1-flash-lite")}:generateContent`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_TTS_KEY },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: "Transcribe this short voice question exactly as spoken — Hindi speech in Devanagari, English speech in English. Output ONLY the transcription, nothing else." },
+                  { inlineData: { mimeType: m, data: audio } },
+                ],
+              },
+            ],
+          }),
+        },
+      );
+      if (!r.ok) {
+        lastDetail = `gemini ${r.status}: ${(await r.text()).slice(0, 140)}`;
+        continue;
+      }
+      const data = await r.json();
+      const text = (data.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("") || "").trim();
+      return json(res, 200, { text: fixMishearings(text.slice(0, 2000)) });
+    } catch (err) {
+      lastDetail = String(err?.message || err).slice(0, 140);
+    }
   }
+  console.error("stt error:", lastDetail);
+  return json(res, 503, { error: "Couldn't hear that — please try again.", detail: lastDetail });
 }
 
 // ——— आज का विचार: one thought per day from the teachings, same for everyone ———

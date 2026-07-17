@@ -1148,7 +1148,7 @@
           showLive(
             err?.status === 429
               ? "⚠️ बहुत सारे सवाल एक साथ — 1-2 मिनट रुककर फिर बोलिए"
-              : `⚠️ आवाज़ record हुई पर समझी नहीं जा सकी (server ${err?.status || ""}) — एक बार फिर बोलिए`,
+              : `⚠️ आवाज़ record हुई पर समझी नहीं जा सकी (server ${err?.status || ""}${err?.detail ? " · " + err.detail : ""}) — एक बार फिर बोलिए`,
           );
         } else {
           input.placeholder = "Couldn't transcribe — try again or type…";
@@ -1187,8 +1187,10 @@
       body: JSON.stringify({ audio: btoa(bin), mime: blob.type, lang: recLang }),
     });
     if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
       const e = new Error("stt " + r.status);
       e.status = r.status;
+      e.detail = d.detail || "";
       throw e;
     }
     return String((await r.json()).text || "").trim();
