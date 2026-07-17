@@ -622,17 +622,21 @@ async function handleChat(req, res) {
     }
 
     // Top sources so the widget can link to the exact video moments.
+    // Owner's rule: ONLY our public channels (YouTube + ashaeiynn.com) are
+    // ever shown to seekers — studio material (Vimeo/Zoom/audio) appears
+    // nowhere on screen; the admin log still keeps the full picture.
     const seen = new Set();
     const sources = [];
     for (const c of chunks) {
       if (c.title.startsWith("Bhaiya's approved answer")) continue; // internal, not a linkable source
+      if (!publicUrl(c.url)) continue;
       const key = `${c.title}@${c.start_seconds}`;
       if (seen.has(key)) continue;
       seen.add(key);
       sources.push({
         title: c.title,
         timestamp: formatTimestamp(c.start_seconds),
-        url: publicUrl(c.url) ? `${c.url}#t=${Math.floor(c.start_seconds)}s` : null,
+        url: `${c.url}#t=${Math.floor(c.start_seconds)}s`,
       });
       if (sources.length >= 3) break;
     }
@@ -678,9 +682,18 @@ async function handleChat(req, res) {
       break;
     }
 
+    // Owner's rule: the on-screen "Source:" line appears ONLY when it names a
+    // public source (YouTube/Pathshala). Studio-sourced answers show just the
+    // teaching and Bhaiya's quote. The log keeps the full answer regardless,
+    // so the admin's knowledge-gap review is untouched.
     writeLog({ ...logEntry, answer, ms: Date.now() - t0 });
+    let shown = answer;
+    const srcLine = shown.match(/\n\s*Source\s*[:：][^\n]*/i);
+    if (srcLine && !sources.some((s) => s.timestamp && srcLine[0].includes(s.title))) {
+      shown = shown.replace(/\n\s*Source\s*[:：][^\n]*/gi, "").trimEnd();
+    }
     json(res, 200, {
-      answer,
+      answer: shown,
       sources,
       ...(suggest && profile ? { suggest } : {}),
       ...(followups.length ? { followups } : {}),

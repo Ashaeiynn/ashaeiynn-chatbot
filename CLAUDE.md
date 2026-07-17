@@ -68,10 +68,15 @@ mlx_whisper large-v3-turbo hi) → `data/transcripts/*.json` → `npm run ingest
 ## Testing
 - `npm run test:retrieval` — search quality, free
 - `npm run test:answers` — 22-question answer suite (needs server running; self-paced
-  ~9s/question ≈ 7 min). Passing bar 22/22. Contract: grounded answers end with a
-  `Source:` line + sources[]; off-topic gets NO source line, NO sources[] (either the
-  canonical fallback or a short in-character refusal — both valid). The server strips
-  sources/chips off any sourceless answer deterministically.
+  ~9s/question ≈ 7 min). Passing bar 22/22. Contract (updated 2026-07-17): the model
+  still ends grounded answers with a `Source:` line (kept in questions.log for gap
+  review), but the RESPONSE only shows it when it names a public source — owner's
+  link policy: seekers only ever see YouTube-channel + ashaeiynn.com links/sources;
+  studio material (Vimeo/Zoom/audio) appears nowhere on screen. So a grounded
+  studio-sourced response has NO visible Source line and empty sources[] — the suite
+  may need this in mind before judging pass/fail. Off-topic: canonical fallback or a
+  short in-character refusal, no sources. The server strips sources/chips off any
+  sourceless answer deterministically.
 - ⚠️ QUOTA: local testing and the LIVE bot share ONE Gemini free-tier key — heavy
   test runs throttle real members ("chatbot is very busy"). Test in off-hours, pace
   calls ≥9s apart, and never loop the suite back-to-back.
