@@ -701,10 +701,13 @@ async function handleStt(req, res) {
   // fail, surface Gemini's real reason so the phone screen shows it.
   const tryMimes = mime === "audio/mp4" ? ["audio/mp4", "audio/aac"] : [mime, "audio/mp4"];
   let lastDetail = "";
-  // The iOS home-screen app (and ONLY it — everyone else keeps the Gemini ear
-  // untouched) hears through Groq's Whisper first: a dedicated speech model,
-  // faster, with its own roomy quota. Gemini below remains its fallback.
-  if (src === "ios-app" && process.env.GROQ_API_KEY) {
+  // The iOS home-screen app hears ONLY through Groq's Whisper (dedicated
+  // speech model, its own roomy free quota) — NEVER through Gemini, by the
+  // owner's rule: Gemini listening burns the shared free tier today and would
+  // cost real money on a paid plan. If Groq fails, iOS gets the error, not a
+  // silent fall-through. Everyone else keeps the Gemini ear untouched below.
+  if (src === "ios-app") {
+    if (!process.env.GROQ_API_KEY) return json(res, 503, { error: "stt-not-configured", detail: "groq key missing" });
     try {
       const fd = new FormData();
       const ext = mime.includes("webm") ? "webm" : mime.includes("wav") ? "wav" : mime.includes("ogg") ? "ogg" : "m4a";
@@ -729,6 +732,8 @@ async function handleStt(req, res) {
     } catch (err) {
       lastDetail = "groq: " + String(err?.message || err).slice(0, 120);
     }
+    console.error("stt error:", lastDetail);
+    return json(res, 503, { error: "Couldn't hear that — please try again.", detail: lastDetail });
   }
   // two models = two separate quota pools; when one is exhausted (429) the
   // other often still has room — try both before giving up
@@ -1022,8 +1027,8 @@ const server = createServer(async (req, res) => {
       apiKeyConfigured,
       backup: BACKUP_CONFIGURED ? { ready: true, lastUsed: failover.at, answers: failover.count } : false,
       naturalVoice: TTS_KEY ? "elevenlabs" : GEMINI_TTS_KEY ? "gemini" : false,
-      // the iOS home-screen app's dedicated ear (Whisper via Groq)
-      iosEar: process.env.GROQ_API_KEY ? "groq-whisper" : "gemini",
+      // the iOS home-screen app's ONLY ear (Whisper via Groq — never Gemini)
+      iosEar: process.env.GROQ_API_KEY ? "groq-whisper" : "not-configured",
       knowledgeBase: existsSync(path.join(ROOT, "data", "knowledge.db")) ? "built" : "missing",
     });
   }
@@ -1211,13 +1216,23 @@ const server = createServer(async (req, res) => {
     }
   }
   // ——— the Users tab: member registry with computed status ———
+  // Second lock on top of admin, SAME password as the Library — member
+  // details (names, WhatsApp, email) are personal and deserve the extra door.
+  const usersOk = () => {
+    if (!adminOk()) return false;
+    if (LIBRARY_KEY && req.headers["x-library-key"] !== LIBRARY_KEY) {
+      json(res, 403, { error: "users-locked" });
+      return false;
+    }
+    return true;
+  };
   if (req.method === "GET" && url.pathname === "/api/admin/users") {
-    if (!adminOk()) return;
+    if (!usersOk()) return;
     const subs = new Set(push.subUids?.() || []);
     return json(res, 200, { users: users.listUsers().map((u) => ({ ...u, subscribed: subs.has(u.id) })) });
   }
   if (req.method === "POST" && url.pathname === "/api/admin/user-update") {
-    if (!adminOk()) return;
+    if (!usersOk()) return;
     let body = "";
     for await (const part of req) body += part;
     try {

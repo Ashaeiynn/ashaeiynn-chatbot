@@ -189,6 +189,13 @@
   <button class="tab" data-t="users">👥 Users</button>
 </nav>
 <main id="view-users" hidden>
+  <div id="ulock" class="teach-card" style="max-width:420px;margin:34px auto;text-align:center" hidden>
+    <h3>🔒 Users locked</h3>
+    <p>Member details are private — enter the password (same as the Library).</p>
+    <input type="password" id="upw" placeholder="Password">
+    <button class="gold-btn" id="ugo" style="width:100%;padding:10px">Unlock</button>
+    <p id="uerr" style="color:#ff9d76;min-height:16px;margin-top:8px"></p>
+  </div>
   <div id="ustats" class="statsgrid"></div>
   <div id="ubar" style="display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap">
     <button class="chip on" data-uf="all">All</button>
@@ -559,9 +566,28 @@
     uQuery = e.target.value.toLowerCase();
     renderUsers();
   });
+  // second lock, same password as the Library (one unlock opens both tabs)
+  function usersLocked(show, err = "") {
+    $("#ulock").hidden = !show;
+    $("#ustats").hidden = $("#ubar").hidden = $("#ulist").hidden = show;
+    $("#uerr").textContent = err;
+    if (show) $("#upw").focus();
+  }
+  $("#ugo").addEventListener("click", () => {
+    sessionStorage.setItem("libKey", $("#upw").value.trim());
+    $("#upw").value = "";
+    loadUsers();
+  });
+  $("#upw").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#ugo").click(); });
   async function loadUsers() {
-    const r = await fetch("/api/admin/users", { headers: { "x-admin-key": key() } }).catch(() => null);
+    if (!sessionStorage.getItem("libKey")) return usersLocked(true);
+    const r = await fetch("/api/admin/users", { headers: { "x-admin-key": key(), "x-library-key": sessionStorage.getItem("libKey") || "" } }).catch(() => null);
+    if (r && r.status === 403) {
+      sessionStorage.removeItem("libKey");
+      return usersLocked(true, "Wrong password — try again.");
+    }
     if (!r || !r.ok) return;
+    usersLocked(false);
     uAll = (await r.json()).users || [];
     const c = (s) => uAll.filter((u) => u.status === s).length;
     $("#ustats").innerHTML = `
@@ -631,7 +657,7 @@
   async function updateUser(id, patch) {
     await fetch("/api/admin/user-update", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-admin-key": key() },
+      headers: { "Content-Type": "application/json", "x-admin-key": key(), "x-library-key": sessionStorage.getItem("libKey") || "" },
       body: JSON.stringify({ id, ...patch }),
     }).catch(() => {});
     loadUsers();
