@@ -114,6 +114,22 @@
   #go{width:100%;background:linear-gradient(140deg,var(--gold2),var(--gold) 70%);color:#231a04;font-weight:600;border:none;padding:11px}
   #lerr{color:#ff9d76;font-size:12.5px;margin-top:10px;min-height:16px}
 
+  /* users table */
+  .utwrap{border:1px solid var(--line);border-radius:14px;overflow:auto;background:var(--card)}
+  .utable{width:100%;border-collapse:collapse;min-width:860px}
+  .utable th{font-size:10.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--gold);text-align:left;
+    padding:11px 14px;border-bottom:1px solid var(--line);white-space:nowrap;font-weight:600}
+  .utable td{padding:11px 14px;font-size:13px;color:var(--ink);border-bottom:1px solid var(--line);
+    white-space:nowrap;vertical-align:middle}
+  .utable tbody tr:last-child td{border-bottom:none}
+  .utable tbody tr:hover{background:rgba(217,169,79,.05)}
+  .utable td.em{max-width:230px;overflow:hidden;text-overflow:ellipsis;color:var(--dim)}
+  .utable td.dim{color:var(--dim);font-size:12px}
+  .ustat{border-radius:999px;padding:2px 10px;font-size:11.5px;border:1px solid var(--line);white-space:nowrap}
+  .ustat.active{color:#9adcb4;border-color:#2c5c3f}
+  .ustat.inactive{color:#e8c987;border-color:rgba(227,183,102,.5)}
+  .ustat.deleted{color:#ff9d76;border-color:#a04a33}
+
   /* ——— the chatbot's living cosmos, behind everything ——— */
   .acosmos{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;
     background:radial-gradient(135% 100% at 50% 0%,#0a110b 0%,#070b08 55%,#050704 100%)}
@@ -563,39 +579,54 @@
           (uFilter === "member" ? u.member : uFilter === "subscribed" ? u.subscribed : u.status === uFilter)) &&
         (!uQuery || `${u.name} ${u.nick} ${u.whatsapp} ${u.email}`.toLowerCase().includes(uQuery)),
     );
-    $("#ulist").innerHTML = list.length
-      ? ""
-      : `<div class="empty">${uAll.length ? "No users match this filter." : "No sign-ups yet — every new user registers before their first question."}</div>`;
-    const dot = { active: "🟢", inactive: "🟡", deleted: "🔴" };
+    $("#ulist").innerHTML = "";
+    if (!list.length) {
+      $("#ulist").innerHTML = `<div class="empty">${uAll.length ? "No users match this filter." : "No sign-ups yet — every new user registers before their first question."}</div>`;
+      return;
+    }
     const day = (iso) => new Date(iso).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short" });
+    const label = { active: "Active", inactive: "Inactive", deleted: "Deleted" };
+    const wrap = document.createElement("div");
+    wrap.className = "utwrap";
+    const table = document.createElement("table");
+    table.className = "utable";
+    table.innerHTML = `<thead><tr>
+      <th>Name</th><th>Nickname</th><th>WhatsApp</th><th>Email</th>
+      <th>Joined</th><th>Last seen</th><th>Status</th><th style="text-align:right">Actions</th>
+    </tr></thead>`;
+    const tbody = document.createElement("tbody");
     for (const u of list) {
-      const el = document.createElement("div");
-      el.className = "job";
-      el.style.alignItems = "center";
-      el.innerHTML = `<span>${dot[u.status] || "❔"}</span>
-        <div style="display:flex;gap:16px;align-items:center;flex:1;min-width:0;flex-wrap:wrap">
-          <span style="white-space:nowrap;font-weight:600">${esc(u.name)} <span style="color:var(--gold2);font-weight:400">“${esc(u.nick)}”</span>${u.member ? " ⭐" : ""}${u.subscribed ? " 🔔" : ""}</span>
-          <span class="d" style="white-space:nowrap">📱 ${esc(u.whatsapp)}</span>
-          <span class="d" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">✉️ ${esc(u.email)}</span>
-          <span class="d" style="white-space:nowrap">joined ${day(u.at)} · seen ${day(u.lastSeen)}${u.deletedReason ? ` · ${esc(u.deletedReason)}` : ""}</span>
-        </div>`;
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td style="font-weight:600">${esc(u.name)}${u.member ? " ⭐" : ""}</td>
+        <td style="color:var(--gold2)">“${esc(u.nick)}”</td>
+        <td class="dim">${esc(u.whatsapp)}</td>
+        <td class="em" title="${esc(u.email)}">${esc(u.email)}</td>
+        <td class="dim">${day(u.at)}</td>
+        <td class="dim">${day(u.lastSeen)}</td>
+        <td><span class="ustat ${u.status}" ${u.deletedReason ? `title="${esc(u.deletedReason)}"` : ""}>${label[u.status] || u.status}</span>${u.subscribed ? " 🔔" : ""}</td>`;
+      const td = document.createElement("td");
+      td.style.textAlign = "right";
       const mem = document.createElement("button");
       mem.className = "mini";
-      mem.textContent = u.member ? "⭐ Member" : "☆ Mark member";
+      mem.textContent = u.member ? "⭐ Member" : "☆ Member";
+      mem.title = u.member ? "Remove member badge" : "Mark as Ashaeiynn member";
       mem.addEventListener("click", () => updateUser(u.id, { member: !u.member }));
       const del = document.createElement("button");
       del.className = "mini danger";
+      del.style.marginLeft = "6px";
       del.textContent = u.status === "deleted" ? "Restore" : "Delete";
       del.addEventListener("click", () => {
         if (u.status !== "deleted" && !confirm(`Delete ${u.name}? They can sign up again anytime.`)) return;
         updateUser(u.id, { deleted: u.status !== "deleted" });
       });
-      const btns = document.createElement("div");
-      btns.style.cssText = "display:flex;gap:6px;margin-left:auto;flex-shrink:0";
-      btns.append(mem, del);
-      el.appendChild(btns);
-      $("#ulist").appendChild(el);
+      td.append(mem, del);
+      tr.appendChild(td);
+      tbody.appendChild(tr);
     }
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    $("#ulist").appendChild(wrap);
   }
   async function updateUser(id, patch) {
     await fetch("/api/admin/user-update", {
