@@ -1952,6 +1952,9 @@
         journey.name = d.nick;
         saveJourney();
         card.remove();
+        // now that they have an identity, offer the doorbell straight away —
+        // no waiting for a reopen (it then returns every open until allowed)
+        maybeOfferBell();
       } catch (e2) {
         err.textContent = e2.message;
         go.disabled = false;
