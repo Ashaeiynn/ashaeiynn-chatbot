@@ -1170,7 +1170,8 @@ const server = createServer(async (req, res) => {
   // ——— the Users tab: member registry with computed status ———
   if (req.method === "GET" && url.pathname === "/api/admin/users") {
     if (!adminOk()) return;
-    return json(res, 200, { users: users.listUsers() });
+    const subs = new Set(push.subUids?.() || []);
+    return json(res, 200, { users: users.listUsers().map((u) => ({ ...u, subscribed: subs.has(u.id) })) });
   }
   if (req.method === "POST" && url.pathname === "/api/admin/user-update") {
     if (!adminOk()) return;

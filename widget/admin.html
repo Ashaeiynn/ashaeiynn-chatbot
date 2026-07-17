@@ -180,6 +180,7 @@
     <button class="chip" data-uf="inactive">🟡 Inactive</button>
     <button class="chip" data-uf="deleted">🔴 Deleted</button>
     <button class="chip" data-uf="member">⭐ Members</button>
+    <button class="chip" data-uf="subscribed">🔔 Subscribed</button>
     <input id="usearch" placeholder="Search name, number, email…" style="flex:1;min-width:160px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 16px;color:var(--ink);font-size:13.5px;outline:none">
   </div>
   <div id="ulist"><div class="empty">No sign-ups yet — every new user registers before their first question.</div></div>
@@ -558,7 +559,8 @@
   function renderUsers() {
     const list = uAll.filter(
       (u) =>
-        (uFilter === "all" || (uFilter === "member" ? u.member : u.status === uFilter)) &&
+        (uFilter === "all" ||
+          (uFilter === "member" ? u.member : uFilter === "subscribed" ? u.subscribed : u.status === uFilter)) &&
         (!uQuery || `${u.name} ${u.nick} ${u.whatsapp} ${u.email}`.toLowerCase().includes(uQuery)),
     );
     $("#ulist").innerHTML = list.length
@@ -572,7 +574,7 @@
       el.style.alignItems = "center";
       el.innerHTML = `<span>${dot[u.status] || "❔"}</span>
         <div style="display:flex;gap:16px;align-items:center;flex:1;min-width:0;flex-wrap:wrap">
-          <span style="white-space:nowrap;font-weight:600">${esc(u.name)} <span style="color:var(--gold2);font-weight:400">“${esc(u.nick)}”</span>${u.member ? " ⭐" : ""}</span>
+          <span style="white-space:nowrap;font-weight:600">${esc(u.name)} <span style="color:var(--gold2);font-weight:400">“${esc(u.nick)}”</span>${u.member ? " ⭐" : ""}${u.subscribed ? " 🔔" : ""}</span>
           <span class="d" style="white-space:nowrap">📱 ${esc(u.whatsapp)}</span>
           <span class="d" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">✉️ ${esc(u.email)}</span>
           <span class="d" style="white-space:nowrap">joined ${day(u.at)} · seen ${day(u.lastSeen)}${u.deletedReason ? ` · ${esc(u.deletedReason)}` : ""}</span>
@@ -672,8 +674,13 @@
     const d = await r.json();
     $("#nstats").innerHTML = `
       <div class="stat"><b>${d.ready ? "🟢" : "🔴"}</b><span>${d.ready ? "system ready" : "setup pending"}</span></div>
-      <div class="stat"><b>${d.subscribers}</b><span>🔔 subscribed phones</span></div>
+      <div class="stat" id="nsubstat" style="cursor:pointer" title="See who is subscribed"><b>${d.subscribers}</b><span>🔔 subscribed phones →</span></div>
       <div class="stat"><b>${(d.log || []).length}</b><span>notifications sent</span></div>`;
+    $("#nsubstat").addEventListener("click", () => {
+      uFilter = "subscribed";
+      document.querySelectorAll(".chip[data-uf]").forEach((x) => x.classList.toggle("on", x.dataset.uf === "subscribed"));
+      document.querySelector('.tab[data-t="users"]').click();
+    });
     $("#nsend").disabled = !d.ready;
     if (!d.ready) $("#nresult").textContent = "⚠️ Push system not configured yet — ask Claude to finish the notifications setup";
     const queued = d.queued || [];

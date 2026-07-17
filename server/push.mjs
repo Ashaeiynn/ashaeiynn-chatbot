@@ -70,6 +70,7 @@ export function removeSub(endpoint) {
   return all.length - left.length;
 }
 export const subCount = () => load(SUBS, []).length;
+export const subUids = () => [...new Set(load(SUBS, []).map((s) => s.uid).filter(Boolean))];
 export function removeByUid(uid) {
   if (!uid) return 0;
   const all = load(SUBS, []);
