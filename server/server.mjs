@@ -1293,7 +1293,7 @@ setInterval(queueTick, 60_000).unref?.();
 
 // App icons follow the theme: rebuilt once per style version at startup
 // (sharp ships with the ML deps). Purely cosmetic — failures never matter.
-const ICON_STYLE = "gold-v2";
+const ICON_STYLE = "gold-v3";
 try {
   const stampFile = path.join(ROOT, "data", "icon-style.txt");
   const current = existsSync(stampFile) ? readFileSync(stampFile, "utf8").trim() : "";

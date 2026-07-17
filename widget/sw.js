@@ -13,8 +13,8 @@ self.addEventListener("push", (e) => {
   e.waitUntil(
     self.registration.showNotification(d.title || "Ask Your Guide 🙏", {
       body: d.body || "",
-      icon: "/icon-192.png?v=g2",
-      badge: "/icon-192.png?v=g2",
+      icon: "/icon-192.png?v=g3",
+      badge: "/icon-192.png?v=g3",
       data: { url: d.url || "/", title: d.title || "", body: d.body || "" },
     }),
   );

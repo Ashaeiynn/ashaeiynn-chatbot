@@ -35,8 +35,15 @@ const bgSvg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="512" h
 const LOGO_W = 300; // lotus width inside the 512 canvas
 
 // TRUE gold lotus: use the logo purely as a stencil (its alpha), filled with
-// solid gold — tinting the original colors washed out to silver.
-const resized = await sharp(path.join(W, "logo.png")).resize({ width: LOGO_W }).ensureAlpha().png().toBuffer();
+// solid gold — tinting the original colors washed out to silver. The canvas
+// is padded so the glow fades out INSIDE it (no clipped rectangle edges).
+const PAD = 30;
+const resized = await sharp(path.join(W, "logo.png"))
+  .resize({ width: LOGO_W })
+  .ensureAlpha()
+  .extend({ top: PAD, bottom: PAD, left: PAD, right: PAD, background: { r: 0, g: 0, b: 0, alpha: 0 } })
+  .png()
+  .toBuffer();
 const meta = await sharp(resized).metadata();
 const alpha = await sharp(resized).extractChannel(3).toBuffer(); // the stencil
 const goldLotus = await sharp({
