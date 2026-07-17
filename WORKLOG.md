@@ -13,6 +13,23 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-17 (MacBook Pro session, with the owner)
 
+- **~19:00** Member-suggested corrections shipped (owner chose MEMBERS-ONLY).
+  Flow: bot detects a member says an answer was wrong (LLM emits `सुधार: 1`,
+  server-gated to members → correctionInvite) OR a member taps 👎 (/api/feedback
+  returns invite:true for members) → widget shows a "teach the right answer" box
+  → POST /api/suggest (members-only, verified via users.byId) → PENDING queue in
+  server/suggestions.mjs (data/suggestions.json, gitignored). Admin: new
+  "📝 Suggestions (N)" chip in Questions tab → review card (question, bot answer,
+  editable suggestion) → Approve (→ addCorrection, SAME pipeline as admin edits,
+  bot learns it) / Reject. SACRED RULE preserved: nothing user-submitted touches
+  knowledge until admin approves. New: users.byId(); markers सुधार parsed+
+  seatbelt-scrubbed. Verified live end-to-end (member gating, submit, list,
+  approve→correction, reject); admin UI screenshot-confirmed.
+- **~14:30** iOS Hindi STT: auto-detect on English toggle (was force-en →
+  mangled Hindi), short spelling prompt (long Devanagari prompt made Whisper echo
+  it on short clips), verbose_json diagnostics (`stt ok:` lines in journalctl show
+  size/lang/duration/text). Likely root cause = user's language toggle on English.
+
 - **08:2x** Gendered address: male seekers = भाई, female = बहन (judged from the
   sign-up name; unclear = जी / neutral openers). prompt.mjs rule 2 + the
   per-question seeker note in server.mjs.
