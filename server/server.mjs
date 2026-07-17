@@ -465,6 +465,10 @@ async function handleChat(req, res) {
     lang: payload.lang,
     hi: wantsHindi,
     ...(seekerMember ? { member: true } : {}),
+    // this answer was composed WITH the admin's corrected answer as the
+    // highest-authority excerpt (same-meaning matches return it verbatim
+    // earlier and carry corrected:true instead)
+    ...(approved ? { guided: true } : {}),
     top: chunks.slice(0, 3).map((c) => ({ t: c.title, s: Number(c.score?.toFixed(3)) })),
   };
 
