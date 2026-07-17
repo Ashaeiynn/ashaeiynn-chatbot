@@ -70,6 +70,8 @@ if (process.platform === "darwin" && existsSync("/usr/bin/caffeinate")) {
 const MISHEARD = [
   [/गुरुवार/g, "गुरुदेव"],
   [/\bguru\s?[vw]aa?r\b/gi, "Gurudev"],
+  [/\bg[iu]r[uo]\s?dev\b/gi, "Gurudev"],
+  [/गिरुदेव|गीरुदेव/g, "गुरुदेव"],
   [/[अआ]शा\s?[ईइय]{1,2}न/g, "Ashaeiynn"],
   [/\basha\s?[eiy]{1,3}nn?\b/gi, "Ashaeiynn"],
   [/पाठ\s+शाला/g, "पाठशाला"],
