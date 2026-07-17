@@ -22,6 +22,7 @@ data/push-subs.json
 data/push-log.json
 data/push-state.json
 data/push-queue.json
+data/users.json
 data/uploads/
 data/teach-queue.json
 models/**/model_quantized.onnx

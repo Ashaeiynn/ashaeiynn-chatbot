@@ -923,6 +923,7 @@
           via: via || "text",
           lang: recLang,
           profile: {
+            uid: journey.uid || "",
             name: journey.name || "",
             summary: journey.summary || "",
             style: journey.commStyle || "",
@@ -1197,6 +1198,7 @@
   }
 
   function startListening(target) {
+    if (needSignup()) return;
     if (useRecorder()) {
       startRecording(target);
       return;
@@ -1403,7 +1405,14 @@
   };
   // channel/page links have no timestamp — show just the title then
   const srcLabel = (s) => (s.timestamp ? `${s.title} (${s.timestamp})` : s.title);
+  // sign-up comes before the first question — the gate every ask passes through
+  function needSignup() {
+    if (journey.uid) return false;
+    maybeAskName();
+    return true;
+  }
   function askChip(q) {
+    if (needSignup()) return;
     if (panel.dataset.mode === "text") {
       input.value = q;
       form.requestSubmit();
@@ -1620,7 +1629,7 @@
       method: "POST",
       headers: { "Content-Type": "application/json" },
       // lang: auto-messages arrive in the seeker's own language
-      body: JSON.stringify({ subscription: sub.toJSON(), lang: recLang && recLang.startsWith("en") ? "en" : "hi" }),
+      body: JSON.stringify({ subscription: sub.toJSON(), lang: recLang && recLang.startsWith("en") ? "en" : "hi", uid: journey.uid || "" }),
     }).catch(() => {});
     journey.push = 1;
     saveJourney();
@@ -1801,40 +1810,64 @@
     }
   }
 
-  // first ever open: ask the seeker's name (one time, skippable, device-only)
+  // Sign-up before first use (owner's rule): the registry lets Ashaeiynn know
+  // members from visitors. The guide addresses the seeker by their nickname.
   function maybeAskName() {
-    if (journey.name || journey.namePrompted) return;
-    journey.namePrompted = true;
-    saveJourney();
+    if (journey.uid || panel.querySelector(".vcb-namecard")) return;
     const card = document.createElement("div");
     card.className = "vcb-namecard";
     const h = document.createElement("h4");
-    h.textContent = "🙏 जय सिया राम — आपका नाम क्या है?";
+    h.textContent = "🙏 जय सिया राम — Welcome to Ashaeiynn Guide";
     const p = document.createElement("p");
-    p.textContent = "ताकि आपका guide आपसे नाम से बात कर सके। नाम सिर्फ़ आपके इसी फ़ोन में रहता है — कहीं और नहीं।";
-    const inp = document.createElement("input");
-    inp.placeholder = "आपका नाम / Your name";
-    inp.maxLength = 30;
+    p.textContent = "A one-time introduction before your journey begins. Your details stay with Ashaeiynn only.";
+    const name = document.createElement("input");
+    name.placeholder = "Full name";
+    name.maxLength = 80;
+    name.value = "";
+    const nick = document.createElement("input");
+    nick.placeholder = "Nickname — what should the guide call you?";
+    nick.maxLength = 40;
+    nick.value = journey.name || "";
+    const wa = document.createElement("input");
+    wa.placeholder = "WhatsApp number";
+    wa.maxLength = 20;
+    wa.inputMode = "tel";
+    const em = document.createElement("input");
+    em.placeholder = "Email ID";
+    em.maxLength = 120;
+    em.inputMode = "email";
+    const err = document.createElement("p");
+    err.style.cssText = "color:#ff9d76;font-size:12.5px;min-height:16px;margin:0";
     const go = document.createElement("button");
     go.className = "vcb-namego";
-    go.textContent = "आगे बढ़ें 🙏";
-    const skip = document.createElement("button");
-    skip.className = "vcb-nameskip";
-    skip.textContent = "बाद में (skip)";
-    const done = () => {
-      const v = inp.value.trim();
-      if (v) {
-        journey.name = v.slice(0, 30);
+    go.textContent = "Begin the journey 🙏";
+    const submit = async () => {
+      err.textContent = "";
+      go.disabled = true;
+      go.textContent = "One moment…";
+      try {
+        const r = await fetch(`${API}/api/signup`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: name.value, nick: nick.value, whatsapp: wa.value, email: em.value }),
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || "Could not sign up — try again.");
+        journey.uid = d.uid;
+        journey.name = d.nick;
         saveJourney();
+        card.remove();
+      } catch (e2) {
+        err.textContent = e2.message;
+        go.disabled = false;
+        go.textContent = "Begin the journey 🙏";
       }
-      card.remove();
     };
-    go.addEventListener("click", done);
-    inp.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") done();
+    go.addEventListener("click", submit);
+    em.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") submit();
     });
-    skip.addEventListener("click", () => card.remove());
-    card.append(h, p, inp, go, skip);
+    card.append(h, p, name, nick, wa, em, err, go);
     panel.appendChild(card);
   }
 
@@ -1921,6 +1954,7 @@
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (needSignup()) return;
     const text = input.value.trim();
     if (!text || send.disabled) return;
     input.value = "";

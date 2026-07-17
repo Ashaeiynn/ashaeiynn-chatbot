@@ -9,6 +9,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { ROOT } from "./env.mjs";
+import { markDeleted } from "./users.mjs";
 
 const SUBS = path.join(ROOT, "data", "push-subs.json");
 const LOG = path.join(ROOT, "data", "push-log.json");
@@ -48,15 +49,16 @@ const save = (f, v) => {
   }
 };
 
-export function addSub(sub, lang) {
+export function addSub(sub, lang, uid) {
   if (!sub?.endpoint || !sub?.keys) return false;
   const all = load(SUBS, []);
   const clean = lang === "en" ? "en" : "hi";
   const existing = all.find((s) => s.endpoint === sub.endpoint);
   if (existing) {
     existing.lang = clean; // language preference can change over time
+    if (uid) existing.uid = uid;
   } else {
-    all.push({ endpoint: sub.endpoint, keys: sub.keys, lang: clean, at: new Date().toISOString() });
+    all.push({ endpoint: sub.endpoint, keys: sub.keys, lang: clean, uid: uid || "", at: new Date().toISOString() });
   }
   save(SUBS, all);
   return true;
@@ -92,7 +94,20 @@ export async function sendToAll(title, body, url, source) {
       if (err?.statusCode === 404 || err?.statusCode === 410) dead.push(s.endpoint); // uninstalled
     }
   }
-  if (dead.length) save(SUBS, all.filter((s) => !dead.includes(s.endpoint)));
+  if (dead.length) {
+    // a dead channel is the strongest "app removed" signal a phone ever sends
+    for (const ep of dead) {
+      const s = all.find((x) => x.endpoint === ep);
+      if (s?.uid) {
+        try {
+          markDeleted(s.uid, "app removed (push channel died)");
+        } catch {
+          /* registry best-effort */
+        }
+      }
+    }
+    save(SUBS, all.filter((s) => !dead.includes(s.endpoint)));
+  }
   const log = load(LOG, []);
   log.push({ at: new Date().toISOString(), title: forLog(title).slice(0, 120), body: forLog(body).slice(0, 400), url: url || "", source: source || "admin", sent, of: all.length });
   save(LOG, log.slice(-500));

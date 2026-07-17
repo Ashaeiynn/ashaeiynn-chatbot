@@ -29,6 +29,22 @@ import { warmup } from "./embed.mjs";
 import { buildSystemPrompt, buildContextBlock } from "./prompt.mjs";
 import { complete, PROVIDER, ACTIVE_MODEL, keyConfigured, BACKUP_CONFIGURED, failover, LlmAuthError, LlmRateLimitError } from "./llm.mjs";
 
+// the member registry — like panchang and push, never a dependency
+let users = {
+  register: () => {
+    throw new Error("Sign-up is unavailable right now — please try again shortly.");
+  },
+  touch: () => {},
+  markDeleted: () => {},
+  setFlags: () => null,
+  listUsers: () => [],
+};
+try {
+  users = await import("./users.mjs");
+} catch (err) {
+  console.error("users registry disabled:", err?.message);
+}
+
 const PORT = Number(process.env.PORT || 3111);
 const FALLBACK =
   process.env.FALLBACK_MESSAGE ||
@@ -320,6 +336,11 @@ async function handleChat(req, res) {
   // the app). Used once for this answer, never stored — the server keeps no
   // per-person memory by design.
   const profile = payload.profile && typeof payload.profile === "object" ? payload.profile : null;
+  try {
+    users.touch(typeof profile?.uid === "string" ? profile.uid.slice(0, 30) : "");
+  } catch {
+    /* registry is best-effort */
+  }
   const seekerName = typeof profile?.name === "string" ? profile.name.trim().slice(0, 40) : "";
   const seekerSummary = typeof profile?.summary === "string" ? profile.summary.trim().slice(0, 300) : "";
   const seekerStyle = typeof profile?.style === "string" ? profile.style.trim().slice(0, 160) : "";
@@ -867,6 +888,22 @@ const server = createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/push/key") {
     return json(res, 200, { ready: push.pushReady(), key: push.publicKey() });
   }
+  // ——— sign-up: the guide asks who is arriving (member registry) ———
+  if (req.method === "POST" && url.pathname === "/api/signup") {
+    const ip = req.socket.remoteAddress ?? "unknown";
+    if (rateLimited(ip, "light", 60)) return json(res, 429, { error: "Too many requests." });
+    let body = "";
+    for await (const part of req) {
+      body += part;
+      if (body.length > 5_000) return json(res, 413, { error: "Too long." });
+    }
+    try {
+      const u = users.register(JSON.parse(body));
+      return json(res, 200, { uid: u.id, nick: u.nick });
+    } catch (err) {
+      return json(res, 400, { error: String(err?.message || "Could not sign up.") });
+    }
+  }
   if (req.method === "POST" && (url.pathname === "/api/push/subscribe" || url.pathname === "/api/push/unsubscribe")) {
     const ip = req.socket.remoteAddress ?? "unknown";
     if (rateLimited(ip, "light", 60)) return json(res, 429, { error: "Too many requests." });
@@ -877,7 +914,7 @@ const server = createServer(async (req, res) => {
     }
     try {
       const p = JSON.parse(body);
-      if (url.pathname === "/api/push/subscribe") push.addSub(p.subscription || p, p.lang);
+      if (url.pathname === "/api/push/subscribe") push.addSub(p.subscription || p, p.lang, String(p.uid || "").slice(0, 30));
       else push.removeSub(String(p.endpoint || ""));
       return json(res, 200, { ok: true });
     } catch {
@@ -1103,6 +1140,24 @@ const server = createServer(async (req, res) => {
       return json(res, 200, { notes: [] });
     }
   }
+  // ——— the Users tab: member registry with computed status ———
+  if (req.method === "GET" && url.pathname === "/api/admin/users") {
+    if (!adminOk()) return;
+    return json(res, 200, { users: users.listUsers() });
+  }
+  if (req.method === "POST" && url.pathname === "/api/admin/user-update") {
+    if (!adminOk()) return;
+    let body = "";
+    for await (const part of req) body += part;
+    try {
+      const p = JSON.parse(body);
+      const u = users.setFlags(String(p.id || ""), p);
+      return u ? json(res, 200, { ok: true }) : json(res, 404, { error: "User not found." });
+    } catch {
+      return json(res, 400, { error: "Invalid JSON." });
+    }
+  }
+
   // ——— the Learning tab: current mind + its night-by-night growth ———
   if (req.method === "GET" && url.pathname === "/api/admin/learning") {
     if (!adminOk()) return;

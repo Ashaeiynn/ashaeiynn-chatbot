@@ -170,7 +170,20 @@
   <button class="tab" data-t="library">📖 Library</button>
   <button class="tab" data-t="notify">🔔 Notify</button>
   <button class="tab" data-t="learning">🧠 Learning</button>
+  <button class="tab" data-t="users">👥 Users</button>
 </nav>
+<main id="view-users" hidden>
+  <div id="ustats" class="statsgrid"></div>
+  <div id="ubar" style="display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap">
+    <button class="chip on" data-uf="all">All</button>
+    <button class="chip" data-uf="active">🟢 Active</button>
+    <button class="chip" data-uf="inactive">🟡 Inactive</button>
+    <button class="chip" data-uf="deleted">🔴 Deleted</button>
+    <button class="chip" data-uf="member">⭐ Members</button>
+    <input id="usearch" placeholder="Search name, number, email…" style="flex:1;min-width:160px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 16px;color:var(--ink);font-size:13.5px;outline:none">
+  </div>
+  <div id="ulist"><div class="empty">No sign-ups yet — every new user registers before their first question.</div></div>
+</main>
 <main id="view-learning" hidden>
   <div id="lstats" class="statsgrid"></div>
   <div class="teach-card">
@@ -475,8 +488,8 @@
     }, Math.max(0, 650 - (Date.now() - t0)));
   });
   $("#logout").addEventListener("click", () => { localStorage.removeItem("adminKey"); location.reload(); });
-  document.querySelectorAll(".chip").forEach((c) => c.addEventListener("click", () => {
-    document.querySelectorAll(".chip").forEach((x) => x.classList.remove("on"));
+  document.querySelectorAll(".chip[data-f]").forEach((c) => c.addEventListener("click", () => {
+    document.querySelectorAll(".chip[data-f]").forEach((x) => x.classList.remove("on"));
     c.classList.add("on"); filter = c.dataset.f; render();
   }));
   $("#search").addEventListener("input", (e) => { query = e.target.value; render(); });
@@ -491,11 +504,85 @@
     $("#view-library").hidden = t.dataset.t !== "library";
     $("#view-notify").hidden = t.dataset.t !== "notify";
     $("#view-learning").hidden = t.dataset.t !== "learning";
+    $("#view-users").hidden = t.dataset.t !== "users";
     if (t.dataset.t === "teach") loadJobs();
     if (t.dataset.t === "library") loadLibrary();
     if (t.dataset.t === "notify") loadNotify();
     if (t.dataset.t === "learning") loadLearning();
+    if (t.dataset.t === "users") loadUsers();
   }));
+
+  // ——— 👥 Users: the member registry ———
+  let uFilter = "all";
+  let uQuery = "";
+  let uAll = [];
+  document.querySelectorAll(".chip[data-uf]").forEach((c) => c.addEventListener("click", () => {
+    document.querySelectorAll(".chip[data-uf]").forEach((x) => x.classList.remove("on"));
+    c.classList.add("on");
+    uFilter = c.dataset.uf;
+    renderUsers();
+  }));
+  $("#usearch").addEventListener("input", (e) => {
+    uQuery = e.target.value.toLowerCase();
+    renderUsers();
+  });
+  async function loadUsers() {
+    const r = await fetch("/api/admin/users", { headers: { "x-admin-key": key() } }).catch(() => null);
+    if (!r || !r.ok) return;
+    uAll = (await r.json()).users || [];
+    const c = (s) => uAll.filter((u) => u.status === s).length;
+    $("#ustats").innerHTML = `
+      <div class="stat"><b>${uAll.length}</b><span>total sign-ups</span></div>
+      <div class="stat"><b>${c("active")}</b><span>🟢 active (≤15 days)</span></div>
+      <div class="stat"><b>${c("inactive")}</b><span>🟡 inactive (15+ days)</span></div>
+      <div class="stat"><b>${c("deleted")}</b><span>🔴 deleted</span></div>
+      <div class="stat"><b>${uAll.filter((u) => u.member).length}</b><span>⭐ members</span></div>`;
+    renderUsers();
+  }
+  function renderUsers() {
+    const list = uAll.filter(
+      (u) =>
+        (uFilter === "all" || (uFilter === "member" ? u.member : u.status === uFilter)) &&
+        (!uQuery || `${u.name} ${u.nick} ${u.whatsapp} ${u.email}`.toLowerCase().includes(uQuery)),
+    );
+    $("#ulist").innerHTML = list.length
+      ? ""
+      : `<div class="empty">${uAll.length ? "No users match this filter." : "No sign-ups yet — every new user registers before their first question."}</div>`;
+    const dot = { active: "🟢", inactive: "🟡", deleted: "🔴" };
+    const day = (iso) => new Date(iso).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short" });
+    for (const u of list) {
+      const el = document.createElement("div");
+      el.className = "job";
+      el.innerHTML = `<span>${dot[u.status] || "❔"}</span>
+        <div style="flex:1;min-width:0"><div>${esc(u.name)} <span style="color:var(--gold2)">“${esc(u.nick)}”</span>${u.member ? " ⭐" : ""}</div>
+        <div class="d">📱 ${esc(u.whatsapp)} · ✉️ ${esc(u.email)}</div>
+        <div class="d">joined ${day(u.at)} · last seen ${day(u.lastSeen)}${u.deletedReason ? ` · ${esc(u.deletedReason)}` : ""}</div></div>`;
+      const mem = document.createElement("button");
+      mem.className = "mini";
+      mem.textContent = u.member ? "⭐ Member" : "☆ Mark member";
+      mem.addEventListener("click", () => updateUser(u.id, { member: !u.member }));
+      const del = document.createElement("button");
+      del.className = "mini danger";
+      del.textContent = u.status === "deleted" ? "Restore" : "Delete";
+      del.addEventListener("click", () => {
+        if (u.status !== "deleted" && !confirm(`Delete ${u.name}? They can sign up again anytime.`)) return;
+        updateUser(u.id, { deleted: u.status !== "deleted" });
+      });
+      const btns = document.createElement("div");
+      btns.style.cssText = "display:flex;flex-direction:column;gap:6px;margin-left:auto;flex-shrink:0";
+      btns.append(mem, del);
+      el.appendChild(btns);
+      $("#ulist").appendChild(el);
+    }
+  }
+  async function updateUser(id, patch) {
+    await fetch("/api/admin/user-update", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-key": key() },
+      body: JSON.stringify({ id, ...patch }),
+    }).catch(() => {});
+    loadUsers();
+  }
 
   // ——— 🧠 Learning: the guide's self-taught mind and its growth ———
   async function loadLearning() {
