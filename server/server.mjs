@@ -358,7 +358,8 @@ async function handleChat(req, res) {
   try {
     const u = users.touch(seekerUid);
     seekerMember = !!u?.member;
-    if (u) seekerCredits = Number(u.credits || 0);
+    // effective balance = today's allowance (auto-refilled) + admin bonus
+    if (u) seekerCredits = users.credits(seekerUid);
   } catch {
     /* registry is best-effort */
   }
@@ -398,8 +399,8 @@ async function handleChat(req, res) {
   // seekers with a real balance are gated; anonymous/test callers pass through.
   if (seekerUid && seekerCredits !== null && seekerCredits <= 0) {
     const outMsg = wantsHindi
-      ? "🙏 आपके प्रश्न-credits अभी समाप्त हो गए हैं। और प्रश्न पूछने के लिए कृपया Ashaeiynn team से संपर्क कीजिए — वे आपके credits बढ़ा देंगे।"
-      : "🙏 Your question-credits are finished for now. To ask more, please reach out to the Ashaeiynn team — they'll add credits for you.";
+      ? "🙏 आज के आपके प्रश्न पूरे हो गए हैं। कल फिर 100 नए प्रश्न मिलेंगे — तब तक के लिए प्रणाम। ज़रूरत हो तो Ashaeiynn team से भी बात कर सकते हैं।"
+      : "🙏 You've used all of today's questions. 100 fresh ones arrive tomorrow — until then, pranam. You can also reach the Ashaeiynn team if you need more today.";
     const contact = linkDirectory().filter((l) => l.title === "Contact Ashaeiynn").map((l) => ({ title: l.title, timestamp: "", url: l.url }));
     writeLog({ at: new Date().toISOString(), q: message, via: payload.via, noCredits: true });
     return json(res, 200, { answer: outMsg, sources: contact, credits: 0, noCredits: true });
