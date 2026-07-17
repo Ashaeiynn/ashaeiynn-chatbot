@@ -918,12 +918,22 @@ async function handleStt(req, res) {
 // gitignored — it regenerates anywhere.
 let thoughtCache = { date: "", data: null };
 const THOUGHT_FILE = path.join(ROOT, "data", "thought.json");
+// A garbled transcript makes the model REFUSE ("this passage is corrupted…")
+// — reject any such meta-commentary, and any answer that isn't real Hindi. Used
+// both to validate a freshly generated thought AND to throw away a previously
+// cached bad one so it regenerates without needing the file cleared by hand.
+const thoughtLooksBad = (t) => {
+  if (!t || t.trim().length < 12) return true;
+  if (/corrupt|fragment|garbled|poorly transcribed|provide a clear|clearer passage|cannot (extract|provide|generate)|coherent|logical continuity|no clear meaning|repetitive phrases|incomplete sentence|as an ai|i'?m sorry|i cannot|does not contain|unable to/i.test(t)) return true;
+  if ((t.match(/[ऀ-ॿ]/g) || []).length < 6) return true; // essentially no Hindi → off-script
+  return false;
+};
 async function handleThought(req, res) {
   const date = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
   if (thoughtCache.date === date && thoughtCache.data) return json(res, 200, thoughtCache.data);
   try {
     const saved = JSON.parse(readFileSync(THOUGHT_FILE, "utf8"));
-    if (saved.date === date && saved.text) {
+    if (saved.date === date && saved.text && !thoughtLooksBad(saved.text)) {
       thoughtCache = { date, data: saved };
       return json(res, 200, saved);
     }
@@ -932,15 +942,7 @@ async function handleThought(req, res) {
   }
   const candidates = thoughtCandidate(date);
   if (!candidates.length) return json(res, 200, {});
-  // A garbled transcript makes the model REFUSE ("this passage is corrupted…")
-  // — reject any such meta-commentary, and any answer that isn't real Hindi,
-  // then move on to the next passage. This guarantees a clean daily thought.
-  const looksBad = (t) => {
-    if (!t || t.trim().length < 12) return true;
-    if (/corrupt|fragment|garbled|poorly transcribed|provide a clear|clearer passage|cannot (extract|provide|generate)|coherent|logical continuity|no clear meaning|repetitive phrases|incomplete sentence|as an ai|i'?m sorry|i cannot|does not contain|unable to/i.test(t)) return true;
-    if ((t.match(/[ऀ-ॿ]/g) || []).length < 6) return true; // essentially no Hindi → off-script
-    return false;
-  };
+  const looksBad = thoughtLooksBad;
   let text = "", chosen = null;
   if (apiKeyConfigured) {
     for (const c of candidates) {
