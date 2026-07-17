@@ -80,6 +80,12 @@ const MISHEARD = [
 ];
 const fixMishearings = (t) => MISHEARD.reduce((s, [re, ok]) => s.replace(re, ok), t);
 
+// Owner's link policy: seekers are only ever sent to OUR public channels —
+// the YouTube channel and ashaeiynn.com (Pathshala articles + site pages).
+// Everything else (Vimeo studio videos, Zoom recordings, raw audio) remains
+// citable by title but never clickable. Address-book links are already ours.
+const publicUrl = (u) => (u && /youtube\.com|youtu\.be|ashaeiynn\.com/i.test(String(u)) ? u : null);
+
 // ——— the address book (data/links.json): channels & standing pages the bot
 // can hand out when a seeker asks for a link. Re-read every 10 minutes.
 const LINK_ASK =
@@ -563,7 +569,7 @@ async function handleChat(req, res) {
             text,
             title: c.title,
             timestamp: formatTimestamp(c.start_seconds),
-            url: c.url ? `${c.url}#t=${Math.floor(c.start_seconds)}s` : null,
+            url: publicUrl(c.url) ? `${c.url}#t=${Math.floor(c.start_seconds)}s` : null,
           };
         }
         answer = answer.slice(0, qu.index).trimEnd();
@@ -626,7 +632,7 @@ async function handleChat(req, res) {
       sources.push({
         title: c.title,
         timestamp: formatTimestamp(c.start_seconds),
-        url: c.url ? `${c.url}#t=${Math.floor(c.start_seconds)}s` : null,
+        url: publicUrl(c.url) ? `${c.url}#t=${Math.floor(c.start_seconds)}s` : null,
       });
       if (sources.length >= 3) break;
     }
@@ -654,16 +660,20 @@ async function handleChat(req, res) {
 
     // A gentle "watch next" the seeker hasn't seen yet (their device tells us
     // what they've seen; nothing tracked here) — the next-best relevant source.
+    // Owner's rule: suggest ONLY our public channels — YouTube videos and
+    // Pathshala/website articles. Studio material (Vimeo/Zoom/audio) is never
+    // suggested; it stays citable by title under answers.
     let suggest = null;
     const usedTitles = new Set(sources.map((s) => s.title.toLowerCase()));
     for (const c of chunks) {
       const t = c.title.toLowerCase();
       if (usedTitles.has(t) || seenTitles.has(t)) continue;
       if (c.title.startsWith("Bhaiya's approved answer")) continue;
+      if (!publicUrl(c.url)) continue;
       suggest = {
         title: c.title,
         timestamp: formatTimestamp(c.start_seconds),
-        url: c.url ? `${c.url}#t=${Math.floor(c.start_seconds)}s` : null,
+        url: `${c.url}#t=${Math.floor(c.start_seconds)}s`,
       };
       break;
     }
@@ -734,29 +744,36 @@ async function handleStt(req, res) {
   // silent fall-through. Everyone else keeps the Gemini ear untouched below.
   if (src === "ios-app") {
     if (!process.env.GROQ_API_KEY) return json(res, 503, { error: "stt-not-configured", detail: "groq key missing" });
-    try {
-      const fd = new FormData();
-      const ext = mime.includes("webm") ? "webm" : mime.includes("wav") ? "wav" : mime.includes("ogg") ? "ogg" : "m4a";
-      fd.append("file", new Blob([Buffer.from(audio, "base64")], { type: mime }), `voice.${ext}`);
-      fd.append("model", "whisper-large-v3-turbo");
-      fd.append("temperature", "0");
-      const l = lang.toLowerCase();
-      if (l.startsWith("hi")) fd.append("language", "hi");
-      else if (l.startsWith("en")) fd.append("language", "en");
-      const r = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
-        body: fd,
-      });
-      if (r.ok) {
-        const text = String((await r.json()).text || "").trim();
-        if (text) return json(res, 200, { text: fixMishearings(text.slice(0, 2000)) });
-        lastDetail = "groq: empty transcription";
-      } else {
-        lastDetail = `groq ${r.status}: ${(await r.text()).slice(0, 80)}`;
+    const ext = mime.includes("webm") ? "webm" : mime.includes("wav") ? "wav" : mime.includes("ogg") ? "ogg" : "m4a";
+    const blob = new Blob([Buffer.from(audio, "base64")], { type: mime });
+    const l = lang.toLowerCase();
+    // FULL large-v3 first — markedly better Hindi than turbo (turbo trades
+    // multilingual accuracy for speed); turbo stays as the separate-quota
+    // fallback. The prompt biases the ear toward सत्संग vocabulary + Devanagari.
+    for (const model of ["whisper-large-v3", "whisper-large-v3-turbo"]) {
+      try {
+        const fd = new FormData();
+        fd.append("file", blob, `voice.${ext}`);
+        fd.append("model", model);
+        fd.append("temperature", "0");
+        fd.append("prompt", "जय सिया राम। गुरुदेव और Parikshit Bhaiya की Ashaeiynn पाठशाला — साधना, जाप, ध्यान, तीसरी आँख।");
+        if (l.startsWith("hi")) fd.append("language", "hi");
+        else if (l.startsWith("en")) fd.append("language", "en");
+        const r = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+          body: fd,
+        });
+        if (r.ok) {
+          const text = String((await r.json()).text || "").trim();
+          if (text) return json(res, 200, { text: fixMishearings(text.slice(0, 2000)) });
+          lastDetail = `groq ${model}: empty transcription`;
+        } else {
+          lastDetail = `groq ${model} ${r.status}: ${(await r.text()).slice(0, 60)}`;
+        }
+      } catch (err) {
+        lastDetail = "groq: " + String(err?.message || err).slice(0, 120);
       }
-    } catch (err) {
-      lastDetail = "groq: " + String(err?.message || err).slice(0, 120);
     }
     console.error("stt error:", lastDetail);
     return json(res, 503, { error: "Couldn't hear that — please try again.", detail: lastDetail });
