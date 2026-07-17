@@ -1,194 +1,192 @@
 <style>
   :root{
-    --ground:#0b0906; --ground2:#120d07; --raise:#171009; --rim:rgba(227,183,102,.22);
-    --gold:#d9a94f; --gold-lo:#e3b766; --gold-hi:#f7e3ae; --ink:#f3ecd9; --muted:#a89b7d;
-    --green:#a7cf9a;
-    --serif:'Iowan Old Style','Palatino Linotype','URW Palladio L',P052,Palatino,Georgia,serif;
+    --ink:#f3ecd9; --muted:#a89b7d; --gold:#d9a94f; --gold-lo:#e3b766; --gold-hi:#f7e3ae; --gold-t:#f3d795;
     --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif;
+    --serif:Georgia,'Kohinoor Devanagari','Devanagari MT',serif;
   }
   *{box-sizing:border-box}
   .board{
-    background:
-      radial-gradient(1100px 700px at 50% -10%, #1c140a 0%, transparent 60%),
-      radial-gradient(800px 600px at 90% 110%, #16120b 0%, transparent 55%),
-      var(--ground);
-    color:var(--ink); font-family:var(--sans); padding:40px 22px 48px; min-height:100%;
+    background:radial-gradient(900px 600px at 50% -8%, #17110a 0%, transparent 58%), #0a0806;
+    color:var(--ink); font-family:var(--sans); padding:38px 20px 46px; min-height:100%;
   }
-  .head{max-width:940px; margin:0 auto 34px; text-align:center}
-  .eyebrow{font-size:12px; letter-spacing:.32em; text-transform:uppercase; color:var(--gold); margin:0 0 12px}
-  .head h1{font-family:var(--serif); font-weight:500; font-size:30px; margin:0 0 8px; color:var(--gold-hi); text-wrap:balance}
-  .head p{margin:0; color:var(--muted); font-size:15px; line-height:1.6}
-  .phones{display:flex; gap:30px; justify-content:center; align-items:flex-start; flex-wrap:wrap; max-width:1040px; margin:0 auto}
-  .col{display:flex; flex-direction:column; align-items:center; gap:14px; width:296px}
-  .cap{color:var(--muted); font-size:13px; text-align:center; line-height:1.5; max-width:270px}
+  .head{max-width:940px; margin:0 auto 32px; text-align:center}
+  .eyebrow{font-size:11.5px; letter-spacing:.3em; text-transform:uppercase; color:var(--gold); margin:0 0 11px}
+  .head h1{font-family:var(--serif); font-weight:500; font-size:27px; margin:0 0 8px; color:var(--gold-hi); text-wrap:balance}
+  .head p{margin:0 auto; max-width:600px; color:var(--muted); font-size:14.5px; line-height:1.65}
+  .head .pill-note{display:inline-flex;align-items:center;gap:7px;margin-top:14px;font-size:12.5px;color:var(--gold-t);
+    background:linear-gradient(160deg,rgba(217,169,79,.14),rgba(217,169,79,.04));border:1px solid rgba(227,183,102,.4);
+    border-radius:999px;padding:6px 14px}
+  .phones{display:flex; gap:28px; justify-content:center; align-items:flex-start; flex-wrap:wrap; max-width:1020px; margin:0 auto}
+  .col{display:flex; flex-direction:column; align-items:center; gap:13px; width:292px}
+  .cap{color:var(--muted); font-size:12.5px; text-align:center; line-height:1.5; max-width:262px}
   .cap b{color:var(--gold-lo); font-weight:600}
 
-  .phone{
-    width:296px; height:616px; border-radius:44px; position:relative; overflow:hidden;
-    background:linear-gradient(180deg,var(--ground2),var(--ground));
-    box-shadow:0 0 0 1.5px rgba(227,183,102,.28), 0 0 0 9px #0a0805, 0 26px 60px rgba(0,0,0,.6);
-  }
-  .screen{position:absolute; inset:9px; border-radius:36px; overflow:hidden; background:
-    radial-gradient(360px 300px at 50% 8%, #17110a 0%, transparent 62%), var(--ground);
-    display:flex; flex-direction:column}
-  .stars i{position:absolute; width:3px; height:3px; border-radius:50%; background:var(--gold);
-    opacity:.16; box-shadow:0 0 6px var(--gold)}
-  .notch{position:absolute; top:12px; left:50%; transform:translateX(-50%); width:96px; height:22px;
-    background:#0a0805; border-radius:0 0 14px 14px; z-index:5}
+  .phone{width:292px; height:606px; border-radius:42px; position:relative; overflow:hidden;
+    box-shadow:0 0 0 1.5px rgba(227,183,102,.26), 0 0 0 9px #080605, 0 24px 56px rgba(0,0,0,.6)}
+  .screen{position:absolute; inset:0; overflow:hidden; display:flex; flex-direction:column;
+    background:radial-gradient(100% 42% at 50% 112%, rgba(217,169,79,.2) 0%, transparent 55%),
+      linear-gradient(180deg,#0a110b 0%,#070b08 50%,#0a0d07 100%)}
+  .mandala{position:absolute; left:50%; top:53%; transform:translate(-50%,-50%); width:330px; height:330px; opacity:.15; pointer-events:none}
+  .temple{position:absolute; left:0; right:0; bottom:0; width:100%; opacity:.9; pointer-events:none}
+  .star{position:absolute; width:2px; height:2px; border-radius:50%; background:#f3d795; opacity:.5; box-shadow:0 0 5px #e3b766}
 
-  .topbar{display:flex; align-items:center; justify-content:space-between; padding:24px 18px 10px}
-  .brand{display:flex; align-items:center; gap:9px}
-  .lotus{width:26px; height:26px; flex:none}
-  .brand .nm{font-family:var(--serif); font-size:15px; color:var(--gold-hi); line-height:1}
-  .brand .sub{font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-top:2px}
-  .chip{display:inline-flex; align-items:center; gap:5px; font-size:13px; font-weight:600; color:#241a06;
-    background:linear-gradient(140deg,var(--gold-hi),var(--gold) 72%); padding:6px 12px; border-radius:999px;
-    box-shadow:0 2px 12px rgba(217,169,79,.3)}
-  .chip.ghost{background:none; color:var(--gold-lo); box-shadow:inset 0 0 0 1px var(--rim)}
+  .head-bar{position:relative; z-index:3; display:flex; justify-content:space-between; align-items:center;
+    padding:16px 15px 12px; background:linear-gradient(135deg,rgba(10,10,14,.9),rgba(0,0,0,.82));
+    border-bottom:1px solid rgba(227,183,102,.2)}
+  .hleft{display:flex; align-items:center; gap:10px}
+  .ava{width:34px; height:34px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 34% 28%,#232d1d 0%,#0d130c 70%);
+    box-shadow:0 0 0 1px rgba(227,183,102,.55),0 0 0 4px rgba(227,183,102,.1),0 0 16px rgba(217,169,79,.34)}
+  .ava svg{width:20px;height:20px}
+  .title{font-family:var(--serif); font-size:16px; letter-spacing:.4px; line-height:1.15;
+    background:linear-gradient(180deg,#f7e3ae 20%,#d9a94f 85%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:10.5px; color:var(--muted); margin-top:1px}
+  .hright{display:flex; align-items:center; gap:9px}
+  .credit{display:inline-flex; align-items:center; gap:5px; font-size:12.5px; font-weight:700; color:var(--gold-t);
+    background:linear-gradient(160deg,rgba(217,169,79,.16),rgba(217,169,79,.05)); border:1px solid rgba(227,183,102,.5);
+    border-radius:999px; padding:4px 10px; white-space:nowrap}
+  .credit.low{color:#f0c98a; border-color:rgba(227,183,102,.7); box-shadow:0 0 12px rgba(217,169,79,.2)}
+  .hbtn{font-size:15px; opacity:.85; line-height:1}
+  .hbtn.x{font-size:20px; color:#fff; opacity:.75}
 
-  .stage{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; padding:0 22px}
-  .orb{width:150px; height:150px; border-radius:50%; position:relative; display:flex; align-items:center; justify-content:center;
-    background:radial-gradient(circle at 38% 32%, #fbe7bd 0%, var(--gold) 42%, #a97e2f 78%, #6b4e1c 100%);
-    box-shadow:0 0 44px 6px rgba(217,169,79,.42), inset 0 0 26px rgba(90,64,20,.55)}
-  .orb::after{content:""; position:absolute; inset:-14px; border-radius:50%; border:1px solid rgba(227,183,102,.28)}
-  .orb .eye{width:34px; height:34px; border-radius:50%; background:radial-gradient(circle at 50% 45%, #2a1c08, #120b03);
-    box-shadow:0 0 12px rgba(0,0,0,.5), 0 0 0 4px rgba(247,227,174,.5)}
-  .say{font-family:var(--serif); font-size:22px; color:var(--gold-hi)}
-  .hint{font-size:12.5px; color:var(--muted); text-align:center; line-height:1.5}
-  .balance{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted)}
-  .balance b{color:var(--gold-lo); font-weight:600}
-  .balance a{color:var(--gold); text-decoration:none; border-bottom:1px solid var(--rim); padding-bottom:1px}
+  .bless{position:relative; z-index:2; text-align:center; padding:7px 0 6px}
+  .bless span{font-family:var(--serif); font-size:15px; letter-spacing:1px;
+    background:linear-gradient(100deg,#a97c2c 0%,#f7e3ae 28%,#d9a94f 52%,#f7e3ae 74%,#a97c2c 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .bless span::before{content:"✦ "; color:#d9a94f; font-size:9px; vertical-align:2px; opacity:.85}
+  .bless span::after{content:" ✦"; color:#d9a94f; font-size:9px; vertical-align:2px; opacity:.85}
 
-  .navbar{display:flex; justify-content:space-around; align-items:center; padding:14px 0 24px; border-top:1px solid rgba(227,183,102,.1)}
-  .navbar span{font-size:19px; opacity:.5}
-  .navbar .mic{width:52px; height:52px; margin-top:-30px; border-radius:50%; display:flex; align-items:center; justify-content:center;
-    font-size:22px; background:linear-gradient(140deg,var(--gold-hi),var(--gold) 70%); color:#241a06;
-    box-shadow:0 6px 20px rgba(217,169,79,.4); opacity:1}
+  .stage{position:relative; z-index:1; flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:0 26px}
+  .orb{width:96px; height:96px; border-radius:50%; position:relative; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 33% 26%,#2b3722 0%,#121a10 52%,#080d08 100%);
+    box-shadow:0 0 0 2.5px rgba(243,215,149,.8),0 0 40px rgba(217,169,79,.42),inset 0 0 28px rgba(217,169,79,.14)}
+  .orb svg{width:42px;height:42px; filter:drop-shadow(0 0 8px rgba(243,215,149,.55))}
+  .status{font-family:var(--serif); color:#ddd1ab; font-size:14px; line-height:1.55; text-align:center}
+  .status b{color:var(--gold-t)}
+  .stagebar{display:flex; gap:13px; align-items:center; margin-top:4px}
+  .lang{font-size:12px; font-weight:700; color:var(--gold-t); border:1px solid rgba(227,183,102,.5); border-radius:999px;
+    padding:5px 13px; background:linear-gradient(160deg,rgba(217,169,79,.13),rgba(217,169,79,.04))}
+  .kbd{font-size:12px; color:var(--muted)}
+  .bal{font-size:12px; color:var(--muted); text-align:center}
+  .bal b{color:var(--gold-lo); font-weight:600}
+  .bal a{color:var(--gold); border-bottom:1px solid rgba(227,183,102,.4); padding-bottom:1px}
 
-  .dim{position:absolute; inset:0; background:rgba(6,4,2,.62)}
-  .sheet{position:absolute; left:0; right:0; bottom:0; background:linear-gradient(180deg,#181109,#100b06);
-    border-radius:26px 26px 36px 36px; padding:22px 20px 30px; box-shadow:0 -10px 40px rgba(0,0,0,.5);
-    border-top:1px solid var(--rim)}
-  .grab{width:44px; height:4px; border-radius:9px; background:rgba(227,183,102,.3); margin:0 auto 16px}
-  .sheet h2{font-family:var(--serif); font-weight:500; font-size:20px; margin:0 0 3px; color:var(--gold-hi); text-align:center}
-  .sheet .lead{margin:0 0 16px; font-size:12.5px; color:var(--muted); text-align:center}
-  .packs{display:flex; flex-direction:column; gap:10px}
-  .pack{display:flex; align-items:center; justify-content:space-between; padding:13px 15px; border-radius:14px;
+  .dim{position:absolute; inset:0; z-index:4; background:rgba(5,4,2,.6)}
+  .sheet{position:absolute; left:0; right:0; bottom:0; z-index:5; background:linear-gradient(180deg,#141009,#0b0805);
+    border-radius:24px 24px 0 0; padding:20px 18px 26px; border-top:1px solid rgba(227,183,102,.3); box-shadow:0 -10px 36px rgba(0,0,0,.5)}
+  .grab{width:42px; height:4px; border-radius:9px; background:rgba(227,183,102,.3); margin:0 auto 15px}
+  .sheet h2{font-family:var(--serif); font-weight:500; font-size:18px; margin:0 0 3px; color:var(--gold-hi); text-align:center}
+  .sheet .lead{margin:0 0 15px; font-size:12px; color:var(--muted); text-align:center}
+  .packs{display:flex; flex-direction:column; gap:9px}
+  .pack{display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-radius:13px;
     background:rgba(227,183,102,.05); border:1px solid rgba(227,183,102,.16)}
-  .pack.pop{border-color:var(--gold); box-shadow:0 0 0 1px var(--gold), 0 0 18px rgba(217,169,79,.16); background:rgba(227,183,102,.09)}
-  .pack .amt{font-size:17px; font-weight:700; color:var(--gold-hi)}
-  .pack .q{font-size:12.5px; color:var(--muted); margin-top:2px}
-  .pack .tag{font-size:10px; font-weight:700; letter-spacing:.05em; color:#241a06; background:var(--gold);
-    padding:3px 9px; border-radius:999px; text-transform:uppercase}
-  .pack .bonus{font-size:11px; color:var(--green); font-weight:600; margin-top:2px}
-  .pay{margin-top:16px; display:flex; align-items:center; justify-content:center; gap:8px; font-size:11.5px; color:var(--muted)}
-  .free-note{margin-top:12px; text-align:center; font-size:12px; color:var(--gold-lo)}
+  .pack.pop{border-color:var(--gold); box-shadow:0 0 0 1px var(--gold),0 0 16px rgba(217,169,79,.15); background:rgba(227,183,102,.09)}
+  .pack .amt{font-size:16px; font-weight:700; color:var(--gold-hi)}
+  .pack .q{font-size:12px; color:var(--muted); margin-top:2px}
+  .pack .bonus{font-size:10.5px; color:#a7cf9a; font-weight:600; margin-top:2px}
+  .pack .tag{font-size:9.5px; font-weight:700; color:#241a06; background:var(--gold); padding:3px 8px; border-radius:999px; text-transform:uppercase}
+  .pay{margin-top:14px; text-align:center; font-size:11px; color:var(--muted)}
+  .free-note{margin-top:11px; text-align:center; font-size:11.5px; color:var(--gold-lo)}
 
-  .empty{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:0 30px; text-align:center}
-  .empty .big{font-family:var(--serif); font-size:21px; color:var(--gold-hi); line-height:1.4}
-  .empty p{margin:0; font-size:13px; color:var(--muted); line-height:1.6}
-  .btn{margin-top:4px; display:inline-flex; align-items:center; gap:8px; font-size:15px; font-weight:700; color:#241a06;
-    background:linear-gradient(140deg,var(--gold-hi),var(--gold) 72%); padding:13px 30px; border-radius:999px;
-    box-shadow:0 6px 22px rgba(217,169,79,.34)}
-  .btn.ghost{background:none; color:var(--gold-lo); font-weight:600; box-shadow:inset 0 0 0 1px var(--rim)}
-  .daily{font-size:11.5px; color:var(--muted); margin-top:8px}
+  .btn{display:inline-flex; align-items:center; gap:7px; font-size:14px; font-weight:700; color:#241a06;
+    background:linear-gradient(140deg,var(--gold-hi),var(--gold) 72%); padding:11px 26px; border-radius:999px}
+  .btn.ghost{background:none; color:var(--gold-lo); font-weight:600; box-shadow:inset 0 0 0 1px rgba(227,183,102,.4)}
 
-  .model{max-width:760px; margin:44px auto 0; padding:22px 26px; border-radius:16px;
+  .model{max-width:740px; margin:42px auto 0; padding:22px 26px; border-radius:16px;
     background:rgba(227,183,102,.045); border:1px solid rgba(227,183,102,.14)}
-  .model h3{font-family:var(--serif); font-weight:500; font-size:17px; margin:0 0 14px; color:var(--gold-hi); text-align:center}
+  .model h3{font-family:var(--serif); font-weight:500; font-size:16px; margin:0 0 14px; color:var(--gold-hi); text-align:center}
   .model .grid{display:flex; gap:14px; flex-wrap:wrap; justify-content:center}
-  .model .m{flex:1; min-width:150px; text-align:center}
-  .model .m b{display:block; font-size:20px; color:var(--gold-lo); font-family:var(--serif); margin-bottom:3px}
-  .model .m span{font-size:12.5px; color:var(--muted); line-height:1.5}
-  .foot{max-width:760px; margin:16px auto 0; text-align:center; font-size:12px; color:var(--muted); line-height:1.6}
+  .model .m{flex:1; min-width:140px; text-align:center}
+  .model .m b{display:block; font-size:19px; color:var(--gold-lo); font-family:var(--serif); margin-bottom:3px}
+  .model .m span{font-size:12px; color:var(--muted); line-height:1.5}
+  .foot{max-width:740px; margin:16px auto 0; text-align:center; font-size:12px; color:var(--muted); line-height:1.6}
 </style>
 
 <div class="board">
   <div class="head">
     <p class="eyebrow">Credits · concept mockup</p>
-    <h1>How credits would appear to a seeker</h1>
-    <p>Nothing is built — this is only a picture, in your देवालय Gold theme. A gentle balance, a warm recharge, and a kind daily limit.</p>
+    <h1>Credits, added to your app — not a redesign</h1>
+    <p>Your exact screen, untouched. The only new thing is a small gold coin in the header, styled like your own भाषा pill. Nothing is built — this is only a picture.</p>
+    <span class="pill-note">🪙 the one new element →</span>
   </div>
 
   <div class="phones">
 
     <div class="col">
       <div class="phone">
-        <div class="notch"></div>
         <div class="screen">
-          <div class="stars"><i style="top:60px;left:40px"></i><i style="top:120px;left:230px"></i><i style="top:300px;left:30px"></i><i style="top:420px;left:250px"></i><i style="top:520px;left:60px"></i></div>
-          <div class="topbar">
-            <div class="brand">
-              <svg class="lotus" viewBox="0 0 40 40" fill="none" stroke="#e3b766" stroke-width="1.6"><path d="M20 6c3 5 3 9 0 13-3-4-3-8 0-13Z"/><path d="M20 19c5-2 9-1 12 3-5 2-9 1-12-3Z"/><path d="M20 19c-5-2-9-1-12 3 5 2 9 1 12-3Z"/><path d="M20 19c2 5 1 10-3 13-1-5 0-10 3-13Z"/><path d="M20 19c-2 5-1 10 3 13 1-5 0-10-3-13Z"/></svg>
-              <div><div class="nm">Ask Your Guide</div><div class="sub">Ashaeiynn</div></div>
+          <svg class="mandala" viewBox="0 0 360 360" fill="none" stroke="#e3b766"><circle cx="180" cy="180" r="170" stroke-width=".7" opacity=".5"/><circle cx="180" cy="180" r="140" stroke-width=".6" stroke-dasharray="2 7" opacity=".7"/><circle cx="180" cy="180" r="112" stroke-width=".6" opacity=".5"/><g opacity=".65"><path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7"/><path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(45 180 180)"/><path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(90 180 180)"/><path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(135 180 180)"/><path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(180 180 180)"/><path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(225 180 180)"/><path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(270 180 180)"/><path d="M180 12 q14 26 0 52 q-14 -26 0 -52" stroke-width=".7" transform="rotate(315 180 180)"/></g></svg>
+          <div class="star" style="top:70px;left:44px"></div><div class="star" style="top:150px;left:236px"></div><div class="star" style="top:300px;left:34px"></div>
+          <svg class="temple" viewBox="0 0 375 190" height="146" preserveAspectRatio="none"><path d="M0 190 L0 150 L30 150 L30 122 L52 122 L60 92 L68 122 L90 122 L90 150 L126 150 L126 106 L148 106 L158 62 L164 76 L170 40 L176 76 L182 62 L192 106 L214 106 L214 150 L252 150 L252 126 L270 126 L277 98 L284 126 L302 126 L302 150 L340 150 L340 160 L375 160 L375 190 Z" fill="#020403" opacity=".92"/><circle cx="170" cy="33" r="3.4" fill="#f3d795" opacity=".95"/><ellipse cx="120" cy="176" rx="3" ry="4.5" fill="#ffb84d"/><ellipse cx="240" cy="180" rx="3" ry="4.5" fill="#ffb84d"/><ellipse cx="330" cy="172" rx="2.6" ry="4" fill="#ffb84d"/><ellipse cx="44" cy="180" rx="2.6" ry="4" fill="#ffb84d"/></svg>
+          <div class="head-bar">
+            <div class="hleft">
+              <div class="ava"><svg viewBox="0 0 40 40" fill="none" stroke="#f3d795" stroke-width="1.5"><path d="M20 7c3 5 3 9 0 13-3-4-3-8 0-13Z"/><path d="M20 20c5-2 9-1 12 3-5 2-9 1-12-3Z"/><path d="M20 20c-5-2-9-1-12 3 5 2 9 1 12-3Z"/><path d="M20 20c2 5 1 10-3 13-1-5 0-10 3-13Z"/><path d="M20 20c-2 5-1 10 3 13 1-5 0-10-3-13Z"/></svg></div>
+              <div><div class="title">Ask Your Guide</div><div class="sub">Ashaeiynn · answers from the teachings</div></div>
             </div>
-            <span class="chip">🪙 18</span>
+            <div class="hright"><span class="credit">🪙 18</span><span class="hbtn">🔔</span><span class="hbtn">🔇</span><span class="hbtn x">×</span></div>
           </div>
+          <div class="bless"><span>जय सिया राम</span></div>
           <div class="stage">
-            <div class="orb"><div class="eye"></div></div>
-            <div class="say">बोलिए…</div>
-            <div class="hint">माइक दबाइए और अपना प्रश्न पूछिए<br>Tap the mic and speak</div>
-            <div class="balance"><span>🪙 <b>18 प्रश्न शेष</b></span><a>भरें</a></div>
+            <div class="orb"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" stroke="#f3d795" stroke-width="1.8" fill="rgba(217,169,79,.12)"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4" stroke="#d9a94f" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <div class="status">माइक को दबाइए और <b>बोलिए</b> — हिंदी या English<br>Tap the mic and <b>speak</b></div>
+            <div class="stagebar"><span class="lang">भाषा: हिंदी</span><span class="kbd">⌨️ type instead</span></div>
           </div>
-          <div class="navbar"><span>💬</span><div class="mic">🎙️</div><span>☰</span></div>
         </div>
       </div>
-      <div class="cap"><b>Everyday.</b> A quiet gold coin in the corner shows how many questions remain — never in the way.</div>
+      <div class="cap"><b>Your screen, unchanged.</b> Only the <b>🪙 18</b> coin is new — same pill style as भाषा. It shows questions left, quietly.</div>
     </div>
 
     <div class="col">
       <div class="phone">
-        <div class="notch"></div>
         <div class="screen">
-          <div class="topbar">
-            <div class="brand">
-              <svg class="lotus" viewBox="0 0 40 40" fill="none" stroke="#e3b766" stroke-width="1.6"><path d="M20 6c3 5 3 9 0 13-3-4-3-8 0-13Z"/><path d="M20 19c5-2 9-1 12 3-5 2-9 1-12-3Z"/><path d="M20 19c-5-2-9-1-12 3 5 2 9 1 12-3Z"/><path d="M20 19c2 5 1 10-3 13-1-5 0-10 3-13Z"/><path d="M20 19c-2 5-1 10 3 13 1-5 0-10-3-13Z"/></svg>
-              <div><div class="nm">Ask Your Guide</div><div class="sub">Ashaeiynn</div></div>
+          <div class="head-bar">
+            <div class="hleft">
+              <div class="ava"><svg viewBox="0 0 40 40" fill="none" stroke="#f3d795" stroke-width="1.5"><path d="M20 7c3 5 3 9 0 13-3-4-3-8 0-13Z"/><path d="M20 20c5-2 9-1 12 3-5 2-9 1-12-3Z"/><path d="M20 20c-5-2-9-1-12 3 5 2 9 1 12-3Z"/><path d="M20 20c2 5 1 10-3 13-1-5 0-10 3-13Z"/><path d="M20 20c-2 5-1 10 3 13 1-5 0-10-3-13Z"/></svg></div>
+              <div><div class="title">Ask Your Guide</div><div class="sub">Ashaeiynn · answers from the teachings</div></div>
             </div>
-            <span class="chip ghost">🪙 2</span>
+            <div class="hright"><span class="credit low">🪙 2</span><span class="hbtn">🔔</span><span class="hbtn">🔇</span><span class="hbtn x">×</span></div>
           </div>
-          <div class="stage" style="opacity:.35"><div class="orb" style="width:110px;height:110px"><div class="eye"></div></div></div>
+          <div class="bless"><span>जय सिया राम</span></div>
+          <div class="stage" style="opacity:.4"><div class="orb" style="width:78px;height:78px"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" stroke="#f3d795" stroke-width="1.8" fill="rgba(217,169,79,.12)"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4" stroke="#d9a94f" stroke-width="1.8" stroke-linecap="round"/></svg></div></div>
           <div class="dim"></div>
           <div class="sheet">
             <div class="grab"></div>
             <h2>🪙 प्रश्न भरें</h2>
             <p class="lead">Recharge · अपनी यात्रा जारी रखिए</p>
             <div class="packs">
-              <div class="pack"><div><div class="amt">₹100</div><div class="q">100 प्रश्न</div></div><span style="color:var(--muted);font-size:20px">›</span></div>
+              <div class="pack"><div><div class="amt">₹100</div><div class="q">100 प्रश्न</div></div><span style="color:var(--muted);font-size:19px">›</span></div>
               <div class="pack pop"><div><div class="amt">₹250</div><div class="q">275 प्रश्न</div><div class="bonus">+25 अतिरिक्त 🎁</div></div><span class="tag">लोकप्रिय</span></div>
-              <div class="pack"><div><div class="amt">₹500</div><div class="q">600 प्रश्न</div><div class="bonus">+100 अतिरिक्त 🎁</div></div><span style="color:var(--muted);font-size:20px">›</span></div>
+              <div class="pack"><div><div class="amt">₹500</div><div class="q">600 प्रश्न</div><div class="bonus">+100 अतिरिक्त 🎁</div></div><span style="color:var(--muted);font-size:19px">›</span></div>
             </div>
             <div class="pay">🔒 UPI / Card · सुरक्षित भुगतान</div>
             <div class="free-note">⭐ सदस्यों के लिए सदैव निःशुल्क</div>
           </div>
         </div>
       </div>
-      <div class="cap"><b>Recharge.</b> Simple packs — <b>1 question = 1 credit</b>. UPI or card. Members never see this.</div>
+      <div class="cap"><b>Recharge sheet</b> (new) slides up over the same screen — <b>1 प्रश्न = 1 credit</b>. Members never see it.</div>
     </div>
 
     <div class="col">
       <div class="phone">
-        <div class="notch"></div>
         <div class="screen">
-          <div class="stars"><i style="top:80px;left:50px"></i><i style="top:200px;left:230px"></i><i style="top:470px;left:40px"></i></div>
-          <div class="topbar">
-            <div class="brand">
-              <svg class="lotus" viewBox="0 0 40 40" fill="none" stroke="#e3b766" stroke-width="1.6"><path d="M20 6c3 5 3 9 0 13-3-4-3-8 0-13Z"/><path d="M20 19c5-2 9-1 12 3-5 2-9 1-12-3Z"/><path d="M20 19c-5-2-9-1-12 3 5 2 9 1 12-3Z"/><path d="M20 19c2 5 1 10-3 13-1-5 0-10 3-13Z"/><path d="M20 19c-2 5-1 10 3 13 1-5 0-10-3-13Z"/></svg>
-              <div><div class="nm">Ask Your Guide</div><div class="sub">Ashaeiynn</div></div>
+          <svg class="mandala" viewBox="0 0 360 360" fill="none" stroke="#e3b766"><circle cx="180" cy="180" r="170" stroke-width=".7" opacity=".5"/><circle cx="180" cy="180" r="140" stroke-width=".6" stroke-dasharray="2 7" opacity=".7"/><circle cx="180" cy="180" r="112" stroke-width=".6" opacity=".5"/></svg>
+          <svg class="temple" viewBox="0 0 375 190" height="146" preserveAspectRatio="none"><path d="M0 190 L0 150 L30 150 L30 122 L52 122 L60 92 L68 122 L90 122 L90 150 L126 150 L126 106 L148 106 L158 62 L164 76 L170 40 L176 76 L182 62 L192 106 L214 106 L214 150 L252 150 L252 126 L270 126 L277 98 L284 126 L302 126 L302 150 L340 150 L340 160 L375 160 L375 190 Z" fill="#020403" opacity=".92"/><circle cx="170" cy="33" r="3.4" fill="#f3d795" opacity=".95"/><ellipse cx="120" cy="176" rx="3" ry="4.5" fill="#ffb84d"/><ellipse cx="240" cy="180" rx="3" ry="4.5" fill="#ffb84d"/></svg>
+          <div class="head-bar">
+            <div class="hleft">
+              <div class="ava"><svg viewBox="0 0 40 40" fill="none" stroke="#f3d795" stroke-width="1.5"><path d="M20 7c3 5 3 9 0 13-3-4-3-8 0-13Z"/><path d="M20 20c5-2 9-1 12 3-5 2-9 1-12-3Z"/><path d="M20 20c-5-2-9-1-12 3 5 2 9 1 12-3Z"/><path d="M20 20c2 5 1 10-3 13-1-5 0-10 3-13Z"/><path d="M20 20c-2 5-1 10 3 13 1-5 0-10-3-13Z"/></svg></div>
+              <div><div class="title">Ask Your Guide</div><div class="sub">Ashaeiynn · answers from the teachings</div></div>
             </div>
-            <span class="chip ghost">🪙 0</span>
+            <div class="hright"><span class="credit low">🪙 0</span><span class="hbtn">🔔</span><span class="hbtn">🔇</span><span class="hbtn x">×</span></div>
           </div>
-          <div class="empty">
-            <div class="orb" style="width:88px;height:88px;box-shadow:0 0 30px 3px rgba(217,169,79,.3)"><div class="eye" style="width:20px;height:20px"></div></div>
-            <div class="big">आज के निःशुल्क प्रश्न<br>पूरे हुए 🙏</div>
-            <p>कल फिर 5 निःशुल्क प्रश्न मिलेंगे — या अभी credits भरकर यात्रा जारी रखिए।</p>
-            <span class="btn">🪙 प्रश्न भरें</span>
-            <span class="btn ghost">कल फिर पधारिए</span>
-            <div class="daily">हर दिन 5 निःशुल्क प्रश्न · सदस्य असीमित</div>
+          <div class="bless"><span>जय सिया राम</span></div>
+          <div class="stage">
+            <div class="orb" style="width:80px;height:80px"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" stroke="#f3d795" stroke-width="1.8" fill="rgba(217,169,79,.12)"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4" stroke="#d9a94f" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <div class="status">आज के निःशुल्क प्रश्न पूरे हुए 🙏<br><span style="font-size:12px;color:var(--muted)">कल फिर 5 निःशुल्क प्रश्न मिलेंगे</span></div>
+            <div class="stagebar" style="flex-direction:column;gap:8px"><span class="btn">🪙 प्रश्न भरें</span><span class="btn ghost">कल फिर पधारिए</span></div>
           </div>
         </div>
       </div>
-      <div class="cap"><b>Kind limit.</b> When free questions run out, a warm door — recharge, or return tomorrow. Never a cold wall.</div>
+      <div class="cap"><b>When credits run out</b> — the same stage, a warm message instead of the prompt. Never a cold wall.</div>
     </div>
 
   </div>
@@ -196,11 +194,11 @@
   <div class="model">
     <h3>The model in this picture</h3>
     <div class="grid">
-      <div class="m"><b>5 / day</b><span>free questions for everyone, every day</span></div>
-      <div class="m"><b>₹1</b><span>per question beyond that (1 credit)</span></div>
+      <div class="m"><b>5 / day</b><span>free questions for everyone, daily</span></div>
+      <div class="m"><b>₹1</b><span>per question after that (1 credit)</span></div>
       <div class="m"><b>₹100+</b><span>recharge packs, UPI or card</span></div>
       <div class="m"><b>⭐ Free</b><span>members are never charged</span></div>
     </div>
   </div>
-  <p class="foot">Only a visual — say the word and we can change the theme, the wording, the free amount, the prices, or the whole approach before anything is built.</p>
+  <p class="foot">Only a picture. The coin's spot, the wording, the free amount, the prices — all changeable before anything is built.</p>
 </div>
