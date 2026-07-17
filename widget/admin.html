@@ -399,7 +399,8 @@
     } catch { /* best-effort */ }
   }
 
-  const isUnanswered = (e) => e.error || (e.answer && !/Source\s*:/.test(e.answer) && !e.testMode);
+  // corrected entries are never "unanswered" — the approved answer IS the answer
+  const isUnanswered = (e) => !e.corrected && !corrFor(e.q) && (e.error || (e.answer && !/Source\s*:/.test(e.answer) && !e.testMode));
   const when = (iso) => new Date(iso).toLocaleString("en-IN",
     { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -501,11 +502,14 @@
         isUnanswered(e) && !e.error ? `<span class="badge red">no source — knowledge gap?</span>` : "",
       ].join("");
       const srcs = (e.top || []).map((t) => `${t.t} (${t.s})`).join(" · ");
-      const aText = e.answer || (e.error ? "(no answer — the request failed)" : "(answer not recorded — older entry)");
+      // a corrected question shows YOUR approved answer — that is what the bot
+      // teaches now, to every user, however they word the question
+      const aText = edited ? edited.answer : e.answer || (e.error ? "(no answer — the request failed)" : "(answer not recorded — older entry)");
       card.innerHTML = `
         <div class="meta"><span class="badge goldb">${when(e.at)}</span>${badges}</div>
         <div class="q">${esc(e.q)}</div>
         <div class="a${aText.length > 260 ? " long" : ""}">${esc(aText)}</div>
+        ${edited ? `<div class="src" style="color:var(--gold2)">✅ Your corrected answer — the bot now gives this to every user who asks this, in any wording.</div>` : ""}
         ${srcs ? `<div class="src">📚 matched: ${esc(srcs)}</div>` : ""}
         <div style="margin-top:9px"><button class="mini" data-ed>✏️ Edit answer</button></div>`;
       card.querySelector(".a").addEventListener("click", (ev) => ev.currentTarget.classList.toggle("open"));
