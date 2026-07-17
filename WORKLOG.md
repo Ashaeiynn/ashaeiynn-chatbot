@@ -13,6 +13,16 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-17 (MacBook Pro session, with the owner)
 
+- **~21:00** Credits switched to a DAILY model (owner's call): every seeker gets
+  100 free questions/day, auto-refilled per IST day (lazy refill() on first
+  interaction — no cron). Admin "Add credits" now grants a PERSISTENT bonus that
+  carries over, on top of the daily 100. Spend takes from daily first (refills
+  anyway), then bonus (preserves the gift). Fields on each user: dailyLeft,
+  dailyDate, bonus; old single `credits` field retired via migrateToDaily().
+  Out-of-credits msg reframed to "100 more tomorrow". Subscription model deferred.
+  Verified live: all 5 users migrated to 100/day, bonus grant + daily-first
+  deduction (99+50) correct, test residue cleaned.
+
 - **~20:30** CREDITS shipped (admin-topup only, NO payment gateway — owner declined
   Razorpay for now). users.mjs: WELCOME_CREDITS=1000, register() grants it, one-time
   grantExisting() migration gives 1000 to all pre-credit users, credits()/addCredits()/
