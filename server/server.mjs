@@ -558,7 +558,8 @@ async function handleChat(req, res) {
         chat = true;
         answer = answer.slice(0, va.index).trimEnd();
       }
-      const qu = answer.match(/\n\s*(?:उद्धरण|quote)\s*[:：]\s*(.+?)\s*~\s*(\d{1,2})\s*$/i);
+      // the model sometimes writes "~ Excerpt 10" instead of "~ 10" — accept both
+      const qu = answer.match(/\n\s*(?:उद्धरण|quote)\s*[:：]\s*(.+?)\s*~\s*(?:excerpt|अंश)?\s*(\d{1,2})\s*$/i);
       if (qu) {
         const norm = (s) => s.replace(/["“”'’]/g, "").replace(/\s+/g, " ").trim();
         const c = chunks[Number(qu[2]) - 1];
@@ -692,6 +693,9 @@ async function handleChat(req, res) {
     if (srcLine && !sources.some((s) => s.timestamp && srcLine[0].includes(s.title))) {
       shown = shown.replace(/\n\s*Source\s*[:：][^\n]*/gi, "").trimEnd();
     }
+    // seatbelt: a quote marker the parser didn't recognize must never reach
+    // the seeker as raw text (the framed quote uses data.quote, not this line)
+    shown = shown.replace(/\n\s*(?:उद्धरण|quote)\s*[:：][^\n]*/gi, "").trimEnd();
     json(res, 200, {
       answer: shown,
       sources,
