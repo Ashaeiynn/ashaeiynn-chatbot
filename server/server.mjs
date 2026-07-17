@@ -531,7 +531,13 @@ async function handleChat(req, res) {
     let sadhana = null; // seeker declared/changed a practice ("-" = stopped)
     let help = ""; // "screening" | "contact" — this needs a human, attach links
     let quote = null; // verbatim Bhaiya line, verified against the excerpt below
+    let chat = false; // rule-4b conversational turn, not a knowledge question
     for (let pass = 0; pass < 4; pass++) {
+      const va = answer.match(/\n\s*(?:वार्ता|chat)\s*[:：]\s*1?\s*$/i);
+      if (va) {
+        chat = true;
+        answer = answer.slice(0, va.index).trimEnd();
+      }
       const qu = answer.match(/\n\s*(?:उद्धरण|quote)\s*[:：]\s*(.+?)\s*~\s*(\d{1,2})\s*$/i);
       if (qu) {
         const norm = (s) => s.replace(/["“”'’]/g, "").replace(/\s+/g, " ").trim();
@@ -576,7 +582,7 @@ async function handleChat(req, res) {
     // chips and check-in so the dialogue breathes; sources stay empty.
     // (Handoffs and link requests are the deliberate exceptions.)
     if (!help && !wantsLink && !/source\s*[:：]/i.test(answer)) {
-      writeLog({ ...logEntry, answer, refusal: true });
+      writeLog({ ...logEntry, answer, refusal: true, ...(chat ? { chat: true } : {}) });
       return json(res, 200, {
         answer,
         sources: [],

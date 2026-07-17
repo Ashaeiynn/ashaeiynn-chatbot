@@ -338,6 +338,8 @@
     <button class="chip" data-f="hi">हिंदी</button>
     <button class="chip" data-f="en">English</button>
     <button class="chip" data-f="corrected">✏️ Corrected</button>
+    <input type="date" id="qdate" title="Show one day only"
+      style="background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 14px;color:var(--ink);font-size:13px;outline:none;color-scheme:dark">
     <input id="search" placeholder="Search a question…">
   </div>
   <div id="list"></div>
@@ -384,19 +386,30 @@
     loadJobs(); // pick up any study work still running (shows the ● on the Teach tab)
   }
 
+  // this tab is for KNOWLEDGE questions only — greetings/small talk (marked
+  // `chat` by the server, plus a pattern net for older logs) and feedback
+  // votes stay out of the way
+  const isSmallTalk = (e) =>
+    e.chat ||
+    e.feedback ||
+    /^(hi+|hello|hey|ok(ay)?|thanks?( you)?|bye|good (morning|night|evening)|नमस्ते|नमस्कार|राम राम|जय सिया राम|jai? siya? ram|धन्यवाद|शुक्रिया|कैसे हो|कैसे हैं( आप)?|how are you)[\s!,.?🙏]*$/i.test(
+      (e.q || "").trim(),
+    );
+
   function render() {
+    const base = entries.filter((e) => !isSmallTalk(e));
     const today = new Date().toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
-    const todayN = entries.filter((e) => new Date(e.at).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" }) === today).length;
-    const un = entries.filter(isUnanswered).length;
-    const hiN = entries.filter((e) => e.hi).length;
-    const vN = entries.filter((e) => e.via === "voice").length;
+    const todayN = base.filter((e) => new Date(e.at).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" }) === today).length;
+    const un = base.filter(isUnanswered).length;
+    const hiN = base.filter((e) => e.hi).length;
+    const vN = base.filter((e) => e.via === "voice").length;
     $("#stats").innerHTML = `
-      <div class="stat"><b>${entries.length}</b><span>total questions</span></div>
+      <div class="stat"><b>${base.length}</b><span>total questions</span></div>
       <div class="stat"><b>${todayN}</b><span>today</span></div>
-      <div class="stat"><b>${entries.length ? Math.round(hiN / entries.length * 100) : 0}%</b><span>in Hindi</span></div>
-      <div class="stat"><b>${entries.length ? Math.round(vN / entries.length * 100) : 0}%</b><span>by voice</span></div>
+      <div class="stat"><b>${base.length ? Math.round(hiN / base.length * 100) : 0}%</b><span>in Hindi</span></div>
+      <div class="stat"><b>${base.length ? Math.round(vN / base.length * 100) : 0}%</b><span>by voice</span></div>
       <div class="stat warn"><b>${un}</b><span>unanswered</span></div>`;
-    $("#sub").textContent = `last ${entries.length} questions · newest first`;
+    $("#sub").textContent = `last ${base.length} knowledge questions · newest first`;
 
     // "Corrected" filter shows the saved approved answers themselves
     if (filter === "corrected") {
@@ -428,7 +441,9 @@
     }
 
     const q = query.toLowerCase();
-    const shown = entries.filter((e) => {
+    const qd = $("#qdate").value; // yyyy-mm-dd (IST day) or empty = all days
+    const shown = base.filter((e) => {
+      if (qd && new Date(e.at).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }) !== qd) return false;
       if (filter === "unanswered" && !isUnanswered(e)) return false;
       if (filter === "voice" && e.via !== "voice") return false;
       if (filter === "text" && e.via === "voice") return false;
@@ -493,6 +508,7 @@
     c.classList.add("on"); filter = c.dataset.f; render();
   }));
   $("#search").addEventListener("input", (e) => { query = e.target.value; render(); });
+  $("#qdate").addEventListener("input", render);
 
   // ——— Teach the bot ———
   const key = () => localStorage.getItem("adminKey") || "";
