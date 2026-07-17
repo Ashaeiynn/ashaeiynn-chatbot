@@ -70,6 +70,13 @@ export function removeSub(endpoint) {
   return all.length - left.length;
 }
 export const subCount = () => load(SUBS, []).length;
+export function removeByUid(uid) {
+  if (!uid) return 0;
+  const all = load(SUBS, []);
+  const left = all.filter((s) => s.uid !== uid);
+  if (left.length !== all.length) save(SUBS, left);
+  return all.length - left.length;
+}
 export const pushLog = () => load(LOG, []).slice(-120).reverse();
 
 // title/body may be a plain string (sent as-is to everyone — the admin's

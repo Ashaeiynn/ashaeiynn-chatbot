@@ -480,6 +480,10 @@
     .vcb-namecard input{border-color:rgba(227,183,102,.5);color:#f5edda;background:rgba(217,169,79,.07)}
     .vcb-namecard input:focus{border-color:#d9a94f}
     .vcb-namego{background:linear-gradient(140deg,#f7e3ae,#d9a94f 70%);color:#1d1503}
+    .vcb-ava{cursor:pointer}
+    .vcb-delacc{border:1.5px solid rgba(255,157,118,.55);background:rgba(160,74,51,.12);color:#ff9d76;
+      border-radius:12px;padding:11px 20px;font-size:13.5px;cursor:pointer}
+    .vcb-delacc:hover{background:rgba(160,74,51,.22)}
 
     /* ——— Phase 2: quote, video cards, feedback, streak ——— */
     .vcb-quote{position:relative;margin-top:10px;border-radius:13px;padding:11px 13px 9px 36px;
@@ -1405,6 +1409,66 @@
   };
   // channel/page links have no timestamp — show just the title then
   const srcLabel = (s) => (s.timestamp ? `${s.title} (${s.timestamp})` : s.title);
+  // ——— account sheet: tap the guide's avatar — no extra chrome anywhere ———
+  panel.querySelector(".vcb-ava")?.addEventListener("click", () => {
+    if (!journey.uid || panel.querySelector(".vcb-namecard")) return;
+    const card = document.createElement("div");
+    card.className = "vcb-namecard";
+    const h = document.createElement("h4");
+    h.textContent = `🙏 ${journey.name || "Seeker"} जी`;
+    const p = document.createElement("p");
+    p.textContent = "You are signed in with Ashaeiynn Guide.";
+    const del = document.createElement("button");
+    del.className = "vcb-delacc";
+    del.textContent = "Delete my account";
+    const back = document.createElement("button");
+    back.className = "vcb-nameskip";
+    back.textContent = "Close";
+    let armed = false;
+    del.addEventListener("click", async () => {
+      if (!armed) {
+        armed = true;
+        p.textContent =
+          "This removes your details from Ashaeiynn and your journey from this phone. It cannot be undone.";
+        del.textContent = "Yes, delete everything";
+        back.textContent = "Keep my account";
+        return;
+      }
+      del.disabled = true;
+      del.textContent = "Removing…";
+      try {
+        await fetch(`${API}/api/account/delete`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ uid: journey.uid }),
+        });
+      } catch {
+        /* server best-effort — local wipe proceeds */
+      }
+      try {
+        await pushUnsubscribe();
+      } catch {
+        /* fine */
+      }
+      try {
+        localStorage.removeItem(J_KEY);
+      } catch {
+        /* fine */
+      }
+      for (const k of Object.keys(journey)) delete journey[k];
+      journey.asked = [];
+      journey.seen = [];
+      journey.convo = [];
+      h.textContent = "🙏 Account deleted";
+      p.textContent = "आप जब चाहें लौट आइए — the door is always open.";
+      del.remove();
+      back.textContent = "Close";
+    });
+    back.addEventListener("click", () => card.remove());
+    card.append(h, p, del, back);
+    panel.appendChild(card);
+  });
+
   // sign-up comes before the first question — the gate every ask passes through
   function needSignup() {
     if (journey.uid) return false;

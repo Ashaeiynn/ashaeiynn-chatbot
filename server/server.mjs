@@ -894,6 +894,27 @@ const server = createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/push/key") {
     return json(res, 200, { ready: push.pushReady(), key: push.publicKey() });
   }
+  // the seeker's own right: delete their account (registry + notifications)
+  if (req.method === "POST" && url.pathname === "/api/account/delete") {
+    const ip = req.socket.remoteAddress ?? "unknown";
+    if (rateLimited(ip, "light", 60)) return json(res, 429, { error: "Too many requests." });
+    let body = "";
+    for await (const part of req) {
+      body += part;
+      if (body.length > 2_000) return json(res, 413, { error: "Too long." });
+    }
+    try {
+      const uid = String(JSON.parse(body).uid || "").slice(0, 30);
+      if (uid) {
+        users.markDeleted(uid, "user deleted account");
+        push.removeByUid?.(uid);
+      }
+      return json(res, 200, { ok: true });
+    } catch {
+      return json(res, 400, { error: "Invalid JSON." });
+    }
+  }
+
   // ——— sign-up: the guide asks who is arriving (member registry) ———
   if (req.method === "POST" && url.pathname === "/api/signup") {
     const ip = req.socket.remoteAddress ?? "unknown";
