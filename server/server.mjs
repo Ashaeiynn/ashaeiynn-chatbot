@@ -761,19 +761,28 @@ async function handleStt(req, res) {
   if (src === "ios-app") {
     if (!process.env.GROQ_API_KEY) return json(res, 503, { error: "stt-not-configured", detail: "groq key missing" });
     const ext = mime.includes("webm") ? "webm" : mime.includes("wav") ? "wav" : mime.includes("ogg") ? "ogg" : "m4a";
-    const blob = new Blob([Buffer.from(audio, "base64")], { type: mime });
+    const bytes = Buffer.from(audio, "base64");
+    const blob = new Blob([bytes], { type: mime });
     const l = lang.toLowerCase();
-    // FULL large-v3 first — markedly better Hindi than turbo (turbo trades
-    // multilingual accuracy for speed); turbo stays as the separate-quota
-    // fallback. The prompt biases the ear toward सत्संग vocabulary + Devanagari.
+    // Language: the audience is ~97% Hindi and the app's default toggle is
+    // Hindi, so trust "hi" and force it (Whisper is most accurate when the
+    // language is known). But when the toggle says English we DON'T force —
+    // auto-detect — so a Hindi speaker on the English toggle still works and
+    // Hinglish isn't mangled. A SHORT spelling hint only: a long Devanagari
+    // prompt makes Whisper echo/hallucinate it on quiet or very short clips
+    // (exactly why "जय सिया राम" was coming back garbled).
+    const forceHi = !l || l.startsWith("hi");
+    // FULL large-v3 first — markedly better Hindi than turbo; turbo is the
+    // separate-quota fallback.
     for (const model of ["whisper-large-v3", "whisper-large-v3-turbo"]) {
       try {
         const fd = new FormData();
         fd.append("file", blob, `voice.${ext}`);
         fd.append("model", model);
         fd.append("temperature", "0");
-        fd.append("prompt", "जय सिया राम। गुरुदेव और Parikshit Bhaiya की Ashaeiynn पाठशाला — साधना, जाप, ध्यान, तीसरी आँख।");
-        if (l.startsWith("hi")) fd.append("language", "hi");
+        fd.append("response_format", "verbose_json"); // gives detected language + duration for diagnostics
+        fd.append("prompt", "जय सिया राम। साधना, जाप, ध्यान, गुरुदेव।");
+        if (forceHi) fd.append("language", "hi");
         else if (l.startsWith("en")) fd.append("language", "en");
         const r = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
           method: "POST",
@@ -781,9 +790,13 @@ async function handleStt(req, res) {
           body: fd,
         });
         if (r.ok) {
-          const text = String((await r.json()).text || "").trim();
+          const data = await r.json();
+          const text = String(data.text || "").trim();
+          // one diagnostic line per transcription — lets us SEE what the phone
+          // actually sent (bytes, format) and what Whisper heard, without guessing
+          console.log(`stt ok: ${model} · ${(bytes.length / 1024).toFixed(0)}KB ${mime} · lang=${forceHi ? "hi(forced)" : l || "auto"}→${data.language || "?"} · ${Number(data.duration || 0).toFixed(1)}s · "${text.slice(0, 80)}"`);
           if (text) return json(res, 200, { text: fixMishearings(text.slice(0, 2000)) });
-          lastDetail = `groq ${model}: empty transcription`;
+          lastDetail = `groq ${model}: empty transcription (${(bytes.length / 1024).toFixed(0)}KB, ${Number(data.duration || 0).toFixed(1)}s)`;
         } else {
           lastDetail = `groq ${model} ${r.status}: ${(await r.text()).slice(0, 60)}`;
         }
@@ -791,7 +804,7 @@ async function handleStt(req, res) {
         lastDetail = "groq: " + String(err?.message || err).slice(0, 120);
       }
     }
-    console.error("stt error:", lastDetail);
+    console.error("stt error:", lastDetail, `· ${(bytes.length / 1024).toFixed(0)}KB ${mime}`);
     return json(res, 503, { error: "Couldn't hear that — please try again.", detail: lastDetail });
   }
   // two models = two separate quota pools; when one is exhausted (429) the
