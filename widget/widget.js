@@ -1153,7 +1153,9 @@
           showLive(
             err?.status === 429
               ? "⚠️ बहुत सारे सवाल एक साथ — 1-2 मिनट रुककर फिर बोलिए"
-              : `⚠️ आवाज़ record हुई पर समझी नहीं जा सकी (server ${err?.status || ""}${err?.detail ? " · " + err.detail : ""}) — एक बार फिर बोलिए`,
+              : /429|quota/i.test(err?.detail || "")
+                ? "⚠️ आज का free voice-कोटा पूरा हो गया — अभी ⌨️ type कीजिए, आवाज़ दोपहर बाद अपने-आप लौट आएगी 🙏"
+                : `⚠️ आवाज़ record हुई पर समझी नहीं जा सकी (server ${err?.status || ""}${err?.detail ? " · " + err.detail : ""}) — एक बार फिर बोलिए`,
           );
         } else {
           input.placeholder = "Couldn't transcribe — try again or type…";

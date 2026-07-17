@@ -698,11 +698,15 @@ async function handleStt(req, res) {
   // label but accepts under another — try both before giving up, and if both
   // fail, surface Gemini's real reason so the phone screen shows it.
   const tryMimes = mime === "audio/mp4" ? ["audio/mp4", "audio/aac"] : [mime, "audio/mp4"];
+  // two models = two separate quota pools; when one is exhausted (429) the
+  // other often still has room — try both before giving up
+  const models = [...new Set([process.env.GEMINI_LIGHT_MODEL, process.env.GEMINI_MODEL, "gemini-2.0-flash-lite"].filter(Boolean))];
   let lastDetail = "";
+  for (const model of models)
   for (const m of tryMimes) {
     try {
       const r = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(process.env.GEMINI_LIGHT_MODEL || process.env.GEMINI_MODEL || "gemini-2.0-flash-lite")}:generateContent`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_TTS_KEY },
@@ -719,7 +723,13 @@ async function handleStt(req, res) {
         },
       );
       if (!r.ok) {
-        lastDetail = `gemini ${r.status}: ${(await r.text()).slice(0, 140)}`;
+        let msg = "";
+        try {
+          msg = JSON.parse(await r.text())?.error?.message || "";
+        } catch {
+          /* raw body unhelpful */
+        }
+        lastDetail = `gemini ${r.status}${msg ? ": " + msg.slice(0, 60) : ""}`;
         continue;
       }
       const data = await r.json();
