@@ -876,6 +876,32 @@
     return cands.sort((a, b) => score(b) - score(a))[0] || null;
   }
 
+  // iPhone only lets a page speak if speech was started from a real tap. The
+  // guide always speaks LATER — after the answer, and after the server voice has
+  // been tried — so by then the tap is long gone and iOS silently refuses. That
+  // is why the fallback voice went quiet on iOS while the server voice was down
+  // (owner, 2026-07-19). Firing one silent utterance during the tap itself
+  // unlocks speech for the rest of the visit. Harmless everywhere else.
+  let voicePrimed = false;
+  function primeVoice() {
+    if (voicePrimed || !("speechSynthesis" in window)) return;
+    voicePrimed = true;
+    try {
+      const u = new SpeechSynthesisUtterance(" ");
+      u.volume = 0;
+      speechSynthesis.speak(u);
+      speechSynthesis.getVoices(); // also nudges the voice list to load
+    } catch {
+      /* not supported here — browserSpeak will simply do nothing */
+    }
+  }
+  // the list arrives asynchronously on most browsers; keep it warm
+  try {
+    if ("speechSynthesis" in window) speechSynthesis.addEventListener?.("voiceschanged", () => speechSynthesis.getVoices());
+  } catch {
+    /* best effort */
+  }
+
   // Speak sentence by sentence: natural breathing pauses, and it sidesteps the
   // Chrome bug that silently cuts single long utterances at ~15 seconds.
   function browserSpeak(clean, done) {
@@ -1458,6 +1484,7 @@
   // the big eye: idle→listen · listening→finish · speaking→stop
   {
     orb.addEventListener("click", () => {
+      primeVoice(); // must happen inside the tap for iOS to allow speech later
       const s = panel.dataset.vstate;
       if (listening) {
         if (mediaRec && mediaRec.state === "recording") stopRecording();
@@ -2267,6 +2294,7 @@
   if (standalone || (ownPage && matchMedia("(max-width:640px)").matches)) toggle(true);
 
   form.addEventListener("submit", async (e) => {
+    primeVoice(); // same gate applies when the seeker types instead
     e.preventDefault();
     if (needSignup()) return;
     const text = input.value.trim();
