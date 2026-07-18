@@ -1129,13 +1129,14 @@
   }
 
   // upload with a real progress bar (fetch cannot report upload progress; XHR can)
-  function uploadWithProgress(f, title, onPct) {
+  function uploadWithProgress(f, title, onPct, replace) {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "/api/admin/upload");
       xhr.setRequestHeader("x-admin-key", key());
       xhr.setRequestHeader("x-file-name", encodeURIComponent(f.name));
       xhr.setRequestHeader("x-title", encodeURIComponent(title));
+      if (replace) xhr.setRequestHeader("x-replace", "1");
       xhr.upload.onprogress = (e) => e.lengthComputable && onPct(Math.round((e.loaded / e.total) * 100));
       xhr.onload = () => {
         try {
@@ -1182,12 +1183,27 @@
         "Recordings aren't studied here — please upload the typed transcript (txt, Word or PDF) so Bhaiya's teaching is exact.");
     // spot same-name duplicates BEFORE transferring anything
     let dupes = [];
+    let replaceThese = new Set(); // names the admin chose to teach again
     try {
       const r = await fetch("/api/admin/uploaded-names", { headers: { "x-admin-key": key() } });
       if (r.ok) {
         const known = new Set((await r.json()).names || []);
-        dupes = files.filter((f) => known.has(f.name.toLowerCase()));
-        files = files.filter((f) => !known.has(f.name.toLowerCase()));
+        const sameName = files.filter((f) => known.has(f.name.toLowerCase()));
+        if (sameName.length) {
+          // Same NAME is not the same CONTENT — a corrected or translated version
+          // usually keeps its file name. Ask instead of silently skipping.
+          const again = confirm(
+            `${sameName.length === 1 ? `“${sameName[0].name}” was` : `${sameName.length} of these files were`} taught before under the same name.\n\n` +
+              "Is this a NEW or corrected version?\n\n" +
+              "OK — teach it anyway (the bot re-learns it)\n" +
+              "Cancel — skip it",
+          );
+          if (again) replaceThese = new Set(sameName.map((f) => f.name.toLowerCase()));
+          else {
+            dupes = sameName;
+            files = files.filter((f) => !known.has(f.name.toLowerCase()));
+          }
+        }
       }
     } catch { /* server decides on upload instead */ }
     if (!files.length)
@@ -1223,7 +1239,7 @@
             showStatus("⬆️", `${label} — ${pct}%`, sub, pct);
             renderJobs();
           }
-        });
+        }, replaceThese.has(f.name.toLowerCase()));
         pendingUploads = pendingUploads.filter((x) => x !== p); // its server job takes over
         await loadJobs();
       } catch (err) {
@@ -1247,8 +1263,12 @@
         "reading the file and building searchable memory…", 0);
     if (failed.length)
       showStatus("⚠️", `${files.length - failed.length} uploaded · ${failed.length} failed`, failed.join(" · ").slice(0, 200));
-    else if (dupes.length)
-      showStatus("✅", `${files.length} uploaded · ${dupes.length} duplicate${dupes.length > 1 ? "s" : ""} skipped`, "");
+    else if (dupes.length) {
+      showStatus("⏭", `${dupes.length} skipped — already taught under the same name`,
+        "if it was a new version, upload it again and choose “teach it anyway”");
+      clearTimeout(hideStatus.t);
+      hideStatus.t = setTimeout(hideStatus, 12000);
+    }
     loadJobs();
   }
   $("#drop").addEventListener("click", () => $("#file").click());

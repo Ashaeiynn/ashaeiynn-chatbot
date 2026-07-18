@@ -1617,9 +1617,14 @@ const server = createServer(async (req, res) => {
     const name = decodeURIComponent(req.headers["x-file-name"] || "").replace(/[/\\]/g, "_").trim();
     const title = decodeURIComponent(req.headers["x-title"] || "").trim();
     if (!name) return json(res, 400, { error: "Missing file name." });
-    if (uploadedNames().includes(name.toLowerCase())) {
+    // A matching FILE NAME is not the same thing as matching content. The owner
+    // re-uploaded an English version of a teaching under its original name and
+    // was told "duplicate skipped — nothing new to study" (2026-07-19). The
+    // guard stays (it catches the real accident — the same file sent twice), but
+    // the portal can now say "teach it anyway" and send x-replace.
+    if (uploadedNames().includes(name.toLowerCase()) && req.headers["x-replace"] !== "1") {
       req.resume(); // drain the body so the connection closes cleanly
-      return json(res, 409, { error: "duplicate", duplicate: true });
+      return json(res, 409, { error: "duplicate", duplicate: true, name });
     }
     const dest = path.join(uploadsDir, `${Date.now().toString(36)}-${name}`);
     try {
