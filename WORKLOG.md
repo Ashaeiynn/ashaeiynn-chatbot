@@ -19,6 +19,28 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **"What IS this साधना?" vs "what are its नियम?" — two different questions** (owner:
+  "if someone asks about the sadhana it should not contain the instruction… if they ask
+  the rules, then only a member gets them"). Embedding similarity rated both the same, so
+  the approved food-rules answer was being delivered to a plain "सिया तत्व साधना क्या है?".
+  Decided in CODE now (server.mjs, next to the greeting detector), not left to the model:
+  - `RULES_STRONG` (नियम/निर्देश/विधि/कैसे करें/rules/method…) = always a how-to.
+  - `RULES_SOFT` (खाना/समय/नमक/दूध/व्रत…) = a how-to UNLESS the question asks for meaning
+    (महत्व/फायदे/क्यों) — so "व्रत का महत्व क्या है?" stays a teaching question.
+  - Hinglish covered too (niyam, khane, samay, kaise karu…) — many seekers type in Latin.
+  - `SADHANA_TOPIC` scopes the members-only gate to साधना/अनुष्ठान/दीक्षा/नवरात्रि/जाप, read
+    from the last 2 turns as well (so "इसके नियम?" after naming one still counts).
+    Deliberate: "ध्यान कैसे करें?" is Bhaiya's OPEN teaching (it's on the channel) and must
+    stay open to a newcomer — the gate is for a साधना's निर्देश, not every how-to.
+  Behaviour: non-member + साधना rules → the approved answer is DROPPED from the context
+  entirely (the model cannot leak what it never received) and it warmly says what the
+  साधना is, explains the निर्देश are given personally, and invites a screening
+  (`सहायता: screening` attaches the link). Member + rules → full निर्देश as before.
+  Anyone asking "what is it" → the teaching, never the rule sheet. All 4 combinations
+  verified live; 22 offline cases for the classifier.
+  NOTE for the owner: membership comes from the admin Users tab — a real member on a
+  new/unregistered device counts as a non-member until they're marked there.
+
 - **CRITICAL — the bot changed a figure in Bhaiya's approved answer.** Asked about
   सिया तत्व साधना food rules it said milk is barred after **8 बजे**; the approved answer
   says **6 बजे**. The correction had fired correctly (DIRECT, 0.936) — the MODEL drifted
