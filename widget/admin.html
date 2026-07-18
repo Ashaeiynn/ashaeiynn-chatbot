@@ -1087,16 +1087,28 @@
         label: p.status === "uploading" ? `⬆️ ${p.pct}%` : p.status === "waiting" ? "pending" : "✗ failed",
       });
     }
-    for (const j of serverJobs) {
+    // Finished work should not sit in "what the bot is studying right now"
+    // forever (owner, 2026-07-19). Keep a done row for two minutes so the ✅ is
+    // seen, then let it go. Failures STAY — those need the admin's eyes.
+    const live = serverJobs.filter(
+      (j) => j.status !== "done" || !j.doneAt || Date.now() - j.doneAt < 120000,
+    );
+    for (const j of live) {
       let detail = j.detail;
       if (j.status === "failed") {
         const f = friendlyError(j.detail);
         detail = f ? `${f}${j.detail ? `  (${j.detail})` : ""}` : j.detail;
       }
-      if (j.status === "done" && !detail) detail = "the bot now answers with this knowledge — try asking";
+      if (j.status === "done" && !detail)
+        detail =
+          j.kind === "forget"
+            ? "removed — the bot no longer uses this source"
+            : "the bot now answers with this knowledge — try asking";
       rows.push({ icon: KIND_ICON[j.kind] || "📦", title: j.title, detail, cls: j.status, label: labelFor(j) });
     }
-    $("#jobs").innerHTML = rows.length ? "" : `<div class="empty">nothing yet — add something above</div>`;
+    $("#jobs").innerHTML = rows.length
+      ? ""
+      : `<div class="empty">nothing being studied right now — add something above</div>`;
     for (const r of rows) {
       const el = document.createElement("div");
       el.className = "job";
@@ -1125,6 +1137,11 @@
     if (pendingUploads.length || serverJobs.some((j) => ["queued", "working", "ready", "studying"].includes(j.status))) {
       clearTimeout(loadJobs.t);
       loadJobs.t = setTimeout(loadJobs, 2000); // it should feel live while it works
+    } else if (serverJobs.some((j) => j.status === "done" && j.doneAt)) {
+      // nothing running, but finished rows are still on screen — come back to
+      // clear them once they age out
+      clearTimeout(loadJobs.t);
+      loadJobs.t = setTimeout(loadJobs, 20000);
     }
   }
 

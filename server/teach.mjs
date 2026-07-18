@@ -173,6 +173,7 @@ async function pump() {
         converted++;
       } catch (err) {
         job.status = "failed";
+        job.doneAt = Date.now();
         job.detail = String(err?.message || err).slice(0, 300);
         console.error("teach failed:", job.title, "-", job.detail);
       }
@@ -189,6 +190,7 @@ async function pump() {
         reload();
         batch.forEach((j) => {
           j.status = "done";
+          j.doneAt = Date.now(); // the portal drops finished rows after a couple of minutes
           j.detail = "";
         });
         console.log(`teach: knowledge refreshed (+${batch.length} source${batch.length > 1 ? "s" : ""})`);
@@ -196,6 +198,7 @@ async function pump() {
       } catch (err) {
         batch.forEach((j) => {
           j.status = "failed";
+          j.doneAt = Date.now();
           j.detail = "study step failed: " + String(err?.message || err).slice(0, 200);
         });
       }
