@@ -121,6 +121,11 @@ const MEANING_ASK =
   /महत्व|महत्त्व|फ़?ायद|लाभ|मतलब|अर्थ|क्यों|उद्देश्य|के\s*बारे|\b(mahatva|fayda|faayda|labh|matlab)\b|benefit|meaning|purpose|significance|importance|\bwhy\b|tell me about/i;
 const ABOUT_ASK = /क्या\s*(है|हैं|होती|होता|हो)|\bkya\s*(hai|h)\b|what\s+(is|are|does)|about (the|this)/i;
 const isRulesQ = (t) => RULES_STRONG.test(t) || (RULES_SOFT.test(t) && !MEANING_ASK.test(t));
+// The members-only gate covers a SĀDHANĀ's निर्देश — not every how-to. "ध्यान कैसे
+// करें?" is Bhaiya's open teaching (it is on the YouTube channel) and must stay
+// open to a newcomer; "इस साधना के नियम" is what belongs to the family.
+const SADHANA_TOPIC =
+  /साधना|साधनाएँ|अनुष्ठान|दीक्षा|नवरात्रि|सिया\s*तत्व|राम\s*तत्व|हवन|जाप|मंत्र\s*(जप|जाप|सिद्ध)|\b(sadh?ana|sadhna|anushthan|deeksha|diksha|navratri|navratra|siya\s*tatt?[vw]a|ram\s*tatt?[vw]a|hawan|havan|jaap)\b/i;
 
 // ——— the address book (data/links.json): channels & standing pages the bot
 // can hand out when a seeker asks for a link. Re-read every 10 minutes.
@@ -457,14 +462,29 @@ async function handleChat(req, res) {
   // to the family: members receive them, everyone else is warmly invited in first.
   // And "सिया तत्व साधना क्या है?" must never be answered with its rule sheet — which
   // is exactly what an approved rules answer was doing to every nearby question.
+  // The साधना may have been named a turn or two ago ("इसके नियम क्या हैं?"), so the
+  // topic is read from the recent conversation, not just this message.
+  const topicText = history
+    .filter((m) => m.role === "user")
+    .slice(-2)
+    .map((m) => m.content)
+    .concat(message)
+    .join(" ");
+  const sadhanaTopic = SADHANA_TOPIC.test(topicText);
   const rulesAsk = !isGreeting && isRulesQ(message);
   const aboutAsk = !isGreeting && !rulesAsk && (ABOUT_ASK.test(message) || MEANING_ASK.test(message));
-  const rulesWithheld = rulesAsk && !seekerMember;
+  const rulesWithheld = rulesAsk && sadhanaTopic && !seekerMember;
+  const aboutSadhana = aboutAsk && sadhanaTopic;
   // Drop an approved RULES answer whenever its substance does not belong in THIS
-  // answer — a non-member never receives it, and a member asking "what is it?"
-  // gets the teaching, not the rule sheet. The model cannot leak what it was
-  // never given. (A member asking for the नियम still gets it in full.)
-  if (approved && isRulesQ(approved.q) && (!seekerMember || aboutAsk)) approved = null;
+  // answer — a non-member never receives a साधना's निर्देश, and anyone asking
+  // "what is it?" gets the teaching, not the rule sheet. The model cannot leak
+  // what it was never given. (A member asking for the नियम still gets them whole.)
+  if (
+    approved &&
+    isRulesQ(approved.q) &&
+    ((!seekerMember && SADHANA_TOPIC.test(approved.q)) || aboutAsk)
+  )
+    approved = null;
 
   // Search transcripts for the question (plus a bit of recent context for follow-ups).
   // Cross-language boost: also search with a Hindi/English translation of the question,
@@ -531,7 +551,7 @@ async function handleChat(req, res) {
     // corrected = same-meaning match (the correction IS the answer, adapted);
     // guided = related match (the correction was the highest-authority source)
     ...(approved ? (approved.score >= DIRECT_MATCH ? { corrected: true } : { guided: true }) : {}),
-    ...(rulesWithheld ? { rulesWithheld: true } : aboutAsk ? { aboutAsk: true } : {}),
+    ...(rulesWithheld ? { rulesWithheld: true } : aboutSadhana ? { aboutAsk: true } : {}),
     top: chunks.slice(0, 3).map((c) => ({ t: c.title, s: Number(c.score?.toFixed(3)) })),
   };
 
@@ -594,7 +614,7 @@ async function handleChat(req, res) {
           }${
             rulesWithheld
               ? `\n[साधना निर्देश — NOT FOR THIS SEEKER. They are asking for the नियम/निर्देश of a साधना (rules, timings, food, method, count) and they have NOT joined Ashaeiynn. Ashaeiynn never hands साधना निर्देश to someone outside the family — they are given personally, with a guide, so the साधना is done rightly and safely. So: do NOT state a single rule, timing, food restriction, count or step, even though the excerpts below contain them. Instead, in 3-4 warm sentences — say what this साधना IS and why it matters in Bhaiya's teaching, explain kindly that its निर्देश are given personally once their own journey with Ashaeiynn begins, and invite them to book a screening. This is care, never secrecy: never sound like you are hiding something, and never hint at a rule while declining. End with the final line: सहायता: screening]`
-              : aboutAsk
+              : aboutSadhana
                 ? `\n[THIS IS A "WHAT IS IT" QUESTION, not a how-to. The seeker wants to understand the साधना itself — what it is, what it awakens, why Bhaiya gives it, what a seeker gains from it. Do NOT answer with its नियम: no timings, no food restrictions, no step-by-step method, no do's and don'ts. Teach the साधना, not the rulebook.${
                     seekerMember ? " You may offer its नियम as ONE of the सुझाव follow-ups." : ""
                   }]`
