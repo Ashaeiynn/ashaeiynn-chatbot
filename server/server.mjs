@@ -476,7 +476,7 @@ async function handleChat(req, res) {
       title: "Bhaiya's approved answer (admin-edited)",
       content: `Question it was written for: ${approved.q}\n${
         approved.score >= DIRECT_MATCH
-          ? "(The seeker's current question means the SAME as that one. This approved answer IS the answer: deliver its COMPLETE teaching — every specific point and instruction — freshly worded for this seeker and their language, adding nothing and dropping nothing.)\n"
+          ? "(The seeker's current question means the SAME as that one. This approved answer IS the answer: deliver its COMPLETE teaching — every specific point and instruction — freshly worded for this seeker and their language, adding nothing and dropping nothing. COPY EVERY NUMBER AND CLOCK TIME EXACTLY as written here — if it says 6 pm, say 6 pm, never 7 or 8. Changing a figure is a serious error.)\n"
           : ""
       }Approved answer: ${approved.answer}`,
       start_seconds: 0,
