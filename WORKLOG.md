@@ -44,10 +44,11 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   race — a fast translation still costs nothing) and added an 800-entry cache, since seekers
   re-ask and tap the same suggestion chips constantly. Verified live afterwards: that same
   Hinglish question now cites The Hidden Science of Meditation / The Science of Bodh.
-  STILL OPEN (small): the raw Hinglish query still contributes its alphabet-matches to the
-  merged results, so boilerplate pages ("Website: Disclaimer") can appear in sources under an
-  otherwise correct answer. Excluding disclaimer/privacy/terms pages from retrieval would fix
-  it — not done, as it changes what the bot studies and that is the owner's call.
+  FOLLOW-UP (done, owner approved): legal/admin pages are now excluded from SEARCH —
+  `BOILERPLATE_PAGE` in retrieve.mjs drops Website: Disclaimer / Terms & Conditions /
+  No Refund Policy / Shipping (8 chunks of 902). They stay in the library, nothing deleted,
+  one regex to undo. 894 usable chunks; verified live that "Disclaimer" no longer appears
+  as a cited source. Every other website page is real content and was left alone.
 
 - **⚠️ MAJOR FINDING — a Hinglish correction was invisible to Hindi seekers.** e5 compares
   SCRIPT as much as meaning across languages. Against a Latin-script (Hinglish) key:
