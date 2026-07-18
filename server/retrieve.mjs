@@ -114,8 +114,13 @@ export async function searchMulti(questions, limit = 8) {
     const key = item.chunk.title;
     const n = perVideo.get(key) ?? 0;
     if (n >= PER_VIDEO_CAP) continue;
-    // already saying this? spend the slot on something the seeker has not been told
-    if (top.some((t) => cosine(t.chunk.vec, item.chunk.vec) >= NEAR_DUPLICATE)) continue;
+    // Only ACROSS sources. Within one source, consecutive chunks deliberately
+    // overlap by ~200 chars, so they score above this and would be thrown away —
+    // which stripped the main teaching down to a single chunk and left answers
+    // vague (measured, and immediately visible in the reply). Depth inside one
+    // source is what PER_VIDEO_CAP is for; this guard is only about the same
+    // teaching arriving twice under two different names.
+    if (top.some((t) => t.chunk.title !== key && cosine(t.chunk.vec, item.chunk.vec) >= NEAR_DUPLICATE)) continue;
     perVideo.set(key, n + 1);
     top.push(item);
     if (top.length >= limit) break;
