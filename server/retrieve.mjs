@@ -11,17 +11,38 @@ const dbFile = path.join(ROOT, "data", "knowledge.db");
 
 let chunks = null; // in-memory: [{ id, title, content, start_seconds, url, vec }]
 
+// Some recordings transcribed badly — whisper got "stuck" and emitted the same
+// word (or "!" / single letters) thousands of times. Measured 2026-07-18: ~12.6%
+// of chunks are this garbage. Retrieving them gives the guide nothing to say, so
+// answers from those videos came out vague or wrong. We keep them in the file
+// (nothing is deleted) but exclude them from SEARCH.
+// Tuned on real data: spoken Hindi is full of 2-letter words, so short-word
+// share is NOT a junk signal — repetition and single-character spam are.
+function isGarbled(text) {
+  const w = String(text || "").split(/\s+/).filter(Boolean);
+  if (w.length < 12) return true;
+  const uniq = new Set(w).size / w.length;
+  const counts = {};
+  for (const x of w) counts[x] = (counts[x] || 0) + 1;
+  const topShare = Math.max(...Object.values(counts)) / w.length;
+  const singleShare = w.filter((x) => x.length <= 1).length / w.length;
+  return uniq < 0.25 || topShare > 0.25 || singleShare > 0.4;
+}
+
 function load() {
   if (chunks) return chunks;
   if (!existsSync(dbFile)) throw new Error("Knowledge base not built yet — run: npm run ingest");
   const db = new DatabaseSync(dbFile, { readOnly: true });
-  const rows = db
+  const all = db
     .prepare(
       `SELECT c.title, c.content, c.start_seconds, c.embedding, v.url
        FROM chunks c JOIN videos v ON v.id = c.video_id`,
     )
     .all();
   db.close();
+  const rows = all.filter((r) => !isGarbled(r.content));
+  const dropped = all.length - rows.length;
+  if (dropped) console.log(`retrieval: ${rows.length} usable chunks (skipped ${dropped} garbled from bad transcriptions)`);
   chunks = rows.map((r) => ({
     title: r.title,
     content: r.content,
