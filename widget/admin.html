@@ -964,6 +964,19 @@
     failed: "❌ failed",
     dup: "🔁 already learnt",
   };
+  // Removing a source runs through the SAME queue, so it was announcing itself as
+  // "reading" and "studying" while it was actually deleting and unlearning
+  // (owner, 2026-07-19). Same states, honest words.
+  const FORGET_LABEL = {
+    queued: "⏳ waiting to remove",
+    working: "🗑️ removing",
+    ready: "🗑️ removed · unlearning next",
+    studying: "🧠 unlearning",
+    done: "✅ removed & forgotten",
+    failed: "❌ could not remove",
+    dup: "🔁 already gone",
+  };
+  const labelFor = (j) => (j.kind === "forget" ? FORGET_LABEL : ST_LABEL)[j.status] || j.status;
 
   // raw errors → words the admin can act on (raw kept in brackets for support)
   function friendlyError(raw) {
@@ -982,7 +995,11 @@
   let uploading = false;
   let pendingUploads = []; // files chosen but not yet handed to the server
   let serverJobs = [];
+  function hideStatus() {
+    $("#teach-status").style.display = "none";
+  }
   function showStatus(icon, main, sub, pct) {
+    clearTimeout(hideStatus.t); // any new news cancels a pending fade-out
     $("#teach-status").style.display = "block";
     $("#ts-icon").textContent = icon;
     $("#ts-main").textContent = main;
@@ -1018,6 +1035,7 @@
     tab.textContent = activeN || pendingUploads.length ? "📚 Teach the bot ●" : "📚 Teach the bot";
     if (activeN) {
       const working = jobs.find((j) => j.status === "working");
+      const removing = jobs.some((j) => j.kind === "forget" && ["queued", "working", "ready", "studying"].includes(j.status));
       if (t.studying) {
         // The rebuild gives no progress of its own, so this is an ELAPSED-TIME
         // estimate against the usual ~7 minutes — capped below 100 so it never
@@ -1025,13 +1043,13 @@
         if (!studyStartedAt) studyStartedAt = Date.now();
         const pct = Math.min(95, Math.round(((Date.now() - studyStartedAt) / 420000) * 100));
         const mins = Math.floor((Date.now() - studyStartedAt) / 60000);
-        showStatus("📖", `Learning — ${pct}%`,
-          `building searchable memory · about ${mins} min so far · the bot keeps answering with its old knowledge meanwhile`, pct);
+        showStatus(removing ? "🧠" : "📖", `${removing ? "Unlearning" : "Learning"} — ${pct}%`,
+          `rebuilding searchable memory · about ${mins} min so far · the bot keeps answering with its old knowledge meanwhile`, pct);
       } else if (working) {
         studyStartedAt = 0;
         const doneN = (t.done || 0) + (t.ready || 0);
-        showStatus("⚙️",
-          `Reading ${doneN + 1} of ${t.total} — ${Math.round((doneN / Math.max(1, t.total)) * 100)}%`,
+        showStatus(working.kind === "forget" ? "🗑️" : "⚙️",
+          `${working.kind === "forget" ? "Removing" : "Reading"} ${doneN + 1} of ${t.total} — ${Math.round((doneN / Math.max(1, t.total)) * 100)}%`,
           `${working.title}${working.detail ? " · " + working.detail : ""}${activeN > 1 ? ` · ${activeN - 1} more waiting` : ""}`,
           Math.round((doneN / Math.max(1, t.total)) * 100));
       } else {
@@ -1041,7 +1059,15 @@
       }
     } else if (t.total) {
       if (t.failed) showStatus("⚠️", `${t.done || 0} learnt · ${t.failed} failed`, "the list below shows what failed and why");
-      else if (t.done) showStatus("✅", `Finished — 100% · ${t.done} item${t.done > 1 ? "s" : ""} learnt`, "the bot is already answering with this knowledge", 100);
+      else if (t.done) {
+        const gone = jobs.filter((j) => j.kind === "forget" && j.status === "done").length;
+        showStatus("✅",
+          gone ? `Finished — 100% · ${gone} source${gone > 1 ? "s" : ""} removed & forgotten` : `Finished — 100% · ${t.done} item${t.done > 1 ? "s" : ""} learnt`,
+          "the bot is already answering with its updated knowledge", 100);
+        // …and then get out of the way. It used to sit there for good.
+        clearTimeout(hideStatus.t);
+        hideStatus.t = setTimeout(hideStatus, 9000);
+      }
     }
   }
 
@@ -1068,7 +1094,7 @@
         detail = f ? `${f}${j.detail ? `  (${j.detail})` : ""}` : j.detail;
       }
       if (j.status === "done" && !detail) detail = "the bot now answers with this knowledge — try asking";
-      rows.push({ icon: KIND_ICON[j.kind] || "📦", title: j.title, detail, cls: j.status, label: ST_LABEL[j.status] || j.status });
+      rows.push({ icon: KIND_ICON[j.kind] || "📦", title: j.title, detail, cls: j.status, label: labelFor(j) });
     }
     $("#jobs").innerHTML = rows.length ? "" : `<div class="empty">nothing yet — add something above</div>`;
     for (const r of rows) {
@@ -1297,6 +1323,19 @@
     if (show) $("#libpw").focus();
   }
 
+  // Poll until the study queue is empty, then show the Library as it really is.
+  function waitThenRefreshLibrary() {
+    clearTimeout(waitThenRefreshLibrary.t);
+    waitThenRefreshLibrary.t = setTimeout(async () => {
+      const d = await fetch("/api/admin/jobs", { headers: { "x-admin-key": key() } })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null);
+      const busy = (d?.jobs || []).some((j) => ["queued", "working", "ready", "studying"].includes(j.status));
+      if (busy) return waitThenRefreshLibrary();
+      loadLibrary();
+    }, 3000);
+  }
+
   async function loadLibrary() {
     if (!sessionStorage.getItem("libKey")) return libLocked(true);
     const r = await fetch("/api/admin/library", { headers: libHeaders() });
@@ -1366,7 +1405,18 @@
       el.querySelector('[data-a="rm"]').addEventListener("click", async () => {
         if (!confirm(`Forget "${it.title}"?\n\nThe bot will no longer use this source to answer. (A copy stays in the GitHub backup.)`)) return;
         const r = await fetch(`/api/admin/source?f=${encodeURIComponent(it.file)}`, { method: "DELETE", headers: libHeaders() });
-        if (r.ok) { alert("Removed — the bot is re-studying its memory now (see Teach tab → Progress)."); loadLibrary(); }
+        if (r.ok) {
+          // Deleting only QUEUES the removal — the file goes when the job runs.
+          // Reloading the list straight away brought the row back and looked like
+          // the delete had failed (owner, 2026-07-19). Grey the row out and say
+          // what is happening instead, then refresh once the queue is clear.
+          el.style.opacity = ".45";
+          el.querySelectorAll("button").forEach((b) => (b.disabled = true));
+          const note = el.querySelector(".m");
+          if (note) note.textContent = "🗑️ removing — the bot is unlearning this now…";
+          loadJobs();
+          waitThenRefreshLibrary();
+        }
       });
       $("#liblist").appendChild(el);
     }
