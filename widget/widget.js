@@ -857,6 +857,18 @@
       .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "")
       .trim();
 
+  // Apple's Hindi voice reads a standalone "गुरु" as "गुरुवार" (Thursday) —
+  // reported on a seeker's iPhone, 2026-07-19. Respelling it with the long ū
+  // breaks that expansion. This applies ONLY to the device voice on Apple
+  // devices: the words on screen, the words sent to the server voice, and the
+  // log are all untouched, and Android is unaffected.
+  const APPLE_SPEECH_FIXES = [
+    // only a standalone गुरु — never गुरुदेव, गुरुकुल, or गुरुवार itself
+    [/गुरु(?![ऀ-ॿ])/gu, "गुरू"],
+  ];
+  const forDeviceVoice = (t) =>
+    isApple ? APPLE_SPEECH_FIXES.reduce((acc, [re, to]) => acc.replace(re, to), t) : t;
+
   // Choose the most natural free voice the device offers. Chrome's "Google …"
   // network voices and Apple's downloadable Enhanced/Premium voices sound far
   // better than the compact defaults, so rank them first.
@@ -930,7 +942,7 @@
         /* notice is best-effort */
       }
     }
-    const sentences = clean
+    const sentences = forDeviceVoice(clean)
       .split(/(?<=[।॥.!?])\s+/)
       .flatMap((s) => (s.length > 240 ? s.split(/(?<=,)\s+/) : [s]))
       .map((s) => s.trim())
