@@ -19,6 +19,29 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **Installing on Android: grey "A" icon, and no install prompt.** A seeker's phone showed the
+  app as a generic letter tile labelled with the PAGE TITLE ("Ask Your Guide — Ashaeiynn")
+  instead of the manifest name ("Ashaeiynn Guide") — the signature of a plain bookmark shortcut,
+  i.e. the manifest was never read. Server side was verified fine: manifest served as
+  application/manifest+json, both icons genuine PNGs at exactly 192×192 and 512×512. So the
+  install had been made by an in-app browser (WhatsApp/Facebook link) or a phone's own browser
+  (that was a Xiaomi), neither of which reads manifests.
+  TWO REAL GAPS FOUND AND FIXED:
+  1. `sw.js` existed but had NO fetch handler, and was registered ONLY inside `pushSubscribe()`
+     — so unless a seeker switched notifications on, no service worker ever existed and Chrome
+     would not offer "Install app" by itself. Now registered on load (guide's own origin only —
+     embedded elsewhere there is no /sw.js) and given a fetch handler.
+     The handler caches NOTHING and only touches page navigations: the widget is deliberately
+     served no-cache so fixes reach phones immediately, and API/TTS audio must not be
+     intercepted. Verified live: registered, activated, controlling, chat round-trip normal,
+     zero console errors.
+  2. In-app browsers now get one dismissible line — "Open this in Chrome to install the app on
+     your phone" (Safari wording on iPhone) — shown only when in an in-app browser, not already
+     installed, and not previously dismissed. UA detection tested against 7 real user agents
+     (FB_IAB, Instagram, WhatsApp, Android `; wv)`, vs real Chrome/Safari/desktop).
+  NOT PROVEN FROM HERE: whether Chrome now actually raises the prompt on a real phone — it also
+  applies its own engagement heuristics. Needs the owner to test on Android.
+
 - **"Talk to your mentor" was landing in almost every answer** (owner: it should only say that
   when really necessary). Rule 15 was correctly scoped, but the MEMBER context block carried
   *"For personal matters send them to THEIR OWN mentor: अपने mentor से बात कीजिए"* on EVERY
