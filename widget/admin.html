@@ -95,6 +95,9 @@
   #libsearch{flex:1;min-width:150px;background:var(--card);border:1px solid var(--line);border-radius:999px;
     padding:8px 16px;color:var(--ink);font-size:13.5px;outline:none}
   #libsearch:focus{border-color:var(--gold)}
+  #libtype{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 14px;
+    color:var(--ink);font-size:13.5px;outline:none;cursor:pointer;font-family:inherit;color-scheme:dark}
+  #libtype:focus,#libtype:hover{border-color:var(--gold)}
   #reader{position:fixed;inset:0;background:rgba(5,3,18,.85);display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
   #reader.show{display:flex}
   #reader .rbox{background:var(--card);border:1px solid var(--gold);border-radius:18px;max-width:780px;width:100%;
@@ -281,6 +284,17 @@
   </div>
   <div id="libstats"></div>
   <div id="libbar">
+    <select id="libtype" title="Filter the library by source type">
+      <option value="all">All types</option>
+      <option value="recording">🎧 Recordings (audio)</option>
+      <option value="video">🎬 Vimeo videos</option>
+      <option value="youtube">▶️ YouTube videos</option>
+      <option value="article">📰 Articles</option>
+      <option value="website">🌐 Website pages</option>
+      <option value="document">📄 Documents</option>
+      <option value="note">✍️ Notes</option>
+      <option value="curated">⭐ Curated</option>
+    </select>
     <input id="libsearch" placeholder="Search the library…">
     <button id="backup">⬇️ Download all (backup)</button>
   </div>
@@ -1299,7 +1313,11 @@
     const shown = lib.filter((it) =>
       (libFilter === "all" || it.type === libFilter) &&
       (!q || it.title.toLowerCase().includes(q)));
-    $("#liblist").innerHTML = shown.length ? "" : `<div class="empty">कुछ नहीं मिला · nothing found</div>`;
+    // keep the dropdown showing whatever filter is active (the stat chips set it too)
+    if ($("#libtype")) $("#libtype").value = libFilter;
+    $("#liblist").innerHTML = shown.length
+      ? `<div class="src" style="margin:0 0 10px 2px">showing ${shown.length} of ${lib.length} sources${libFilter === "all" ? "" : ` · ${(TYPE_META[libFilter] || ["", libFilter])[1]}`}${q ? ` · matching “${esc(libQuery)}”` : ""}</div>`
+      : `<div class="empty">कुछ नहीं मिला · nothing found</div>`;
     for (const it of shown.slice(0, 400)) {
       const [ic, label] = TYPE_META[it.type] || ["📦", it.type];
       const meta = [label,
@@ -1359,6 +1377,7 @@
   }
 
   $("#libsearch").addEventListener("input", (e) => { libQuery = e.target.value; renderLibrary(); });
+  $("#libtype").addEventListener("change", (e) => { libFilter = e.target.value; renderLibrary(); });
   $("#backup").addEventListener("click", async () => {
     $("#backup").textContent = "⏳ preparing…"; $("#backup").disabled = true;
     try {
