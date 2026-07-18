@@ -624,7 +624,15 @@ async function handleChat(req, res) {
           // so Bhaiya's Hinglish material was invisible to most seekers. Free:
           // plain transliteration rules, no AI call. (Hinglish questions get the
           // mirror of this from the translation step above.)
-          isDevanagari ? toLatin(message) : null, // `isDevanagari` is the boolean computed above for this very message
+          // The script-flip form. A Devanagari question gets its Hinglish
+          // spelling directly; an ENGLISH question gets it from the Hindi
+          // translation above — otherwise English seekers still could not reach
+          // teachings written in Hinglish (measured: 0 of 3 before this line).
+          isDevanagari
+            ? toLatin(message)
+            : translated && /[ऀ-ॿ]/.test(translated)
+              ? toLatin(translated)
+              : null,
         ],
         Number(process.env.RETRIEVE_K || 12),
       );
