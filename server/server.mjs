@@ -103,6 +103,25 @@ const publicUrl = (u) => (u && /youtube\.com|youtu\.be|ashaeiynn\.com/i.test(Str
 const GREETING_ONLY =
   /^\s*(jai?\s*(shree\s*|shri\s*)?(siya\s*|sita\s*)?ram(\s*ji)?|जय\s*(श्री\s*)?(सिया\s*|सीता\s*)?राम(\s*जी)?|जय\s*सियाराम|जय\s*गुरुदेव|राधे\s*राधे|नमस्ते|नमस्कार|प्रणाम|राम\s*राम|हेलो|हाय|namaste|hello|hi|hey|good\s*(morning|afternoon|evening|night))\s*[!.,\s🙏]*$/i;
 
+// Two very different asks about the same साधना (owner's rule, 2026-07-18):
+//   "सिया तत्व साधना क्या है?"      → teach WHAT it is, its meaning and benefit
+//   "इसके नियम क्या हैं?"            → the निर्देश — MEMBERS ONLY
+// Left to the model (and to embedding similarity alone) both scored the same and
+// every question got the food-rules answer. Decided here in code instead.
+// RULES wins when a question matches both ("नियम क्या हैं" is a rules question).
+// Hindi, Devanagari AND Hinglish — plenty of seekers type "khane ka samay".
+// STRONG = unmistakably a how-to.
+const RULES_STRONG =
+  /नियम|निर्देश|विधि|तरीक|परहेज|पालन|सावधान|कैसे\s*(कर|करूँ|करुँ|शुरू)|कब\s*कर|कितने\s*दिन|कितनी\s*बार|कितना\s*जाप|\b(niyam|nirdesh|vidhi|tarika|parhez)\b|\bkitn[ei]\s+(din|baar|bar)\b|\bkaise\s+(kar|karu|karun|shuru)|\bkab\s+kar|\brules?\b|instruction|guideline|method|procedure|steps?\b|timing|\bdiet\b|how (do|to|should|can) (i|we|one)/i;
+// SOFT = food/time words. These mean "how do I do it" in a practice question, but
+// NOT when the seeker is asking what something means ("व्रत का महत्व क्या है?").
+const RULES_SOFT =
+  /खान[ेा]|भोजन|आहार|नमक|दूध|व्रत|उपवास|समय|टाइम|\b(khana|khane|bhojan|aahar|namak|doodh|dudh|vrat|upvas|samay)\b|what.*\b(eat|avoid|food|drink)\b|\bfast(ing)?\b/i;
+const MEANING_ASK =
+  /महत्व|महत्त्व|फ़?ायद|लाभ|मतलब|अर्थ|क्यों|उद्देश्य|के\s*बारे|\b(mahatva|fayda|faayda|labh|matlab)\b|benefit|meaning|purpose|significance|importance|\bwhy\b|tell me about/i;
+const ABOUT_ASK = /क्या\s*(है|हैं|होती|होता|हो)|\bkya\s*(hai|h)\b|what\s+(is|are|does)|about (the|this)/i;
+const isRulesQ = (t) => RULES_STRONG.test(t) || (RULES_SOFT.test(t) && !MEANING_ASK.test(t));
+
 // ——— the address book (data/links.json): channels & standing pages the bot
 // can hand out when a seeker asks for a link. Re-read every 10 minutes.
 const LINK_ASK =
@@ -434,6 +453,19 @@ async function handleChat(req, res) {
     /* corrections are best-effort */
   }
 
+  // WHAT-IT-IS vs HOW-TO-DO-IT (owner's rule, 2026-07-18). A साधना's निर्देश belong
+  // to the family: members receive them, everyone else is warmly invited in first.
+  // And "सिया तत्व साधना क्या है?" must never be answered with its rule sheet — which
+  // is exactly what an approved rules answer was doing to every nearby question.
+  const rulesAsk = !isGreeting && isRulesQ(message);
+  const aboutAsk = !isGreeting && !rulesAsk && (ABOUT_ASK.test(message) || MEANING_ASK.test(message));
+  const rulesWithheld = rulesAsk && !seekerMember;
+  // Drop an approved RULES answer whenever its substance does not belong in THIS
+  // answer — a non-member never receives it, and a member asking "what is it?"
+  // gets the teaching, not the rule sheet. The model cannot leak what it was
+  // never given. (A member asking for the नियम still gets it in full.)
+  if (approved && isRulesQ(approved.q) && (!seekerMember || aboutAsk)) approved = null;
+
   // Search transcripts for the question (plus a bit of recent context for follow-ups).
   // Cross-language boost: also search with a Hindi/English translation of the question,
   // since the videos are spoken in Hindi but visitors may ask in English (or vice versa).
@@ -499,6 +531,7 @@ async function handleChat(req, res) {
     // corrected = same-meaning match (the correction IS the answer, adapted);
     // guided = related match (the correction was the highest-authority source)
     ...(approved ? (approved.score >= DIRECT_MATCH ? { corrected: true } : { guided: true }) : {}),
+    ...(rulesWithheld ? { rulesWithheld: true } : aboutAsk ? { aboutAsk: true } : {}),
     top: chunks.slice(0, 3).map((c) => ({ t: c.title, s: Number(c.score?.toFixed(3)) })),
   };
 
@@ -557,6 +590,14 @@ async function handleChat(req, res) {
               ? `\n[MEMBER: this seeker is a verified Ashaeiynn member — they already belong to the family and have their own mentor. NEVER suggest booking a screening or joining Ashaeiynn to them. For personal matters (rule 15) send them to THEIR OWN mentor: "अपने mentor से बात कीजिए — वे आपको जानते हैं". Otherwise simply answer from Bhaiya's teachings. IF (and only if) this member indicates a PREVIOUS answer of yours was wrong or incomplete — they say so outright, or their message clearly contradicts/re-asks because it didn't land — then: humbly acknowledge (never argue), answer again as best you can from the excerpts, and gently invite them to share Bhaiya's correct teaching so our team can review it — e.g. "अगर आप जानते हैं कि Bhaiya इसे कैसे समझाते हैं, तो बताइए — मैं हमारी team तक पहुँचा दूँगा।" Then add a final line exactly: सुधार: 1 (the app turns this into a box for them to type the correct answer; never shown as text). Do this ONLY on a genuine wrong-answer signal, never on a normal follow-up or a first question.]`
               : profile?.uid
                 ? `\n[NOT YET A MEMBER: this seeker has not joined Ashaeiynn yet. For personal matters (rule 15) guide them to book a screening at ashaeiynn.com. And when a moment is genuinely right — deep interest, a personal ask, a practice they want to begin — you may warmly mention ONCE in the conversation that their own journey with Ashaeiynn can begin with a screening. Inviting, never pushy, never in every answer.]`
+                : ""
+          }${
+            rulesWithheld
+              ? `\n[साधना निर्देश — NOT FOR THIS SEEKER. They are asking for the नियम/निर्देश of a साधना (rules, timings, food, method, count) and they have NOT joined Ashaeiynn. Ashaeiynn never hands साधना निर्देश to someone outside the family — they are given personally, with a guide, so the साधना is done rightly and safely. So: do NOT state a single rule, timing, food restriction, count or step, even though the excerpts below contain them. Instead, in 3-4 warm sentences — say what this साधना IS and why it matters in Bhaiya's teaching, explain kindly that its निर्देश are given personally once their own journey with Ashaeiynn begins, and invite them to book a screening. This is care, never secrecy: never sound like you are hiding something, and never hint at a rule while declining. End with the final line: सहायता: screening]`
+              : aboutAsk
+                ? `\n[THIS IS A "WHAT IS IT" QUESTION, not a how-to. The seeker wants to understand the साधना itself — what it is, what it awakens, why Bhaiya gives it, what a seeker gains from it. Do NOT answer with its नियम: no timings, no food restrictions, no step-by-step method, no do's and don'ts. Teach the साधना, not the rulebook.${
+                    seekerMember ? " You may offer its नियम as ONE of the सुझाव follow-ups." : ""
+                  }]`
                 : ""
           }${
             wantsLink
