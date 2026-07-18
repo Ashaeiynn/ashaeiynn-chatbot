@@ -901,6 +901,18 @@
   // is why the fallback voice went quiet on iOS while the server voice was down
   // (owner, 2026-07-19). Firing one silent utterance during the tap itself
   // unlocks speech for the rest of the visit. Harmless everywhere else.
+  // A short buzz when the seeker taps the mic — the tap has no other feedback on
+  // a phone, so it is easy to be unsure whether the guide is listening.
+  // Android only: Apple does not support the Vibration API, so this is a no-op
+  // on iPhone and iPad (nothing breaks, it simply is not felt).
+  const buzz = (ms = 18) => {
+    try {
+      navigator.vibrate?.(ms);
+    } catch {
+      /* unsupported or blocked — never let a nicety throw */
+    }
+  };
+
   let voicePrimed = false;
   let voiceMissingTold = false; // only mention a missing device voice once per visit
   function primeVoice() {
@@ -1517,6 +1529,7 @@
   // the big eye: idle→listen · listening→finish · speaking→stop
   {
     orb.addEventListener("click", () => {
+      buzz(); // a small acknowledgement that the tap landed
       // NO primeVoice() here. Speaking — even a silent utterance — flips iOS's
       // audio session to playback, and the very next thing this handler does is
       // start the microphone. That broke voice input on iPhone (owner,
@@ -1568,6 +1581,7 @@
   }
   kbdBtn.addEventListener("click", () => { primeVoice(); setMode("text"); });
   micBtn.addEventListener("click", () => {
+    buzz();
     // the mic in the typing bar returns to the voice stage and starts listening
     setMode("voice");
     startListening("stage");
