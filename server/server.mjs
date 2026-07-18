@@ -125,6 +125,13 @@ const ACK_ONLY = new RegExp(`^\\s*(?:${ACK_WORD}[\\s,!.।]*){1,3}[!.,।\\s\u{1
 const UNCLEAR_ONLY =
   /^\s*(कुछ\s*)?(बताइए|बताइये|बताओ|बताएं|बतायें|मदद\s*(कीजिए|करिए|करो)?|हेल्प|(मुझे\s*)?(कुछ\s*)?समझ\s*नहीं\s*आ\s*(रहा|रही|रहा है)|कुछ\s*समझ\s*नहीं\s*आता|(मैं\s*)?क्या\s*(करूँ|करुँ|करू|करु|करें|करूं)|(मेरी\s*)?समस्या\s*है|(मैं\s*)?परेशान\s*हूँ|help(\s*me)?|please\s*help|i\s*need\s*help|guide\s*me|tell\s*me|can\s*you\s*help(\s*me)?)\s*[?।!.\s🙏]*$/i;
 
+// A mentor referral belongs to a seeker's own circumstances — health, fear, a
+// crisis, their specific condition — NOT to a teaching question. The MEMBER note
+// carried "send them to their mentor" on every single request, so the bot closed
+// almost every answer with it (owner, 2026-07-18).
+const PERSONAL_ASK =
+  /मेरी\s*(समस्या|तकलीफ़?|परेशानी|बीमारी|हालत|पत्नी|माँ|बेटी|बेटा)|मेरे\s*(पति|पिता|घर\s*में)|मुझे\s+(?:\S+\s+){0,2}(डर|तनाव|बीमारी|दिक्कत|परेशानी|तकलीफ़?|घबराहट)|बीमार|इलाज|दवा|अस्पताल|डिप्रेशन|अवसाद|घबराहट|काला\s*जादू|तंत्र[\s-]?मंत्र\s*किया|ऊपरी\s*हवा|नज़र\s*लग|टोना|आत्महत्या|जीना\s*नहीं|मेरे\s*साथ\s*(ऐसा|बुरा)|my\s+(problem|health|illness|disease|condition|wife|husband|son|daughter|family|situation)|i\s*am\s*(sick|ill|suffering|depressed|scared|afraid|not\s*well)|black\s*magic|depress|anxiety|suicid|panic\s*attack/i;
+
 // Two very different asks about the same साधना (owner's rule, 2026-07-18):
 //   "सिया तत्व साधना क्या है?"      → teach WHAT it is, its meaning and benefit
 //   "इसके नियम क्या हैं?"            → the निर्देश — MEMBERS ONLY
@@ -518,6 +525,8 @@ async function handleChat(req, res) {
       .slice(-2)
       .some((m) => m.content.includes(seekerName) || /\b(भाई|बहन|bhai|behen)\b/.test(m.content));
 
+  const personalAsk = !isGreeting && !isAck && !isUnclear && PERSONAL_ASK.test(message);
+
   const recentOpenings = history
     .filter((m) => m.role === "assistant")
     .slice(-3)
@@ -678,7 +687,11 @@ async function handleChat(req, res) {
               : ""
           }${
             seekerMember
-              ? `\n[MEMBER: this seeker is a verified Ashaeiynn member — they already belong to the family and have their own mentor. NEVER suggest booking a screening or joining Ashaeiynn to them. For personal matters (rule 15) send them to THEIR OWN mentor: "अपने mentor से बात कीजिए — वे आपको जानते हैं". Otherwise simply answer from Bhaiya's teachings. IF (and only if) this member indicates a PREVIOUS answer of yours was wrong or incomplete — they say so outright, or their message clearly contradicts/re-asks because it didn't land — then: humbly acknowledge (never argue), answer again as best you can from the excerpts, and gently invite them to share Bhaiya's correct teaching so our team can review it — e.g. "अगर आप जानते हैं कि Bhaiya इसे कैसे समझाते हैं, तो बताइए — मैं हमारी team तक पहुँचा दूँगा।" Then add a final line exactly: सुधार: 1 (the app turns this into a box for them to type the correct answer; never shown as text). Do this ONLY on a genuine wrong-answer signal, never on a normal follow-up or a first question.]`
+              ? `\n[MEMBER: this seeker is a verified Ashaeiynn member — they already belong to the family and have their own mentor. NEVER suggest booking a screening or joining Ashaeiynn to them. ${
+                  personalAsk
+                    ? 'This question is about their OWN circumstances, so rule 15 applies: give one line of warmth and send them to THEIR OWN mentor — "अपने mentor से बात कीजिए — वे आपको जानते हैं".'
+                    : 'This is a TEACHING question, not a personal one. Answer it fully from Bhaiya\'s teachings and do NOT send them to their mentor — no "अपने mentor से बात कीजिए", no "मेंटर से चर्चा कीजिए", not even as a closing suggestion. A mentor referral in an ordinary answer makes the guide sound like it is passing the seeker away; keep it for health, fear, crisis or their own specific condition.'
+                } IF (and only if) this member indicates a PREVIOUS answer of yours was wrong or incomplete — they say so outright, or their message clearly contradicts/re-asks because it didn't land — then: humbly acknowledge (never argue), answer again as best you can from the excerpts, and gently invite them to share Bhaiya's correct teaching so our team can review it — e.g. "अगर आप जानते हैं कि Bhaiya इसे कैसे समझाते हैं, तो बताइए — मैं हमारी team तक पहुँचा दूँगा।" Then add a final line exactly: सुधार: 1 (the app turns this into a box for them to type the correct answer; never shown as text). Do this ONLY on a genuine wrong-answer signal, never on a normal follow-up or a first question.]`
               : profile?.uid
                 ? `\n[NOT YET A MEMBER: this seeker has not joined Ashaeiynn yet. For personal matters (rule 15) guide them to book a screening at ashaeiynn.com. And when a moment is genuinely right — deep interest, a personal ask, a practice they want to begin — you may warmly mention ONCE in the conversation that their own journey with Ashaeiynn can begin with a screening. Inviting, never pushy, never in every answer.]`
                 : ""
