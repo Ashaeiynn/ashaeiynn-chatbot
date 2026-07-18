@@ -141,12 +141,19 @@ export async function searchMulti(questions, limit = 8) {
 
 // Which sources are teaching the SAME thing? Uploading one teaching twice (a
 // second copy, or the same material rewritten) is easy to do by accident, and
-// the bot then spends part of every relevant answer repeating itself. This
-// reports it so the admin can decide — it never deletes anything, because two
-// versions of one teaching are sometimes deliberate (prose + Q&A, say).
-// Threshold measured 2026-07-19: same teaching 0.925 median, different
-// teachings never above 0.874.
-export function duplicateSources(minShare = 0.5) {
+// the bot then spends part of every relevant answer repeating itself. This only
+// REPORTS it — it never deletes, because two versions of one teaching are
+// sometimes deliberate (prose + Q&A, say).
+//
+// MEASURED 2026-07-19, and the first attempt got this wrong. Counting "chunks
+// above 0.90" flagged 45 pairs, most of them merely related articles. What
+// actually separates them is the MEAN best match across a source:
+//   the same document twice ……… 0.957 – 0.975
+//   related but distinct teachings 0.929 – 0.941  (incl. the template hawan pages)
+// so the line sits at 0.95.
+const SAME_TEACHING = 0.95;
+
+export function duplicateSources() {
   const all = load();
   const bySource = new Map();
   for (const c of all) {
@@ -158,22 +165,25 @@ export function duplicateSources(minShare = 0.5) {
   for (const title of titles) {
     const mine = bySource.get(title);
     if (mine.length < 2) continue; // too small to judge
-    const hits = new Map(); // other title → how many of my chunks it already covers
-    for (const c of mine) {
-      let best = { t: null, s: 0 };
-      for (const other of titles) {
-        if (other === title) continue;
-        for (const o of bySource.get(other)) {
+    let best = { title: null, score: 0 };
+    for (const other of titles) {
+      if (other === title) continue;
+      const theirs = bySource.get(other);
+      // how well is EVERY part of this source already covered by that one?
+      let sum = 0;
+      for (const c of mine) {
+        let top = 0;
+        for (const o of theirs) {
           const sim = cosine(c.vec, o.vec);
-          if (sim > best.s) best = { t: other, s: sim };
+          if (sim > top) top = sim;
         }
+        sum += top;
       }
-      if (best.t && best.s >= 0.9) hits.set(best.t, (hits.get(best.t) ?? 0) + 1);
+      const mean = sum / mine.length;
+      if (mean > best.score) best = { title: other, score: mean };
     }
-    let twin = null;
-    for (const [t, n] of hits) if (!twin || n > twin.n) twin = { t, n };
-    if (twin && twin.n / mine.length >= minShare)
-      out.push({ title, twin: twin.t, share: Math.round((twin.n / mine.length) * 100) });
+    if (best.title && best.score >= SAME_TEACHING)
+      out.push({ title, twin: best.title, share: Math.round(best.score * 100) });
   }
   return out;
 }
