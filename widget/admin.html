@@ -1315,8 +1315,10 @@
       (!q || it.title.toLowerCase().includes(q)));
     // keep the dropdown showing whatever filter is active (the stat chips set it too)
     if ($("#libtype")) $("#libtype").value = libFilter;
+    // the list itself is capped at 400 rows below — say so rather than claim more
+    const capped = Math.min(shown.length, 400);
     $("#liblist").innerHTML = shown.length
-      ? `<div class="src" style="margin:0 0 10px 2px">showing ${shown.length} of ${lib.length} sources${libFilter === "all" ? "" : ` · ${(TYPE_META[libFilter] || ["", libFilter])[1]}`}${q ? ` · matching “${esc(libQuery)}”` : ""}</div>`
+      ? `<div class="src" style="margin:0 0 10px 2px">showing ${capped < shown.length ? `first ${capped} of ${shown.length} matching` : `${shown.length}`} · ${lib.length} sources total${libFilter === "all" ? "" : ` · ${(TYPE_META[libFilter] || ["", libFilter])[1]}`}${q ? ` · matching “${esc(libQuery)}”` : ""}</div>`
       : `<div class="empty">कुछ नहीं मिला · nothing found</div>`;
     for (const it of shown.slice(0, 400)) {
       const [ic, label] = TYPE_META[it.type] || ["📦", it.type];
