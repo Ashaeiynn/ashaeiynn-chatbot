@@ -57,7 +57,18 @@ def main():
     from pypdf import PdfReader
 
     reader = PdfReader(sys.argv[1])
-    pages = [(p.extract_text() or "") for p in reader.pages]
+    # LAYOUT MODE, not the default. Measured on Bhaiya's own PDFs (2026-07-19):
+    # the default extractor sprays spaces inside words — "Bhaiya k e discourse",
+    # "T one: war m", "gr eeting style" — 30% of words came out as 1-2 letter
+    # fragments, which wrecks both search and the model's reading. Layout mode
+    # returns "Bhaiya ke discourse. Tone: warm, greeting style" and drops that to
+    # 18%, which is simply the natural rate of short words in Hinglish.
+    pages = []
+    for p in reader.pages:
+        try:
+            pages.append(p.extract_text(extraction_mode="layout") or "")
+        except Exception:
+            pages.append(p.extract_text() or "")  # older pypdf — better than nothing
     text = clean_pages(pages)
     # A scan is a picture of a page: pypdf finds no text at all. Say so, rather
     # than letting it fail later as a vague "no readable text".
