@@ -13,6 +13,34 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-18 (MacBook Pro session, with the owner)
 
+- **Ambiguous साधना questions now ask WHICH one** (owner: "in ashaeiynn we do many
+  sadhanas — the bot should ask which sadhana the user is talking about"). New rule 7c
+  in prompt.mjs: when a question asks about नियम / timings / food / instructions without
+  naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
+  which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
+
+- **CRITICAL — the bot changed a figure in Bhaiya's approved answer.** Asked about
+  सिया तत्व साधना food rules it said milk is barred after **8 बजे**; the approved answer
+  says **6 बजे**. The correction had fired correctly (DIRECT, 0.936) — the MODEL drifted
+  while re-wording. Seekers act on these numbers, so this is a real-world error, not a
+  wording nit. Two-layer fix:
+  1. Prompt (rule 7b + the DIRECT-match note): never alter a number, clock time, count,
+     duration or name — re-word the prose freely, never the figures.
+  2. **Code guard** (prompt alone was NOT enough — measured 1 wrong run in 2 after the
+     prompt fix): on a DIRECT match, compare the digits of the approved answer with the
+     digits of the generated answer (Devanagari numerals normalised, Source line ignored).
+     On any mismatch, one cheap narrow repair call; if that still disagrees, deliver
+     Bhaiya's approved text as it stands. Accuracy of a rule outranks nice phrasing.
+     Result: 4/4 runs now say 6 बजे, still freshly worded per seeker.
+  LESSON for future sessions: for anything a seeker ACTS on (times, counts, दिन, mantra
+  counts), verify in code — never trust the prompt alone.
+
+- **Bug this exposed: marker lines leaked into the spoken answer.** सुझाव / वापसी /
+  वार्ता / साधना / सहायता are all parsed with END-of-answer anchors, but the model does
+  not always put `Source:` last — when it wrote Source *before* them, none matched and
+  the seeker saw (and heard) the raw marker text, with no tappable chips. Fixed by
+  lifting the Source line out before parsing and putting it back after. Verified.
+
 - **Owner reported: answers too generic / "going round and round", greetings got essays.**
   THREE real causes found and fixed (all measured, not guessed):
   1. **BIGGEST — correction thresholds sat inside the noise band.** e5 rates ANY two
