@@ -168,6 +168,14 @@
         radial-gradient(.9px .9px at 120px 280px,rgba(190,200,255,.3) 50%,transparent 51%)}
     @keyframes vcbDrift1{from{background-position:0 0}to{background-position:-240px 240px}}
     @keyframes vcbDrift2{from{background-position:0 0}to{background-position:320px 320px}}
+    /* iOS composites blurred, animated layers far more slowly than Android. The
+       look survives; the endless GPU work does not (owner reported lag while
+       typing, iOS only, 2026-07-19). */
+    .vcb-panel.lite .vcb-neb{animation:none}
+    .vcb-panel.lite .vcb-galaxy{animation:none}
+    .vcb-panel.lite .vcb-starfield{animation:none}
+    .vcb-panel.lite .vcb-twinkle{animation:none;opacity:.4}
+    .vcb-panel.lite .vcb-orb-halo,.vcb-panel.lite .vcb-shoot{display:none}
     .vcb-twinkle{position:absolute;border-radius:50%;background:#fff;will-change:opacity,transform;
       animation:vcbTwinkle ease-in-out infinite}
     @keyframes vcbTwinkle{0%,100%{opacity:.12;transform:scale(.8)}50%{opacity:.85;transform:scale(1.25)}}
@@ -315,7 +323,7 @@
     .vcb-you{color:#b9b0e6;font-size:13px;text-align:center;max-width:95%;animation:vcbMsgIn .3s ease both}
     .vcb-ans{color:#f4f0ff;font-size:14.5px;line-height:1.6;white-space:pre-wrap;word-wrap:break-word;
       background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);border-radius:14px;
-      padding:12px 14px;width:100%;animation:vcbMsgIn .3s ease both;backdrop-filter:blur(3px)}
+      padding:12px 14px;width:100%;animation:vcbMsgIn .3s ease both}
     .vcb-live{color:#b8f5dc;font-size:14.5px;text-align:center;min-height:20px;animation:vcbMsgIn .3s ease both}
     .vcb-orbbig{position:relative;width:96px;height:96px;border-radius:50%;border:none;cursor:pointer;
       flex-shrink:0;margin:8px 0 8px;display:flex;align-items:center;justify-content:center;
@@ -719,8 +727,12 @@
   });
 
   // scatter twinkling stars over the cosmos, each with its own rhythm
+  const isApple = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (isApple) panel.classList.add("lite");
+
   const cosmos = panel.querySelector(".vcb-cosmos");
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < (isApple ? 6 : 16); i++) {
     const t = document.createElement("i");
     t.className = "vcb-twinkle";
     const size = 1 + Math.random() * 1.6;
@@ -1493,7 +1505,11 @@
   // the big eye: idle→listen · listening→finish · speaking→stop
   {
     orb.addEventListener("click", () => {
-      primeVoice(); // must happen inside the tap for iOS to allow speech later
+      // NO primeVoice() here. Speaking — even a silent utterance — flips iOS's
+      // audio session to playback, and the very next thing this handler does is
+      // start the microphone. That broke voice input on iPhone (owner,
+      // 2026-07-19, Android unaffected). Priming happens when the panel opens
+      // and on Send, both of which are taps that never touch the mic.
       const s = panel.dataset.vstate;
       if (listening) {
         if (mediaRec && mediaRec.state === "recording") stopRecording();
@@ -2276,7 +2292,13 @@
       })
       .catch(() => {});
   }
-  btn.addEventListener("click", () => toggle(!panel.classList.contains("open")));
+  btn.addEventListener("click", () => {
+    // Unlock speech HERE — a tap that opens the guide, never one that records.
+    // iOS only permits speech that began in a user gesture, and this is the one
+    // gesture every visit starts with.
+    primeVoice();
+    toggle(!panel.classList.contains("open"));
+  });
   // the × close button was removed (not needed inside the app / full-screen guide)
   panel.querySelector(".vcb-close")?.addEventListener("click", () => toggle(false));
 
