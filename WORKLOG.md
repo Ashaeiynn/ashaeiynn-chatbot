@@ -19,6 +19,23 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **iOS: mic dead, and typing laggy — Android fine. Both traced.**
+  1. ⚠️ I CAUSED THE MIC FAILURE EARLIER THE SAME DAY. `primeVoice()` (the silent utterance that
+     unlocks iOS speech) was wired to the mic tap — and speaking, even silently, flips iOS's
+     audio session to playback. The very next line of that handler starts the microphone, so the
+     mic could not open. Android is unaffected because it has no such gate.
+     FIX: never prime on the tap that records. Priming now happens on the launcher tap, on
+     "type instead", on Send, and — the important one — right AFTER recording stops, since the
+     home-screen app auto-opens the panel and its launcher tap never happens at all, so a
+     voice-only seeker would otherwise never prime.
+  2. LAG: every message bubble carried `backdrop-filter: blur(3px)`, sitting over a continuously
+     animated background (blurred nebulae on transform, a 780s rotating galaxy, drifting
+     starfields, 16 twinkles). iOS re-blurs each bubble on every repaint, so the whole
+     conversation was being re-composited while typing. Removed the per-bubble backdrop blur
+     for everyone (invisible difference, large win) and added a `.lite` class on Apple devices
+     that stops the nebula/galaxy/starfield animations and cuts the stars from 16 to 6.
+  NOT VERIFIABLE FROM HERE — needs the owner's iPhone. Deployed and code-verified only.
+
 - **Sources under an answer are now pills, and the Source line is gone from the screen.**
   Owner: the article suggestions take huge space. They were video CARDS — each with an 82×50
   thumbnail box that, with the recordings deleted, held nothing but a 📖 emoji. Three of those
