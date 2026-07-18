@@ -624,7 +624,7 @@
 
   // Credit system paused (owner's call — will implement later). While off, all
   // credit UI (stat, column, Add-credits button) is hidden. Flip to re-enable.
-  const CREDITS_ON = false;
+  const CREDITS_ON = true;
   // ——— Teach the bot ———
   const key = () => localStorage.getItem("adminKey") || "";
   document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
@@ -687,7 +687,7 @@
       <div class="stat"><b>${c("inactive")}</b><span>🟡 inactive (15+ days)</span></div>
       <div class="stat"><b>${c("deleted")}</b><span>🔴 deleted</span></div>
       <div class="stat"><b>${uAll.filter((u) => u.member).length}</b><span>⭐ members</span></div>
-      ${CREDITS_ON ? `<div class="stat"><b>${uAll.reduce((n, u) => n + (u.credits || 0), 0).toLocaleString("en-IN")}</b><span>🪙 credits held</span></div>` : ""}`;
+      ${CREDITS_ON ? `<div class="stat"><b>${uAll.reduce((n, u) => n + (u.credits || 0), 0).toLocaleString("en-IN")}</b><span>🪙 questions left today</span></div>` : ""}`;
     renderUsers();
   }
   function renderUsers() {
@@ -710,7 +710,7 @@
     table.className = "utable";
     table.innerHTML = `<thead><tr>
       <th>Name</th><th>Nickname</th><th>WhatsApp</th><th>Email</th>
-      <th>Joined</th><th>Last seen</th><th>Status</th>${CREDITS_ON ? `<th style="text-align:right">Credits</th>` : ""}<th style="text-align:right">Actions</th>
+      <th>Joined</th><th>Last seen</th><th>Status</th>${CREDITS_ON ? `<th style="text-align:right">Questions left</th>` : ""}<th style="text-align:right">Actions</th>
     </tr></thead>`;
     const tbody = document.createElement("tbody");
     for (const u of list) {
@@ -729,7 +729,7 @@
       if (CREDITS_ON) {
         const addc = document.createElement("button");
         addc.className = "mini";
-        addc.textContent = "🪙 Add credits";
+        addc.textContent = "🪙 Grant extra";
         addc.title = "Add question-credits for this seeker";
         addc.addEventListener("click", () => addCredits(u));
         td.appendChild(addc);
@@ -765,7 +765,7 @@
     loadUsers();
   }
   async function addCredits(u) {
-    const raw = prompt(`Add credits for ${u.name} (now 🪙 ${(u.credits || 0).toLocaleString("en-IN")}).\n\nEach question the seeker asks costs 1 credit. Credits do not reset — the seeker uses them up as they go, and you top them up here. New seekers start with 100.\n\nHow many credits to add?`, "100");
+    const raw = prompt(`Grant extra questions to ${u.name} (they have ${(u.credits || 0).toLocaleString("en-IN")} left right now).\n\nEveryone gets ${u.dailyLimit || 50} questions a day automatically, and that comes back in full every morning — you do not need to top anyone up for normal use.\n\nExtra questions granted here sit ON TOP of the daily allowance and are only used once the day's ${u.dailyLimit || 50} are gone. They carry over day to day.\n\nHow many extra questions?`, "25");
     if (raw === null) return;
     const amount = Math.floor(Number(raw));
     if (!amount || amount <= 0) { alert("Please enter a positive whole number."); return; }

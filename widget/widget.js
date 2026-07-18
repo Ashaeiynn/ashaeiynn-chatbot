@@ -646,7 +646,7 @@
       </div>
       <div class="vcb-head-right">
         <div class="vcb-head-btns"><button class="vcb-bell" aria-label="Reminders" title="Reminders on special occasions">🔔</button><button class="vcb-voice" aria-label="Voice replies" title="Voice replies">🔇</button></div>
-        <span class="vcb-credit" title="प्रश्न शेष · questions left" hidden>🪙 <b>0</b></span>
+        <span class="vcb-credit" title="आज के बचे प्रश्न · questions left today" hidden>🪙 <b>0</b></span>
       </div>
     </div>
     <div class="vcb-bless"><span>${SPLASH}</span></div>
@@ -788,7 +788,7 @@
   const creditEl = panel.querySelector(".vcb-credit");
   // Credit system paused (owner's call — will implement later). While off the
   // 🪙 coin never shows and no balance is fetched. Flip to true to re-enable.
-  const CREDITS_ON = false;
+  const CREDITS_ON = true;
   // the 🪙 coin: show the seeker's questions-left, gold normally, amber when low
   function renderCredits(n) {
     if (!creditEl) return;

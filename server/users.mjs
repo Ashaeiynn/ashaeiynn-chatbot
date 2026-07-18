@@ -10,11 +10,14 @@ import { ROOT } from "./env.mjs";
 
 const FILE = path.join(ROOT, "data", "users.json");
 const ACTIVE_DAYS = 15;
-// Pay-as-you-use: each seeker has a persistent question-credit balance that
-// only goes down as they use it (1 per response). New seekers start with
-// WELCOME_CREDITS; the ONLY way to add more is the admin's Users tab.
-// (No daily refill, no payment gateway yet — a subscription model comes later.)
-export const WELCOME_CREDITS = 100;
+// A DAILY allowance (owner, 2026-07-19): every seeker may ask DAILY_LIMIT
+// questions each day, and the allowance comes back in full the next day.
+// It renews lazily — the first question after midnight IST resets the count —
+// so there is no scheduled job to run or to fail silently.
+// The admin's Users tab can still grant EXTRA questions to one seeker; that
+// bonus sits on top and is only touched once the day's allowance is spent.
+export const DAILY_LIMIT = Number(process.env.DAILY_QUESTIONS || 50);
+export const WELCOME_CREDITS = DAILY_LIMIT; // kept for older callers
 const istDay = () => new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(0, 10);
 
 const load = () => {
@@ -61,7 +64,9 @@ export function register({ name, nick, whatsapp, email }) {
     email,
     member: false,
     deleted: false,
-    credits: WELCOME_CREDITS, // pay-as-you-use starting balance
+    usedToday: 0,
+    dayKey: istDay(),
+    bonus: 0, // extra questions granted by the admin, spent after the daily allowance
     at: new Date().toISOString(),
     lastSeen: new Date().toISOString(),
   };
@@ -70,49 +75,71 @@ export function register({ name, nick, whatsapp, email }) {
   return u;
 }
 
-// ——— credits: a persistent pay-as-you-use balance ———
-export function credits(id) {
-  const u = byId(id);
-  return u ? Number(u.credits || 0) : 0;
+// ——— the daily allowance ———
+// How many questions this seeker has left right now: today's remainder plus any
+// admin-granted bonus. Reading it never writes — the reset happens on spend.
+function leftFor(u) {
+  if (!u) return 0;
+  const usedToday = u.dayKey === istDay() ? Number(u.usedToday || 0) : 0;
+  return Math.max(0, DAILY_LIMIT - usedToday) + Math.max(0, Number(u.bonus || 0));
 }
-// admin tops a seeker up (Users tab) — persistent, any positive whole number
+
+export function credits(id) {
+  return leftFor(byId(id));
+}
+
+// admin grants EXTRA questions (Users tab) — on top of the daily allowance,
+// carried over day to day until used
 export function addCredits(id, amount) {
   const n = Math.floor(Number(amount) || 0);
   if (!n || n < 0) return null;
   const all = load();
   const u = all.find((x) => x.id === id);
   if (!u) return null;
-  u.credits = Number(u.credits || 0) + n;
+  u.bonus = Math.max(0, Number(u.bonus || 0)) + n;
   save(all);
-  return u.credits;
+  return leftFor(u);
 }
-// one credit spent per response (see server.mjs); never goes below zero
+
+// one question spent per response (see server.mjs). Spends the day's allowance
+// first, then any bonus. A new IST day resets the count before charging.
 export function spendCredit(id, n = 1) {
   const all = load();
   const u = all.find((x) => x.id === id);
   if (!u) return null;
-  u.credits = Math.max(0, Number(u.credits || 0) - n);
+  const today = istDay();
+  if (u.dayKey !== today) {
+    u.dayKey = today;
+    u.usedToday = 0;
+  }
+  for (let i = 0; i < n; i++) {
+    if (Number(u.usedToday || 0) < DAILY_LIMIT) u.usedToday = Number(u.usedToday || 0) + 1;
+    else if (Number(u.bonus || 0) > 0) u.bonus = Number(u.bonus) - 1;
+  }
   save(all);
-  return u.credits;
+  return leftFor(u);
 }
-// migrate off the earlier DAILY model onto one persistent balance = whatever the
-// seeker had available at switch-over; then retire the daily fields. Idempotent.
-(function migrateToPersistent() {
+// Move records onto the daily model (owner switched back 2026-07-19). The old
+// persistent `credits` balance is dropped rather than carried over: the credit
+// system was switched OFF while it existed, so no seeker ever really held one.
+// Idempotent — safe to run on every boot.
+(function migrateToDaily() {
   const all = load();
   let changed = false;
   for (const u of all) {
-    if (typeof u.credits !== "number") {
-      // fold daily allowance + bonus into a single balance (or a fresh welcome)
-      u.credits =
-        u.dailyDate !== undefined
-          ? (u.dailyDate === istDay() ? Number(u.dailyLeft || 0) : WELCOME_CREDITS) + Number(u.bonus || 0)
-          : WELCOME_CREDITS;
+    if (typeof u.usedToday !== "number") {
+      u.usedToday = 0;
+      u.dayKey = istDay();
       changed = true;
     }
-    if ("dailyLeft" in u || "dailyDate" in u || "bonus" in u) {
+    if (typeof u.bonus !== "number") {
+      u.bonus = 0;
+      changed = true;
+    }
+    if ("credits" in u || "dailyLeft" in u || "dailyDate" in u) {
+      delete u.credits;
       delete u.dailyLeft;
       delete u.dailyDate;
-      delete u.bonus;
       changed = true;
     }
   }
@@ -172,7 +199,10 @@ export function listUsers() {
   return load()
     .map((u) => ({
       ...u,
-      credits: Number(u.credits || 0),
+      // what the admin sees: questions left today (allowance remainder + bonus)
+      credits: leftFor(u),
+      usedToday: u.dayKey === istDay() ? Number(u.usedToday || 0) : 0,
+      dailyLimit: DAILY_LIMIT,
       status: u.deleted ? "deleted" : now - new Date(u.lastSeen).getTime() <= ACTIVE_DAYS * 864e5 ? "active" : "inactive",
     }))
     .sort((a, b) => (a.lastSeen < b.lastSeen ? 1 : -1));

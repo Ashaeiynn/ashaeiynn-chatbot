@@ -37,6 +37,7 @@ let users = {
   },
   touch: () => {},
   byId: () => null,
+  DAILY_LIMIT: 50,
   credits: () => 0,
   addCredits: () => null,
   spendCredit: () => null,
@@ -59,7 +60,7 @@ const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 // Credit system paused (owner's call — will implement later). While off: no
 // charging, no out-of-credits block, no balance in responses. All the credit
 // code stays intact; flip this to true to re-enable instantly.
-const CREDITS_ON = false;
+const CREDITS_ON = true; // daily question allowance (users.mjs DAILY_LIMIT)
 const MAX_HISTORY_TURNS = 6;
 
 const apiKeyConfigured = keyConfigured;
@@ -478,9 +479,11 @@ async function handleChat(req, res) {
   // Out of credits → a warm stop BEFORE spending any AI. Only registered
   // seekers with a real balance are gated; anonymous/test callers pass through.
   if (seekerUid && seekerCredits !== null && seekerCredits <= 0) {
+    // The allowance renews tomorrow, so say that — "finished" would read as a
+    // door closing on a seeker mid-journey.
     const outMsg = wantsHindi
-      ? "🙏 आपके प्रश्न-credits समाप्त हो गए हैं। और प्रश्न पूछने के लिए कृपया Ashaeiynn team से संपर्क कीजिए — वे आपके credits बढ़ा देंगे।"
-      : "🙏 Your question-credits are finished. To ask more, please reach out to the Ashaeiynn team — they'll add credits for you.";
+      ? `🙏 आज के आपके ${users.DAILY_LIMIT} प्रश्न पूरे हो गए। कल फिर से ${users.DAILY_LIMIT} प्रश्न मिल जाएँगे — तब तक जो सुना है, उस पर थोड़ा ठहरिए। ज़रूरी बात हो तो Ashaeiynn team से संपर्क कीजिए।`
+      : `🙏 That's all ${users.DAILY_LIMIT} of today's questions. Your ${users.DAILY_LIMIT} come back tomorrow — until then, sit a little with what you've heard. If something is urgent, do reach out to the Ashaeiynn team.`;
     const contact = linkDirectory().filter((l) => l.title === "Contact Ashaeiynn").map((l) => ({ title: l.title, timestamp: "", url: l.url }));
     writeLog({ at: new Date().toISOString(), q: message, via: payload.via, noCredits: true });
     return json(res, 200, { answer: outMsg, sources: contact, credits: 0, noCredits: true });
