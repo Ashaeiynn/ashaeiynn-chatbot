@@ -656,9 +656,9 @@
       <button class="vcb-orbbig" type="button" aria-label="Ask by voice">
         <svg class="vcb-mic-big" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs><linearGradient id="vcbMicGold" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#f7e3ae"/><stop offset="55%" stop-color="#d9a94f"/><stop offset="100%" stop-color="#a97c2c"/>
+            <stop offset="0%" stop-color="#b8f5dc"/><stop offset="55%" stop-color="#34d399"/><stop offset="100%" stop-color="#0e7a54"/>
           </linearGradient></defs>
-          <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" stroke="url(#vcbMicGold)" stroke-width="1.8" fill="rgba(217,169,79,.12)"/>
+          <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" stroke="url(#vcbMicGold)" stroke-width="1.8" fill="rgba(52,211,153,.12)"/>
           <path d="M19 10v1a7 7 0 0 1-14 0v-1" stroke="url(#vcbMicGold)" stroke-width="1.8" stroke-linecap="round"/>
           <line x1="12" y1="18" x2="12" y2="22" stroke="url(#vcbMicGold)" stroke-width="1.8" stroke-linecap="round"/>
           <line x1="8.5" y1="22" x2="15.5" y2="22" stroke="url(#vcbMicGold)" stroke-width="1.8" stroke-linecap="round"/>

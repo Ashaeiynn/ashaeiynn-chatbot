@@ -117,6 +117,17 @@ const ACK_WORD =
   "(?:जी|हाँ|हां|ठीक\\s*है|ठीक|अच्छा|सही\\s*है|समझ\\s*(?:गया|गयी|गई)|ओके|हम्म+|बस|धन्यवाद|शुक्रिया|thank\\s*you|thanks|ok(?:ay)?|sure|yes|yeah|yep|right|fine|got\\s*it|understood|hmm+)";
 const ACK_ONLY = new RegExp(`^\\s*(?:${ACK_WORD}[\\s,!.।]*){1,3}[!.,।\\s\u{1F64F}\u{1F60A}\u{1F44D}]*$`, "iu");
 
+// Answering the guide's OWN question in the negative — "मैं साधना नहीं कर रहा",
+// "अभी नहीं", "समझ नहीं आया". The guide asked "साधना कैसी चल रही है?", the seeker
+// said they are not doing one, and the bot replied with a teaching about साधना
+// (owner, 2026-07-19). A negation is a reply, not a request to be taught the
+// very thing they just said they are NOT doing.
+// NOTE: \b is ASCII-only in JavaScript, so it never matches next to Devanagari —
+// the first version of this matched nothing in Hindi at all. And bare "ना" needs
+// boundaries of its own, or it fires inside साध-ना.
+const NEGATION = /नहीं|नही|नईं|(?:^|[\s,।])(?:ना|मत)(?:[\s,।!?]|$)|\b(?:no|not|nope|nahi|nahin)\b/i;
+const INTERROGATIVE = /\?|क्या|कैसे|कब|क्यों|कौन|कहाँ|कितन|बताइए|बताओ|\bwhat\b|\bhow\b|\bwhy\b|\bwhen\b|\bwho\b|\bwhere\b|\bwhich\b|\btell me\b/i;
+
 // "बताइए", "क्या करूँ?", "help me" — a message that names nothing to answer.
 // Caught in code like the greeting, because asking the model to notice its own
 // confusion did NOT hold (measured 2026-07-18: rule 7d alone still produced
@@ -416,6 +427,14 @@ async function handleChat(req, res) {
   // rather than filling the silence with general teaching (owner, 2026-07-18).
   const isUnclear =
     !isGreeting && UNCLEAR_ONLY.test(message) && !history.some((m) => m.role === "user");
+  // A short "no" in reply to the guide's own question — never a question itself.
+  const isNegativeReply = (() => {
+    if (isGreeting || isUnclear) return false;
+    if (!NEGATION.test(message) || INTERROGATIVE.test(message)) return false;
+    if (message.trim().split(/\s+/).length > 12) return false;
+    return history.some((m) => m.role === "assistant");
+  })();
+
   // Only an acknowledgement if there is something to acknowledge.
   const isAck =
     !isGreeting &&
@@ -631,6 +650,7 @@ async function handleChat(req, res) {
     ...(rulesWithheld ? { rulesWithheld: true } : aboutSadhana ? { aboutAsk: true } : {}),
     ...(isUnclear ? { unclear: true } : {}),
     ...(isAck ? { ack: true } : {}),
+    ...(isNegativeReply ? { negReply: true } : {}),
     top: chunks.slice(0, 3).map((c) => ({ t: c.title, s: Number(c.score?.toFixed(3)) })),
   };
 
@@ -721,8 +741,10 @@ async function handleChat(req, res) {
               ? `\n[The seeker just OPENED the app by tapping this notification — the "question" above is that notification's text, not their words. Welcome them warmly for coming, then open a short living conversation about it (3-4 sentences grounded in the excerpts + one inviting question). This is a doorstep moment, not a lecture.]`
               : ""
           }${
-            isAck
-              ? `\n[THIS IS AN ACKNOWLEDGEMENT, not a question — they are simply saying "yes / अच्छा / ठीक है" to what you just told them. Do NOT begin a new teaching, do NOT change the subject, and do NOT bring in साधना rules or any topic they did not ask about. Reply with ONE short warm line — about 15 words, NEVER more than 25 — that stays with what you were JUST discussing and gently opens the door to go further. No teaching, no Source line, no पंचांग. Then TWO final lines: a सुझाव line with 2-3 questions that go DEEPER INTO THAT SAME TOPIC, and the line: वार्ता: 1]`
+            isNegativeReply
+              ? `\n[THE SEEKER IS ANSWERING YOUR OWN QUESTION, AND THE ANSWER IS "NO". Read what you asked them last, then respond to THAT — do not start a teaching about the very thing they just said they are not doing. Two cases: (a) they say they are NOT doing something you asked about ("मैं साधना नहीं कर रहा") — accept it warmly in ONE line without disappointment or persuasion, and ask what they WOULD like to know, or offer gently. (b) they say they did not follow you ("समझ नहीं आया") — say the SAME thing again in simpler words, shorter, with a homely example; never repeat your earlier wording. Either way: short, no lecture, no Source line unless you are genuinely re-teaching. End with a सुझाव line of 2-3 things they might actually want.]`
+              : isAck
+                ? `\n[THIS IS AN ACKNOWLEDGEMENT, not a question — they are simply saying "yes / अच्छा / ठीक है" to what you just told them. Do NOT begin a new teaching, do NOT change the subject, and do NOT bring in साधना rules or any topic they did not ask about. Reply with ONE short warm line — about 15 words, NEVER more than 25 — that stays with what you were JUST discussing and gently opens the door to go further. No teaching, no Source line, no पंचांग. Then TWO final lines: a सुझाव line with 2-3 questions that go DEEPER INTO THAT SAME TOPIC, and the line: वार्ता: 1]`
               : isUnclear
                 ? `\n[THE SEEKER HAS NOT SAID WHAT THEY WANT TO KNOW. Their opening message names no topic at all and there is no conversation before it to explain it. Do NOT compose a teaching, do NOT give general spiritual advice, do NOT describe Ashaeiynn or its साधनाएँ, do NOT reassure them at length. Reply with ONE short warm line — about 20 words, NEVER more than 30 — that greets them${
                   seekerName ? ` by name (भाई/बहन/जी as fits)` : ""
