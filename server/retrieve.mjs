@@ -29,6 +29,13 @@ function isGarbled(text) {
   return uniq < 0.25 || topShare > 0.25 || singleShare > 0.4;
 }
 
+// Legal/admin pages carry no teaching, but they are text like any other, so a
+// weak match could surface "Disclaimer" as the cited source under a spiritual
+// answer. Excluded from SEARCH at the owner's request (2026-07-18); like the
+// garbled chunks they stay in the library — nothing is deleted.
+const BOILERPLATE_PAGE =
+  /^website:\s*(disclaimer|terms|no refund|refund|shipping|privacy)/i;
+
 function load() {
   if (chunks) return chunks;
   if (!existsSync(dbFile)) throw new Error("Knowledge base not built yet — run: npm run ingest");
@@ -40,9 +47,13 @@ function load() {
     )
     .all();
   db.close();
-  const rows = all.filter((r) => !isGarbled(r.content));
+  const rows = all.filter((r) => !isGarbled(r.content) && !BOILERPLATE_PAGE.test(r.title || ""));
   const dropped = all.length - rows.length;
-  if (dropped) console.log(`retrieval: ${rows.length} usable chunks (skipped ${dropped} garbled from bad transcriptions)`);
+  const legal = all.filter((r) => BOILERPLATE_PAGE.test(r.title || "")).length;
+  if (dropped)
+    console.log(
+      `retrieval: ${rows.length} usable chunks (skipped ${dropped - legal} garbled from bad transcriptions, ${legal} legal/admin pages)`,
+    );
   chunks = rows.map((r) => ({
     title: r.title,
     content: r.content,
