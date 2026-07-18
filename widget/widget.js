@@ -532,23 +532,18 @@
       display:flex;align-items:center;gap:8px;margin-top:11px;
       font-family:-apple-system,'Segoe UI',Roboto,sans-serif}
     .vcb-lbl::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(227,183,102,.4),transparent)}
-    .vcb-vids{display:flex;flex-direction:column;gap:8px;margin-top:8px}
-    .vcb-vid{display:flex;gap:10px;align-items:center;border-radius:13px;padding:8px;
-      background:rgba(13,21,14,.85);box-shadow:inset 0 0 0 1px rgba(227,183,102,.16);
-      text-decoration:none;color:inherit}
-    a.vcb-vid:hover{box-shadow:inset 0 0 0 1px rgba(227,183,102,.45)}
-    .vcb-thumb{width:82px;height:50px;border-radius:8px;flex-shrink:0;position:relative;overflow:hidden;
-      background:linear-gradient(130deg,#33290f 0%,#1a2013 55%,#10160e 100%)}
-    .vcb-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.9}
-    .vcb-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:23px;height:23px;
-      border-radius:50%;background:rgba(8,10,6,.68);display:flex;align-items:center;justify-content:center;
-      font-style:normal;color:#f3d795;font-size:9px;box-shadow:0 0 0 1.5px rgba(243,215,149,.8)}
-    .vcb-thumb b{position:absolute;right:4px;bottom:4px;font-size:8.5px;background:rgba(0,0,0,.78);color:#fff;
-      border-radius:4px;padding:1px 5px;font-weight:600;z-index:1}
-    .vcb-vmeta{min-width:0}
-    .vcb-vmeta p{font-size:12.5px;line-height:1.45;color:#e9dfc6;margin:0;
-      font-family:-apple-system,'Segoe UI',Roboto,sans-serif;
-      display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    /* Sources used to be video cards with a thumbnail. With the recordings gone
+       they were three tall rows carrying an empty box and a book emoji — most of
+       an phone screen for three links (owner, 2026-07-19). Now they are pills:
+       gold = something to read, green = something to ask. */
+    .vcb-srcs{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+    .vcb-srcs a,.vcb-srcs span.vcb-src1{display:inline-flex;align-items:center;gap:5px;
+      max-width:100%;padding:5px 11px;border-radius:999px;text-decoration:none;
+      font-size:12px;line-height:1.3;color:#f0dbb0;
+      background:rgba(217,169,79,.10);border:1px solid rgba(217,169,79,.32);
+      font-family:-apple-system,'Segoe UI',Roboto,sans-serif}
+    .vcb-srcs a:hover{background:rgba(217,169,79,.19)}
+    .vcb-srcs b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px}
     .vcb-fb{display:flex;justify-content:space-around;border-top:1px solid rgba(227,183,102,.18);
       padding-top:9px;margin-top:11px}
     .vcb-fbb{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;
@@ -1766,50 +1761,37 @@
       lbl.className = "vcb-lbl";
       // videos were deleted from the library — do not tell a seeker to "watch"
       // an article. Label by what the links actually are.
-      lbl.textContent = data.sources.some((s2) => s2.url && /youtu|vimeo/i.test(s2.url))
-        ? "📿 देखिए"
-        : "📖 पढ़िए";
+      const anyVideo = data.sources.some((s2) => s2.url && /youtu|vimeo/i.test(s2.url));
+      lbl.textContent = anyVideo ? "📿 देखिए" : "📖 पढ़िए";
       el.appendChild(lbl);
-      const vids = document.createElement("div");
-      vids.className = "vcb-vids";
+      const wrap = document.createElement("div");
+      wrap.className = "vcb-srcs";
+      // Titles carry a lot of furniture — "Article: ", "| Asha Pathshala",
+      // "- Ashaeiynn Official" — which would make every pill overflow.
+      const shortTitle = (t) =>
+        String(t)
+          .replace(/^\s*(article|website)\s*:\s*/i, "")
+          .replace(/\s*[|\-–—:]\s*(asha\s*pathshala|ashaeiynn(\s*official)?)\s*$/i, "")
+          .trim();
       data.sources.slice(0, 3).forEach((s) => {
-        const row = document.createElement(s.url ? "a" : "div");
-        row.className = "vcb-vid";
+        const pill = document.createElement(s.url ? "a" : "span");
+        if (!s.url) pill.className = "vcb-src1";
         if (s.url) {
-          row.href = s.url;
-          row.target = "_blank";
-          row.rel = "noopener";
+          pill.href = s.url;
+          pill.target = "_blank";
+          pill.rel = "noopener";
         }
-        const th = document.createElement("div");
-        th.className = "vcb-thumb";
-        const img = s.url && ytThumb(s.url);
-        if (img) {
-          const im = document.createElement("img");
-          im.src = img;
-          im.loading = "lazy";
-          im.alt = "";
-          th.appendChild(im);
-        }
-        const play = document.createElement("i");
-        play.className = "vcb-play";
-        play.textContent = s.url ? (img || /vimeo|youtu/.test(s.url) ? "▶" : "📖") : "📖";
-        th.appendChild(play);
-        // "0:00" is a leftover from the video era — an article has no position
-        // to jump to, so the badge just looked broken under every source.
-        if (s.timestamp && !/^0*:?0*0$/.test(s.timestamp.replace(/\s/g, ""))) {
-          const b = document.createElement("b");
-          b.textContent = s.timestamp;
-          th.appendChild(b);
-        }
-        const meta = document.createElement("div");
-        meta.className = "vcb-vmeta";
-        const p = document.createElement("p");
-        p.textContent = s.title;
-        meta.appendChild(p);
-        row.append(th, meta);
-        vids.appendChild(row);
+        const icon = document.createElement("i");
+        icon.style.fontStyle = "normal";
+        icon.textContent = s.url && /youtu|vimeo/i.test(s.url) ? "▶" : "📖";
+        const name = document.createElement("b");
+        const full = shortTitle(s.title);
+        name.textContent = full;
+        pill.title = s.title; // the whole title on hover, nothing lost
+        pill.append(icon, name);
+        wrap.appendChild(pill);
       });
-      el.appendChild(vids);
+      el.appendChild(wrap);
     }
     if (data.suggest) {
       const sug = document.createElement("div");
