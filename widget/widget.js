@@ -9,6 +9,23 @@
 (() => {
   const script = document.currentScript;
   const API = (script?.dataset.api || new URL(script.src).origin).replace(/\/$/, "");
+
+  // Register the service worker on load. It used to be registered only when a
+  // seeker switched notifications ON — so for almost everyone no worker existed,
+  // Chrome never offered "Install app", and people ended up making a bookmark
+  // shortcut by hand (grey "A" icon). Only on the guide's own origin: embedded
+  // on another site there is no /sw.js to register.
+  if ("serviceWorker" in navigator && location.protocol === "https:" && API === location.origin) {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }
+
+  // An in-app browser (a link tapped inside WhatsApp, Instagram, Facebook)
+  // CANNOT install anything — its "add to home screen", where it exists at all,
+  // makes a bookmark. Most seekers arrive exactly that way, so say so plainly.
+  const IN_APP_BROWSER = /FBAN|FBAV|FB_IAB|FB4A|Instagram|WhatsApp|Line\/|Twitter|MicroMessenger|Snapchat|; wv\)/i;
+  const isInAppBrowser = IN_APP_BROWSER.test(navigator.userAgent);
+  const isInstalled = () =>
+    window.matchMedia?.("(display-mode: standalone)").matches || navigator.standalone === true;
   const TITLE = script?.dataset.title || "Ask Your Guide";
   const COLOR = script?.dataset.color || "#0b0b0f";
   const SPLASH = script?.dataset.splash || "जय सिया राम";
@@ -205,6 +222,15 @@
     .vcb-close{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;opacity:.85}
     .vcb-close:hover{opacity:1}
 
+    .vcb-openin{display:flex;align-items:center;gap:8px;justify-content:center;
+      padding:7px 12px;margin:0 10px 4px;border-radius:9px;
+      background:rgba(217,169,79,.10);border:1px solid rgba(217,169,79,.30);
+      color:#f0dbb0;font-size:12px;line-height:1.35;
+      font-family:-apple-system,'Segoe UI',Roboto,sans-serif}
+    .vcb-openin[hidden]{display:none}
+    .vcb-openin button{background:none;border:0;color:#e8cf9a;cursor:pointer;
+      font-size:13px;line-height:1;padding:2px 4px;opacity:.7}
+    .vcb-openin button:hover{opacity:1}
     /* the docked blessing strip */
     .vcb-bless{position:relative;z-index:2;text-align:center;padding:6px 0 7px;
       font-family:Georgia,'Noto Serif Devanagari',serif;font-size:15px;font-weight:700;
@@ -624,6 +650,7 @@
       </div>
     </div>
     <div class="vcb-bless"><span>${SPLASH}</span></div>
+    <div class="vcb-openin" hidden><span></span><button type="button" aria-label="Dismiss">✕</button></div>
     <div class="vcb-stage">
       <div class="vcb-cap"></div>
       <button class="vcb-orbbig" type="button" aria-label="Ask by voice">
@@ -714,6 +741,34 @@
   const input = panel.querySelector(".vcb-input");
   const send = panel.querySelector(".vcb-send");
   const bless = panel.querySelector(".vcb-bless");
+
+  // Show the "open in Chrome" line only where it actually helps: inside an
+  // in-app browser, not already installed, and not already waved away.
+  const openIn = panel.querySelector(".vcb-openin");
+  if (openIn) {
+    const DISMISS_KEY = "ashaiOpenInDismissed";
+    let waved = false;
+    try {
+      waved = localStorage.getItem(DISMISS_KEY) === "1";
+    } catch {
+      /* private mode — just show it */
+    }
+    if (isInAppBrowser && !isInstalled() && !waved) {
+      const onApple = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      openIn.querySelector("span").textContent = onApple
+        ? "Open this in Safari to install the app on your phone."
+        : "Open this in Chrome to install the app on your phone.";
+      openIn.hidden = false;
+      openIn.querySelector("button").addEventListener("click", () => {
+        openIn.hidden = true;
+        try {
+          localStorage.setItem(DISMISS_KEY, "1");
+        } catch {
+          /* nothing to remember it with — fine */
+        }
+      });
+    }
+  }
   const micBtn = panel.querySelector(".vcb-mic");
   const voiceBtn = panel.querySelector(".vcb-voice");
 
