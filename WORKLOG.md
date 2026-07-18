@@ -19,6 +19,22 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **Every answer opened "देखो Rohan भाई," — the clearest tell of a machine.** Owner: "once or
+  twice is good, but to build it as a conversation, its not something a human does". Two causes:
+  1. prompt.mjs rule 2 literally said *Open teachings with "देखो…", "देखो भाई…"*. Rewritten:
+     those words are FLAVOUR, NOT A TEMPLATE — vary every time, most often just begin with the
+     answer itself, never open two answers in a row alike.
+  2. The addressing note said "address them by name ONCE", which the model read as "open with it".
+  Prompt wording alone was not trusted (it has failed twice today), so the server now computes
+  `recentOpenings` — the first 4 words of the last 3 answers — and forbids reusing them.
+  ⚠️ FIRST ATTEMPT OVER-CORRECTED: warmth vanished completely — no name, no भाई/बहन anywhere
+  ("most answers need no name at all" made it go cold, the opposite mistake). Fixed by deciding
+  warmth in CODE on a rhythm: `addressedRecently` looks at the last 2 answers; if they were
+  addressed, this answer does not; if not, it addresses them ONCE and never as the opening words.
+  Measured over a 4-turn conversation: openings all different, warmth on turns 1 and 4 only.
+  LESSON: when correcting a behaviour, check the opposite failure too — "stop doing X" reliably
+  produces "never do X", which was not what was asked for.
+
 - **"हां ठीक है" was treated as a new question.** Owner: two questions about सिद्धि, then a
   bare "हां ठीक है" — and the bot delivered a fresh teaching that wandered onto साधना rules.
   Reproduced exactly (83 words + 3 sources for an acknowledgement). Cause: nothing marked a
