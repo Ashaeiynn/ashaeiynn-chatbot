@@ -7,6 +7,7 @@ import path from "node:path";
 import { teachFile, teachLink, teachText, forget, publicJobs, jobTotals, uploadsDir } from "./teach.mjs";
 import { matchCorrection, addCorrection, removeCorrection, listCorrections, DIRECT_MATCH } from "./corrections.mjs";
 import { addSuggestion, listSuggestions, getSuggestion, removeSuggestion, pendingCount } from "./suggestions.mjs";
+import { toLatin, hasDevanagari as isDevanagari } from "./translit.mjs";
 import { ROOT } from "./env.mjs";
 import { searchMulti, formatTimestamp, thoughtCandidate } from "./retrieve.mjs";
 
@@ -591,7 +592,7 @@ async function handleChat(req, res) {
       const line = await Promise.race([
         complete({
           system:
-            "You translate search queries. Translate the question into Hindi if it is mainly English, or into English if it is mainly Hindi. Output ONLY the translated question itself — never answer it, never explain.",
+            "You translate search queries. If the question is in English, translate it into Hindi (Devanagari). If it is in Hindi written in Latin letters (Hinglish, e.g. \"sadhna kaise karu\"), write that SAME question in Devanagari. If it is already in Devanagari, translate it into English. Output ONLY the resulting question itself — never answer it, never explain.",
           messages: [{ role: "user", content: message }],
           maxTokens: 150,
           light: true,
@@ -613,7 +614,20 @@ async function handleChat(req, res) {
   // a greeting needs no teaching material — hand the model nothing to riff on
   const chunks = isGreeting || isUnclear || isAck
     ? []
-    : await searchMulti([[...lastUserTurns, message].join(" "), translated], Number(process.env.RETRIEVE_K || 12));
+    : await searchMulti(
+        [
+          [...lastUserTurns, message].join(" "),
+          translated,
+          // The third form is the one that was missing. This model matches SCRIPT
+          // as much as meaning, so a Devanagari question could never reach a
+          // teaching written in Hinglish — and voice input is always Devanagari,
+          // so Bhaiya's Hinglish material was invisible to most seekers. Free:
+          // plain transliteration rules, no AI call. (Hinglish questions get the
+          // mirror of this from the translation step above.)
+          isDevanagari(message) ? toLatin(message) : null,
+        ],
+        Number(process.env.RETRIEVE_K || 12),
+      );
 
   // The approved answer joins the excerpts at the top — the model treats
   // Bhaiya's own edit as the most authoritative teaching (rule 7b). When the
