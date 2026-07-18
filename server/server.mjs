@@ -472,10 +472,19 @@ async function handleChat(req, res) {
   // and asserts it in later answers ("आपकी गुरु तत्व साधना के मार्ग पर…"), so
   // denying it has to actually FORGET it — acknowledging it for one turn is not
   // enough (a member said so and the bot kept it up, 2026-07-19).
-  const deniesPractice =
-    !isGreeting &&
-    NEGATION.test(message) &&
-    /साधना|साधन|अभ्यास|जाप|sadh?na|sadhana|practice|jaap/i.test(message);
+  const PRACTICE_WORD = /साधना|साधन|अभ्यास|जाप|sadh?na|sadhana|practice|jaap/i;
+  const deniesHere = (t) => NEGATION.test(t) && PRACTICE_WORD.test(t);
+  // Look at what the seeker has said RECENTLY, not only this message. Soni denied
+  // her practice once and the guide kept asserting it, because the denial only
+  // cleared the memory if it happened to be the current message. Her own recent
+  // questions and turns travel with every request, so an earlier denial can undo
+  // the stored practice by itself — no waiting for her to repeat herself.
+  const recentlySaid = [
+    message,
+    ...history.filter((m) => m.role === "user").slice(-3).map((m) => m.content),
+    ...(Array.isArray(profile?.topics) ? profile.topics.slice(-5) : []),
+  ].filter((t) => typeof t === "string");
+  const deniesPractice = !isGreeting && recentlySaid.some(deniesHere);
 
   const seekerSadhana =
     !deniesPractice && profile?.sadhana && typeof profile.sadhana.name === "string"
@@ -939,7 +948,7 @@ async function handleChat(req, res) {
         sources: contacts,
         ...(followups.length ? { followups } : {}),
         ...(checkin ? { checkin } : {}),
-        ...(deniesPractice ? { sadhana: "-" } : sadhana ? { sadhana } : {}), // "-" tells the app to forget it
+        ...(sadhana ? { sadhana } : deniesPractice ? { sadhana: "-" } : {}), // a new declaration wins; otherwise "-" forgets it
         // only a MEMBER is invited to teach a correction (server-gated)
         ...(inviteFix && seekerMember ? { correctionInvite: true } : {}),
         ...(bareBalance !== null ? { credits: bareBalance } : {}),
@@ -1059,7 +1068,7 @@ async function handleChat(req, res) {
       ...(suggest && profile ? { suggest } : {}),
       ...(followups.length ? { followups } : {}),
       ...(checkin ? { checkin } : {}),
-      ...(deniesPractice ? { sadhana: "-" } : sadhana ? { sadhana } : {}), // "-" tells the app to forget it
+      ...(sadhana ? { sadhana } : deniesPractice ? { sadhana: "-" } : {}), // a new declaration wins; otherwise "-" forgets it
       ...(quote ? { quote } : {}),
       // only a MEMBER is invited to teach a correction (server-gated)
       ...(inviteFix && seekerMember ? { correctionInvite: true } : {}),
