@@ -347,11 +347,12 @@
   </div>
   <div class="teach-card">
     <h3>📁 Upload files</h3>
-    <p>Videos &amp; audios are listened to and transcribed (takes a while — roughly 1 min per 5 min of recording). PDF, Word, text files are read directly.</p>
+    <p id="up-intro">Videos &amp; audios are listened to and transcribed (takes a while — roughly 1 min per 5 min of recording). PDF, Word, text files are read directly.</p>
     <input type="text" id="up-title" placeholder="Title (optional — used when uploading a single file)">
     <div id="drop">Tap to choose files, or drag &amp; drop files <b>or a whole folder</b> here<br>
-      <small>mp3 · mp4 · wav · m4a · mov · pdf · docx · txt … — folders are studied file by file, sub-folders included</small><br>
+      <small id="drop-types">mp3 · mp4 · wav · m4a · mov · pdf · docx · txt … — folders are studied file by file, sub-folders included</small><br>
       <button class="mini" id="pick-folder" style="margin-top:10px">📂 Choose a whole folder</button>
+      <small id="folder-hint" style="display:none">Choosing a folder needs a computer — on iPhone or iPad, pick the files instead.</small>
     </div>
     <input type="file" id="file" multiple hidden>
     <input type="file" id="folder" webkitdirectory hidden>
@@ -403,6 +404,12 @@
     if (h.teachMedia === false) {
       isCloud = true;
       $("#cloud-note").style.display = "block";
+      // do not advertise what this copy cannot study — the owner selected audio
+      // here and got a failure per file instead of an answer (2026-07-18)
+      $("#up-intro").textContent =
+        "PDF, Word and text files are read directly. Videos & audios cannot be transcribed here — use the studio Mac's portal for those.";
+      $("#drop-types").textContent =
+        "pdf · docx · txt · md · html … — folders are studied file by file, sub-folders included";
     }
   }).catch(() => {});
   let entries = [], filter = "all", query = "";
@@ -1138,9 +1145,21 @@
     return out;
   }
 
+  const MEDIA_ONLY = /\.(mp3|wav|m4a|aac|ogg|opus|flac|wma|amr|3gp|mp4|mov|mkv|webm|avi|mts)$/i;
+
   async function uploadFiles(all) {
     let files = all.filter((f) => SUPPORTED.test(f.name) && !JUNK.test(f.name));
     const skipped = all.length - files.length;
+    // On the cloud copy transcription does not exist. Say so ONCE, clearly,
+    // instead of uploading each recording and failing it one by one.
+    let media = [];
+    if (isCloud) {
+      media = files.filter((f) => MEDIA_ONLY.test(f.name));
+      files = files.filter((f) => !MEDIA_ONLY.test(f.name));
+      if (media.length && !files.length)
+        return showStatus("🎧", `${media.length} recording${media.length > 1 ? "s" : ""} can't be studied here`,
+          "Videos and audios are transcribed on the studio Mac's portal — those lessons then flow to this bot automatically. Documents, PDFs, text, links and pasted text all work here.");
+    }
     // spot same-name duplicates BEFORE transferring anything
     let dupes = [];
     try {
@@ -1208,6 +1227,15 @@
     loadJobs();
   }
   $("#drop").addEventListener("click", () => $("#file").click());
+  // iPhone/iPad cannot pick a folder at all (Apple does not support it in Safari),
+  // so the button silently did nothing there — hide it and say why instead.
+  const noFolderPicker =
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (noFolderPicker) {
+    $("#pick-folder").style.display = "none";
+    $("#folder-hint").style.display = "block";
+  }
   $("#pick-folder").addEventListener("click", (e) => { e.stopPropagation(); $("#folder").click(); });
   $("#file").addEventListener("change", (e) => { if (e.target.files.length) uploadFiles([...e.target.files]); e.target.value = ""; });
   $("#folder").addEventListener("change", (e) => { if (e.target.files.length) uploadFiles([...e.target.files]); e.target.value = ""; });
