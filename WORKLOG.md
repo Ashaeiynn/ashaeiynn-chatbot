@@ -11,6 +11,28 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ---
 
+## 2026-07-18 (MacBook Pro session, with the owner)
+
+- **Owner reported: answers too generic / "going round and round", greetings got essays.**
+  THREE real causes found and fixed (all measured, not guessed):
+  1. **BIGGEST — correction thresholds sat inside the noise band.** e5 rates ANY two
+     same-language spiritual sentences 0.75–0.84. HINT was 0.80, so a loosely-related
+     admin correction was injected as "outranks every excerpt" on nearly EVERY question
+     (a bare greeting scored 0.801!), dragging answers off the real teachings. Measured:
+     noise 0.75–0.84 · genuine rewordings 0.86–0.93 · exact 0.975. Recalibrated
+     HINT 0.80→0.88, DIRECT 0.90→0.93 (corrections.mjs). Bias high on purpose: a missed
+     correction just means a normal answer; a false match poisons every answer.
+  2. **Greetings were treated as knowledge questions** (retrieved + taught + Source line).
+     Now deterministic in code: GREETING_ONLY regex in server.mjs → skips retrieval,
+     skips पंचांग, one short line back. Verified 89 → 15 words, no sources.
+  3. **Its own nightly learning coached padding** ("open with the name", "end with an
+     affirming tone"). Removed; reflect.mjs now forbidden from writing length-adding
+     lessons; prompt.mjs `isPadding()` filters any that slip through (keeps trim ones).
+  Also: rule 3 rewritten (answer in the FIRST sentence, ~90-word cap, never pad with
+  general spiritual filler), rule 4b greeting brevity with examples, पंचांग no longer
+  volunteered, and the parser now accepts the Hindi "स्रोत:" as a Source line.
+  Verified live: knowledge answer 234→94 words, sources are real recordings again.
+
 ## 2026-07-17 (MacBook Pro session, with the owner)
 
 - **~21:40** Credits FINAL model = pay-as-you-use (owner's call after seeing premium-voice
