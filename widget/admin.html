@@ -370,7 +370,7 @@
   </div>
   <div class="teach-card">
     <h3>⏳ Progress</h3>
-    <p id="jobs-sub">what the bot is studying right now</p>
+    <p id="jobs-sub">what the bot is studying right now — live from this server</p>
     <div id="jobs"><div class="empty">nothing yet — add something above</div></div>
   </div>
 </main>
@@ -396,7 +396,8 @@
 <script>
 (() => {
   const $ = (s) => document.querySelector(s);
-  // On the cloud copy (no transcription tools), show the studio Mac's live progress.
+  // The cloud copy studies documents itself; the "cloud note" card just explains
+  // what it can and cannot take.
   let isCloud = false;
   fetch("/health").then((r) => r.json()).then((h) => {
     if (h.teachMedia === false) {
@@ -968,7 +969,7 @@
   function friendlyError(raw) {
     const r = String(raw || "");
     if (/textutil|studio Mac|transcrib|mlx_whisper|Videos and audios/i.test(r))
-      return "This file type (.doc/.rtf/audio/video) can only be taught from the studio Mac's portal. Save it as PDF or .docx and upload it here again.";
+      return "Recordings and old .doc/.rtf files aren't studied here — upload the typed transcript as PDF, Word or text instead.";
     if (/No readable text/i.test(r))
       return "No readable text found — this may be a scan/photo. Upload a PDF/docx that contains real text.";
     if (/Unsupported file/i.test(r)) return "This file type isn't supported — send PDF, docx, txt, or a link.";
@@ -1081,35 +1082,15 @@
   }
 
   async function loadJobs() {
-    // The cloud copy used to have no teaching of its own, so it mirrored the
-    // studio Mac's relayed progress. It teaches documents itself now — and while
-    // it was still watching the Mac, an upload made HERE showed no progress at
-    // all and the banner sat on "Uploading…" forever (owner, 2026-07-19).
-    // Watch our own queue first; fall back to the Mac only when nothing local is
-    // running, so a Mac transcription is still visible.
-    const mine = await fetch("/api/admin/jobs", { headers: { "x-admin-key": key() } })
+    // This copy IS the knowledge base now. It used to mirror the studio Mac's
+    // relayed progress, because teaching happened there — but audio/video
+    // teaching was withdrawn (2026-07-19) and every upload is studied right
+    // here. Watching the Mac meant an upload made HERE showed no progress at
+    // all, and the panel announced "studio Mac hasn't reported yet" while the
+    // server was busy learning the owner's file. The relay is gone.
+    const d = await fetch("/api/admin/jobs", { headers: { "x-admin-key": key() } })
       .then((r) => (r.ok ? r.json() : null))
       .catch(() => null);
-    const busy = (mine?.jobs || []).some((j) => ["queued", "working", "ready", "studying"].includes(j.status));
-    if (isCloud && !busy && !pendingUploads.length) {
-      const r = await fetch("/api/admin/studio-status", { headers: { "x-admin-key": key() } });
-      if (!r.ok) return;
-      const d = await r.json();
-      const fresh = d.at && Date.now() - d.at < 150000;
-      serverJobs = d.jobs || [];
-      celebrateNewLearning(serverJobs);
-      $("#jobs-sub").textContent = fresh
-        ? "🖥️ studio Mac — LIVE · updates every ~30 seconds"
-        : d.at
-          ? `🖥️ studio Mac is offline — last seen ${Math.round((Date.now() - d.at) / 60000)} min ago`
-          : "🖥️ studio Mac hasn't reported yet — it may be off";
-      statusFromJobs(serverJobs, d.totals);
-      renderJobs();
-      clearTimeout(loadJobs.t);
-      loadJobs.t = setTimeout(loadJobs, 15000);
-      return;
-    }
-    const d = mine;
     if (!d) return;
     serverJobs = d.jobs || [];
     celebrateNewLearning(serverJobs);
