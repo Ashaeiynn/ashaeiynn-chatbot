@@ -19,6 +19,20 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **Sources under an answer are now pills, and the Source line is gone from the screen.**
+  Owner: the article suggestions take huge space. They were video CARDS — each with an 82×50
+  thumbnail box that, with the recordings deleted, held nothing but a 📖 emoji. Three of those
+  ate most of a phone screen. Now: a wrapping row of small pills, gold = something to READ,
+  green = something to ASK (matching the सुझाव chips), 82px instead of ~200px. Titles are
+  stripped of their furniture ("Article: ", "— Ashaeiynn Official", "| Asha Pathshala") and
+  ellipsised, with the full title kept on hover/long-press. Deleted 1,381 chars of now-dead
+  card CSS that every seeker was downloading.
+  While looking at it on a phone viewport, found a bigger waste: the answer ALSO printed
+  "Source: Article: … (0:00)" as four lines of text, directly above pills saying the same thing.
+  That line is now always stripped from the seeker's screen. It is still written to
+  questions.log (so knowledge-gap review is untouched) and its PRESENCE still drives the
+  deterministic no-source rules — only its display is gone.
+
 - **Admin: conversation is no longer mistaken for a knowledge gap, and studying shows progress.**
   Owner saw "no source — knowledge gap?" on turns like "नहीं अभी के लिए इतना ही जय सियाराम" and
   "मैं साधना कर ही नहीं रहा हूं अभी". `isUnanswered` flagged anything without a Source line — but
