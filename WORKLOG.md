@@ -19,6 +19,28 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **Admin progress panel was lying, and deletions looked like studying.** Four fixes:
+  1. The live admin was polling `/api/admin/studio-status` — the studio Mac's relayed progress —
+     while teaching happens ON THIS SERVER. An upload made here showed no progress at all and
+     the panel announced "studio Mac hasn't reported yet". The relay is REMOVED; it reads its
+     own queue, polls every 2s. (Media teaching was withdrawn today, so the Mac teaches nothing.)
+  2. Phases are named with percentages: Uploading X% → Reading n of N / Learning X% → Finished 100%.
+     Hands over to "now learning" the moment the bytes land instead of waiting for a poll.
+  3. A REMOVAL runs through the same queue and was labelled "reading"/"studying". Own labels now:
+     removing / unlearning / removed & forgotten.
+  4. Deleting only QUEUES the removal, so reloading the Library brought the row straight back and
+     looked like a failed delete. The row now greys out with "removing — the bot is unlearning
+     this now…", and the list refreshes once the queue drains. The finished banner also clears
+     itself after 9s instead of sitting there for good.
+
+- **"Pitru, Pitr, Pitar are all the same"** (owner). Measured: the library writes **pitra** (212
+  occurrences) and contains ZERO Devanagari पितृ — so a spoken "पितृ दोष" transliterated to
+  "pitri" and matched nothing at all. Added `normalizeSpelling()` in translit.mjs: a table of
+  spelling variants → the spelling the KNOWLEDGE uses, applied to the search text only (nothing
+  on screen or in storage changes). Covers pitru/pitr/pitar/pitri/पितृ → pitra, plus kul devta →
+  kuldevta, gurudev, sadhna, jaap, mantra, shakti.
+  TO ADD A WORD: one line in SPELLINGS. This is the place for any future "these are the same word".
+
 - **Duplicate knowledge: measured, capped, and reported.** Owner asked what happens if the same
   teaching is uploaded twice. MEASURED on their own two PDFs (one prose, one Q&A of the same
   session): the duplicate took **6 of the 12** excerpts the model receives — the per-source cap
