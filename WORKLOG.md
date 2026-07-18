@@ -19,6 +19,26 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **Duplicate knowledge: measured, capped, and reported.** Owner asked what happens if the same
+  teaching is uploaded twice. MEASURED on their own two PDFs (one prose, one Q&A of the same
+  session): the duplicate took **6 of the 12** excerpts the model receives — the per-source cap
+  of 3 is keyed on TITLE, so one teaching under two names got 3 slots each. Contradiction is the
+  worse risk (two versions disagreeing on a figure) but theirs agree.
+  TWO CHANGES:
+  1. retrieve.mjs now also suppresses a chunk that is near-identical to one already chosen
+     ACROSS sources. ⚠️ FIRST ATTEMPT WAS WRONG and degraded live answers: applied within a
+     source too, it stripped the main teaching from 6 chunks to 1 (chunks of one document
+     overlap ~200 chars BY DESIGN), and the reply visibly lost its specifics. Restricted to
+     cross-source: now 3 of 12 for the teaching, 9 freed, specifics back.
+  2. `duplicateSources()` reports sources that teach the same thing; the Library shows a warning
+     line on the card. ⚠️ ALSO MISCALIBRATED FIRST: "share of chunks above 0.90" flagged 45
+     pairs, mostly merely-related articles. What separates them is the MEAN best match —
+     same document twice 0.957-0.975, related-but-distinct 0.929-0.941 (the template hawan
+     pages sit at 0.939). Threshold 0.95 → 45 false flags down to 10 real ones, including a
+     genuine duplicate nobody had noticed: the "How Mantra Chanting Reduces Planetary Effects"
+     docx is 98% the same as the Pathshala article of the same teaching.
+  Nothing is ever deleted automatically — two versions are sometimes deliberate.
+
 - **Every teaching now reachable in Hindi, Hinglish AND English** (owner: "make sure each
   knowledge no matter if in hinglish, also reach english and hindi user in the language they
   asked"). Chose the QUERY side over the knowledge side: instead of translating 937 chunks
