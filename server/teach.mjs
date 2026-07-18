@@ -359,13 +359,12 @@ function htmlToText(html) {
 export function teachFile(filePath, title) {
   const name = path.basename(filePath);
   const t = (title || name.replace(/\.[^.]+$/, "").replace(/^[a-z0-9]+-/, "")).trim();
-  if (MEDIA_RE.test(name)) {
-    // transcription (mlx_whisper) exists only on the studio Mac — reject media
-    // uploads elsewhere immediately with a clear message, not a failed job
-    if (!existsSync(`${HOME}/Library/Python/3.9/bin/mlx_whisper`))
-      throw new Error("Videos and audios are transcribed on the studio Mac's portal — this copy studies documents, PDFs, links and text. The Mac's lessons flow here automatically.");
-    return addJob("media", t, { path: filePath });
-  }
+  // Recordings are no longer taught through the portal (owner's decision,
+  // 2026-07-18): machine transcription proved unreliable enough to damage the
+  // knowledge, so Bhaiya's recordings come in as human-checked transcripts.
+  // The pipeline itself still exists for command-line use: pipeline/6-audio.mjs
+  if (MEDIA_RE.test(name))
+    throw new Error("Recordings aren't studied here — please upload the typed transcript (txt, Word or PDF) so the teaching is exact.");
   if (DOC_RE.test(name)) return addJob("document", t, { path: filePath });
   throw new Error("Unsupported file type: " + name);
 }
@@ -374,7 +373,7 @@ export function teachLink(url, title) {
   const u = new URL(url); // throws on invalid
   if (!/^https?:$/.test(u.protocol)) throw new Error("Only http(s) links are supported.");
   if (/(^|\.)((youtube|vimeo)\.com|youtu\.be)$/i.test(u.hostname))
-    return addJob("video-link", (title || url).trim(), { url });
+    throw new Error("Video links aren't studied here — please add the typed transcript instead, so the teaching is exact.");
   return addJob("article", (title || url).trim(), { url });
 }
 

@@ -331,7 +331,7 @@
 <main id="view-teach" hidden>
   <div id="cloud-note" class="teach-card" style="display:none;border-color:#7a5c2a">
     <h3>☁️ This is the live cloud bot</h3>
-    <p style="margin-bottom:0">It studies <b>PDFs, Word files, text files, links and pasted text right here</b> — teach away. Only <b>videos &amp; audios</b> are transcribed on the studio Mac's portal; those lessons flow to this bot automatically (watch the studying live below when it runs).</p>
+    <p style="margin-bottom:0">It studies <b>PDFs, Word files, text files, links and pasted text right here</b> — teach away. For Bhaiya's recordings, upload the typed transcript so the teaching is exact.</p>
   </div>
   <div id="teach-status" class="teach-card" style="display:none;border-color:rgba(227,183,102,.55)">
     <div style="display:flex;gap:12px;align-items:center">
@@ -347,19 +347,16 @@
   </div>
   <div class="teach-card">
     <h3>📁 Upload files</h3>
-    <p id="up-intro">Videos &amp; audios are listened to and transcribed (takes a while — roughly 1 min per 5 min of recording). PDF, Word, text files are read directly.</p>
+    <p id="up-intro">PDF, Word and text files are read directly. For Bhaiya's recordings, upload the typed transcript — that way the teaching is exact.</p>
     <input type="text" id="up-title" placeholder="Title (optional — used when uploading a single file)">
-    <div id="drop">Tap to choose files, or drag &amp; drop files <b>or a whole folder</b> here<br>
-      <small id="drop-types">mp3 · mp4 · wav · m4a · mov · pdf · docx · txt … — folders are studied file by file, sub-folders included</small><br>
-      <button class="mini" id="pick-folder" style="margin-top:10px">📂 Choose a whole folder</button>
-      <small id="folder-hint" style="display:none">Choosing a folder needs a computer — on iPhone or iPad, pick the files instead.</small>
+    <div id="drop">Tap to choose files, or drag &amp; drop them here<br>
+      <small id="drop-types">pdf · docx · doc · rtf · txt · md · html</small>
     </div>
-    <input type="file" id="file" multiple hidden>
-    <input type="file" id="folder" webkitdirectory hidden>
+    <input type="file" id="file" accept=".pdf,.docx,.doc,.rtf,.txt,.md,.html,.htm" multiple hidden>
   </div>
   <div class="teach-card">
     <h3>🔗 Add a link</h3>
-    <p>YouTube / Vimeo links are downloaded and transcribed. Any other web page is read as an article.</p>
+    <p>A web page or article is read and studied. (Video links aren't studied — add the typed transcript instead.)</p>
     <input type="text" id="link-url" placeholder="https://…">
     <input type="text" id="link-title" placeholder="Title (optional)">
     <button class="gold-btn" id="link-go">Study this link</button>
@@ -404,12 +401,6 @@
     if (h.teachMedia === false) {
       isCloud = true;
       $("#cloud-note").style.display = "block";
-      // do not advertise what this copy cannot study — the owner selected audio
-      // here and got a failure per file instead of an answer (2026-07-18)
-      $("#up-intro").textContent =
-        "PDF, Word and text files are read directly. Videos & audios cannot be transcribed here — use the studio Mac's portal for those.";
-      $("#drop-types").textContent =
-        "pdf · docx · txt · md · html … — folders are studied file by file, sub-folders included";
     }
   }).catch(() => {});
   let entries = [], filter = "all", query = "";
@@ -1121,27 +1112,23 @@
   }
 
   // what the server can study — anything else in a folder is skipped quietly
-  const SUPPORTED = /\.(mp3|wav|m4a|aac|ogg|opus|flac|wma|amr|3gp|mp4|mov|mkv|webm|avi|mts|pdf|docx|doc|rtf|txt|md|html?)$/i;
+  const SUPPORTED = /\.(pdf|docx|doc|rtf|txt|md|html?)$/i;
   const JUNK = /^(\.|~\$|thumbs\.db$)/i;
 
   // walk a dropped folder tree (sub-folders included) and collect its files
   async function filesFromDrop(dt) {
     const entries = [...dt.items].map((i) => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
     if (!entries.length) return [...dt.files];
+    // Folder teaching was withdrawn (owner, 2026-07-18) — a dropped folder is
+    // ignored rather than quietly studied file by file.
     const out = [];
-    async function walk(entry) {
-      if (entry.isFile) {
-        out.push(await new Promise((res, rej) => entry.file(res, rej)));
-      } else if (entry.isDirectory) {
-        const reader = entry.createReader();
-        for (;;) {
-          const batch = await new Promise((res, rej) => reader.readEntries(res, rej));
-          if (!batch.length) break;
-          for (const e of batch) await walk(e);
-        }
-      }
+    let folders = 0;
+    for (const entry of entries) {
+      if (entry.isFile) out.push(await new Promise((res, rej) => entry.file(res, rej)));
+      else if (entry.isDirectory) folders++;
     }
-    for (const e of entries) await walk(e);
+    if (folders && !out.length)
+      showStatus("📂", "Folders aren't studied", "Please open the folder and drop the files themselves.");
     return out;
   }
 
@@ -1150,16 +1137,12 @@
   async function uploadFiles(all) {
     let files = all.filter((f) => SUPPORTED.test(f.name) && !JUNK.test(f.name));
     const skipped = all.length - files.length;
-    // On the cloud copy transcription does not exist. Say so ONCE, clearly,
-    // instead of uploading each recording and failing it one by one.
-    let media = [];
-    if (isCloud) {
-      media = files.filter((f) => MEDIA_ONLY.test(f.name));
-      files = files.filter((f) => !MEDIA_ONLY.test(f.name));
-      if (media.length && !files.length)
-        return showStatus("🎧", `${media.length} recording${media.length > 1 ? "s" : ""} can't be studied here`,
-          "Videos and audios are transcribed on the studio Mac's portal — those lessons then flow to this bot automatically. Documents, PDFs, text, links and pasted text all work here.");
-    }
+    // Recordings are no longer taught through the portal — say so once, clearly,
+    // rather than uploading each one and failing it.
+    const media = all.filter((f) => MEDIA_ONLY.test(f.name));
+    if (media.length && !files.length)
+      return showStatus("🎧", `${media.length} recording${media.length > 1 ? "s" : ""} skipped`,
+        "Recordings aren't studied here — please upload the typed transcript (txt, Word or PDF) so Bhaiya's teaching is exact.");
     // spot same-name duplicates BEFORE transferring anything
     let dupes = [];
     try {
@@ -1227,18 +1210,7 @@
     loadJobs();
   }
   $("#drop").addEventListener("click", () => $("#file").click());
-  // iPhone/iPad cannot pick a folder at all (Apple does not support it in Safari),
-  // so the button silently did nothing there — hide it and say why instead.
-  const noFolderPicker =
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  if (noFolderPicker) {
-    $("#pick-folder").style.display = "none";
-    $("#folder-hint").style.display = "block";
-  }
-  $("#pick-folder").addEventListener("click", (e) => { e.stopPropagation(); $("#folder").click(); });
   $("#file").addEventListener("change", (e) => { if (e.target.files.length) uploadFiles([...e.target.files]); e.target.value = ""; });
-  $("#folder").addEventListener("change", (e) => { if (e.target.files.length) uploadFiles([...e.target.files]); e.target.value = ""; });
   ["dragover", "dragleave", "drop"].forEach((ev) => $("#drop").addEventListener(ev, (e) => {
     e.preventDefault();
     $("#drop").classList.toggle("over", ev === "dragover");
