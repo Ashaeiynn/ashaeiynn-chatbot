@@ -19,6 +19,33 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **Cleared the video-era leftovers under every answer** (owner: the videos-to-watch are gone
+  since we deleted them — "in their place lets give few questions to ask"). Sources were still
+  arriving (3-5 per answer) but they are now ARTICLES, shown under a "📿 देखिए" (watch) heading
+  with a play icon and a "0:00" badge. Fixed in the widget, all verified on the live UI:
+  - the source heading now reads "📖 पढ़िए" unless a real video is among the links;
+  - the "0:00" badge is hidden when there is no real position to jump to;
+  - "🌱 आगे देखिए" (watch next) now only offers an actual YouTube/Vimeo link — it had been
+    recommending "Website: Reviews (0:00)";
+  - the follow-up question chips (which the bot was already returning every time) now carry a
+    heading, "🙏 आप यह भी पूछ सकते हैं", so they read as the invitation they are.
+  NOTE for testing the widget UI: the seeker onboarding form gates everything. Do NOT fill it
+  in (it writes a real user); seed localStorage "ashaiJourney" with a uid/name instead and
+  reload — that skips onboarding with no server-side effect.
+
+- **Admin uploads: audio/video and folders** (owner reported neither works). Neither was a bug,
+  both were bad signposting:
+  - The VPS has no transcription tool at all (checked: no mlx_whisper, no ffmpeg), so the live
+    portal rejects media BY DESIGN — but the upload box advertised "mp3 · mp4 · wav · m4a · mov"
+    and let them be selected, failing one file at a time. /health already exposed
+    `teachMedia:false`; the page now reads it and relabels itself, and catches recordings up
+    front with one clear message.
+  - Folder upload was already implemented (webkitdirectory + drag-drop tree walk) and works in
+    a computer browser — but iPhone/iPad cannot pick folders at all (Apple). The button is now
+    hidden on those devices with a line explaining to pick files instead.
+  OPEN OFFER: audio/video COULD work on the live bot via Groq whisper (key already present for
+  the iOS ear) — ~$2.50 for 64h, needs ffmpeg installed on the VPS. Awaiting the owner's call.
+
 - **Corrections now understand what is being corrected** (owner: the member should either be
   told what to write, "or the bot should understand by itself when the user is correcting it").
   Members write like people — "I am correcting you, next time someone ask about X, tell them…".
