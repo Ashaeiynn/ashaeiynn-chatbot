@@ -467,8 +467,18 @@ async function handleChat(req, res) {
   const seekerName = typeof profile?.name === "string" ? profile.name.trim().slice(0, 40) : "";
   const seekerSummary = typeof profile?.summary === "string" ? profile.summary.trim().slice(0, 300) : "";
   const seekerStyle = typeof profile?.style === "string" ? profile.style.trim().slice(0, 160) : "";
+  // "मैं कोई गुरुतत्व साधना नहीं कर रहा हूँ" — a seeker telling the guide they do
+  // NOT do a practice. The guide remembers a declared practice on their device
+  // and asserts it in later answers ("आपकी गुरु तत्व साधना के मार्ग पर…"), so
+  // denying it has to actually FORGET it — acknowledging it for one turn is not
+  // enough (a member said so and the bot kept it up, 2026-07-19).
+  const deniesPractice =
+    !isGreeting &&
+    NEGATION.test(message) &&
+    /साधना|साधन|अभ्यास|जाप|sadh?na|sadhana|practice|jaap/i.test(message);
+
   const seekerSadhana =
-    profile?.sadhana && typeof profile.sadhana.name === "string"
+    !deniesPractice && profile?.sadhana && typeof profile.sadhana.name === "string"
       ? { name: profile.sadhana.name.trim().slice(0, 120), since: String(profile.sadhana.since || "").slice(0, 20) }
       : null;
   // first question of a fresh session: where did the LAST conversation end?
@@ -929,7 +939,7 @@ async function handleChat(req, res) {
         sources: contacts,
         ...(followups.length ? { followups } : {}),
         ...(checkin ? { checkin } : {}),
-        ...(sadhana ? { sadhana } : {}),
+        ...(deniesPractice ? { sadhana: "-" } : sadhana ? { sadhana } : {}), // "-" tells the app to forget it
         // only a MEMBER is invited to teach a correction (server-gated)
         ...(inviteFix && seekerMember ? { correctionInvite: true } : {}),
         ...(bareBalance !== null ? { credits: bareBalance } : {}),
@@ -1049,7 +1059,7 @@ async function handleChat(req, res) {
       ...(suggest && profile ? { suggest } : {}),
       ...(followups.length ? { followups } : {}),
       ...(checkin ? { checkin } : {}),
-      ...(sadhana ? { sadhana } : {}),
+      ...(deniesPractice ? { sadhana: "-" } : sadhana ? { sadhana } : {}), // "-" tells the app to forget it
       ...(quote ? { quote } : {}),
       // only a MEMBER is invited to teach a correction (server-gated)
       ...(inviteFix && seekerMember ? { correctionInvite: true } : {}),
