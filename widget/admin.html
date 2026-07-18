@@ -384,6 +384,7 @@
     <button class="chip" data-f="hi">हिंदी</button>
     <button class="chip" data-f="en">English</button>
     <button class="chip" data-f="corrected">✏️ Corrected</button>
+    <button class="chip" data-f="chat">💬 Conversation</button>
     <button class="chip" data-f="suggestions" id="sugchip">📝 Suggestions</button>
     <input type="date" id="qdate" title="Show one day only"
       style="background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 14px;color:var(--ink);font-size:13px;outline:none;color-scheme:dark">
@@ -426,7 +427,12 @@
   }
 
   // correction-taught entries are never "unanswered" — the approved answer IS the answer
-  const isUnanswered = (e) => !e.corrected && !e.guided && !corrFor(e.q) && (e.error || (e.answer && !/Source\s*:/.test(e.answer) && !e.testMode));
+  // Greetings, "हाँ ठीक है", "मैं साधना नहीं कर रहा", "बताइए" — these are
+  // conversation, not questions. They never carry a Source line BY DESIGN, so
+  // they were all being flagged "no source — knowledge gap?" and crowding out
+  // the real questions (owner, 2026-07-19).
+  const isChat = (e) => !!(e.chat || e.ack || e.negReply || e.unclear);
+  const isUnanswered = (e) => !isChat(e) && !e.corrected && !e.guided && !corrFor(e.q) && (e.error || (e.answer && !/Source\s*:/.test(e.answer) && !e.testMode));
   const when = (iso) => new Date(iso).toLocaleString("en-IN",
     { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -553,6 +559,8 @@
     const qd = $("#qdate").value; // yyyy-mm-dd (IST day) or empty = all days
     const shown = base.filter((e) => {
       if (qd && new Date(e.at).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }) !== qd) return false;
+      if (filter === "chat") return isChat(e);
+      if (filter !== "all-with-chat" && isChat(e)) return false; // conversation lives on its own chip
       if (filter === "unanswered" && !isUnanswered(e)) return false;
       if (filter === "voice" && e.via !== "voice") return false;
       if (filter === "text" && e.via === "voice") return false;
@@ -996,6 +1004,7 @@
     }
   }
 
+  let studyStartedAt = 0; // when the ~7-minute rebuild began, for the progress bar
   function statusFromJobs(jobs, totals) {
     if (uploading) return; // the upload loop owns the banner while files transfer
     if (Date.now() < celebrateUntil) return; // let the 🎉 moment breathe
@@ -1008,17 +1017,30 @@
     tab.textContent = activeN || pendingUploads.length ? "📚 Teach the bot ●" : "📚 Teach the bot";
     if (activeN) {
       const working = jobs.find((j) => j.status === "working");
-      if (t.studying)
+      if (t.studying) {
+        // The rebuild gives no progress of its own, so this is an ELAPSED-TIME
+        // estimate against the usual ~7 minutes — capped below 100 so it never
+        // claims to be finished before it is.
+        if (!studyStartedAt) studyStartedAt = Date.now();
+        const pct = Math.min(95, Math.round(((Date.now() - studyStartedAt) / 420000) * 100));
+        const mins = Math.floor((Date.now() - studyStartedAt) / 60000);
         showStatus("📖", "Studying — building searchable memory…",
-          "usually ~7 minutes · the bot keeps answering with its old knowledge meanwhile");
-      else if (working)
+          `about ${mins} of ~7 minutes · the bot keeps answering with its old knowledge meanwhile`, pct);
+      } else if (working) {
+        studyStartedAt = 0;
+        const doneN = (t.done || 0) + (t.ready || 0);
         showStatus(working.kind === "media" || working.kind === "video-link" ? "🎧" : "⚙️",
-          `Studying ${(t.done || 0) + (t.ready || 0) + 1} of ${t.total}: ${working.title}`,
-          (working.detail || "") + (activeN > 1 ? ` · ${activeN - 1} more waiting in queue` : ""));
-      else showStatus("⏳", `${activeN} item${activeN > 1 ? "s" : ""} waiting in the study queue…`, "");
+          `Studying ${doneN + 1} of ${t.total}: ${working.title}`,
+          (working.detail || "") + (activeN > 1 ? ` · ${activeN - 1} more waiting in queue` : ""),
+          Math.round((doneN / Math.max(1, t.total)) * 100));
+      } else {
+        studyStartedAt = 0;
+        showStatus("⏳", `${activeN} item${activeN > 1 ? "s" : ""} waiting in the study queue…`, "",
+          Math.round((((t.done || 0) + (t.ready || 0)) / Math.max(1, t.total)) * 100));
+      }
     } else if (t.total) {
       if (t.failed) showStatus("⚠️", `${t.done || 0} learnt · ${t.failed} failed`, "the list below shows what failed and why");
-      else if (t.done) showStatus("✅", `All done — ${t.done} item${t.done > 1 ? "s" : ""} learnt`, "the bot is already answering with this knowledge");
+      else if (t.done) showStatus("✅", `All done — ${t.done} item${t.done > 1 ? "s" : ""} learnt`, "the bot is already answering with this knowledge", 100);
     }
   }
 
