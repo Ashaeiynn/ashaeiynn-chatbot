@@ -18,9 +18,17 @@ const HOME = process.env.HOME;
 const YTDLP = `${HOME}/.local/bin/yt-dlp`;
 const FFMPEG = `${HOME}/.local/bin/ffmpeg`;
 const MLX_WHISPER = `${HOME}/Library/Python/3.9/bin/mlx_whisper`;
-// large-v3-turbo: ~5x realtime on M1 with Hindi quality matching full large-v3.
-const WHISPER_MODEL = "mlx-community/whisper-large-v3-turbo";
+// FULL large-v3, not turbo. The turbo assumption above proved WRONG in practice:
+// measured 2026-07-18, turbo mangled Hindi badly ("जय सिया राम" wrong 100% of the
+// time) and got stuck repeating one word, wrecking ~12.6% of the knowledge base.
+// Slower, but this is Bhaiya's teaching. Override with WHISPER_MODEL=… if needed.
+const WHISPER_MODEL = process.env.WHISPER_MODEL || "mlx-community/whisper-large-v3";
 const LANGUAGE = "hi"; // content is spoken in Hindi
+// Seed the vocabulary it kept getting wrong, and stop the repetition loop
+// (--condition-on-previous-text False is the cure for the "अब अब अब…" garbage).
+const VOCAB_PROMPT =
+  "जय सिया राम। गुरुदेव, भैया, साधना, जाप, ध्यान, मंत्र, हवन, कृपा, आभामंडल, शक्ति, दुर्गा, नवरात्रि, सत्संग, पाठशाला, आशाईन।";
+const QUALITY_ARGS = ["--initial-prompt", VOCAB_PROMPT, "--condition-on-previous-text", "False"];
 const REFERER = "https://vimeo.com/";
 
 function log(msg) {
@@ -95,17 +103,21 @@ for (const [i, v] of videos.entries()) {
       execFileSync("rm", ["-f", dlFile]);
     }
 
-    // 3. Transcribe (Hindi) to a RAW file. Generous cap: turbo runs ~5x realtime, so
-    // minutes*45s leaves wide margin before a hang would trip it.
-    log(`${progress} ✎ transcribing (turbo, hi): ${v.name}`);
+    // 3. Transcribe (Hindi) to a RAW file. Full large-v3 is ~3-4x slower than turbo,
+    // so the cap is widened accordingly before a hang would trip it.
+    log(`${progress} ✎ transcribing (large-v3, hi, anti-repeat): ${v.name}`);
     // Whisper writes <output-dir>/<wav-stem>.json (it ignores a dotted --output-name),
     // so send raw output to audioDir; the FINAL normalized file goes to transcriptsDir.
-    execFileSync(
-      MLX_WHISPER,
-      [wavFile, "--model", WHISPER_MODEL, "--language", LANGUAGE, "--output-format", "json",
-       "--output-dir", audioDir, "--output-name", slug],
-      { stdio: "ignore", timeout: Math.max(15 * 60_000, v.minutes * 45_000), killSignal: "SIGKILL" },
-    );
+    const wArgs = [wavFile, "--model", WHISPER_MODEL, "--language", LANGUAGE, "--output-format", "json",
+      "--output-dir", audioDir, "--output-name", slug];
+    const wOpts = { stdio: "ignore", timeout: Math.max(30 * 60_000, v.minutes * 150_000), killSignal: "SIGKILL" };
+    try {
+      execFileSync(MLX_WHISPER, [...wArgs, ...QUALITY_ARGS], wOpts);
+    } catch (err) {
+      // older mlx_whisper may not know these flags — don't lose the whole run over it
+      log(`   ⚠️  quality flags rejected — retrying plain`);
+      execFileSync(MLX_WHISPER, wArgs, wOpts);
+    }
 
     // 4. Normalize into our transcript shape. Whisper sometimes emits bare NaN/Infinity
     // in logprob fields — invalid JSON — so sanitize before parsing. Only write the

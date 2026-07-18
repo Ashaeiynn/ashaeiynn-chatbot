@@ -16,7 +16,19 @@ mkdirSync(tmpDir, { recursive: true });
 const HOME = process.env.HOME;
 const FFMPEG = `${HOME}/.local/bin/ffmpeg`;
 const MLX_WHISPER = `${HOME}/Library/Python/3.9/bin/mlx_whisper`;
-const WHISPER_MODEL = "mlx-community/whisper-large-v3-turbo";
+// FULL large-v3, not turbo: turbo trades away multilingual accuracy and was
+// mangling Hindi badly (measured 2026-07-18 — "जय सिया राम" came out wrong in
+// 100% of cases). Slower, but this is Bhaiya's teaching — accuracy wins.
+// Override with WHISPER_MODEL=… if you ever need the fast one.
+const WHISPER_MODEL = process.env.WHISPER_MODEL || "mlx-community/whisper-large-v3";
+// Seeds the transcriber with the vocabulary it kept getting wrong. Same trick
+// that fixed the iPhone's Hindi ear.
+const VOCAB_PROMPT =
+  "जय सिया राम। गुरुदेव, भैया, साधना, जाप, ध्यान, मंत्र, हवन, कृपा, आभामंडल, शक्ति, दुर्गा, नवरात्रि, सत्संग, पाठशाला, आशाईन।";
+// Whisper's #1 failure mode: it "conditions on previous text" and can get stuck
+// emitting one word (or "!") thousands of times — that is exactly what wrecked
+// ~12.6% of this knowledge base. Turning it off prevents the loop.
+const QUALITY_ARGS = ["--initial-prompt", VOCAB_PROMPT, "--condition-on-previous-text", "False"];
 
 const [, , inputPath, titleArg] = process.argv;
 if (!inputPath || !existsSync(inputPath)) {
@@ -40,13 +52,16 @@ execFileSync(FFMPEG, ["-y", "-i", inputPath, "-vn", "-ac", "1", "-ar", "16000", 
   stdio: "ignore",
 });
 
-console.log(`✎ transcribing (turbo, hi): ${title}`);
-execFileSync(
-  MLX_WHISPER,
-  [wav, "--model", WHISPER_MODEL, "--language", "hi", "--output-format", "json",
-   "--output-dir", tmpDir, "--output-name", slug],
-  { stdio: "ignore" },
-);
+console.log(`✎ transcribing (large-v3, hi, anti-repeat): ${title}`);
+const baseArgs = [wav, "--model", WHISPER_MODEL, "--language", "hi", "--output-format", "json",
+  "--output-dir", tmpDir, "--output-name", slug];
+try {
+  execFileSync(MLX_WHISPER, [...baseArgs, ...QUALITY_ARGS], { stdio: "ignore" });
+} catch (err) {
+  // older mlx_whisper builds may not know these flags — never fail the job over it
+  console.warn("⚠️  quality flags rejected by this whisper build — retrying plain");
+  execFileSync(MLX_WHISPER, baseArgs, { stdio: "ignore" });
+}
 
 const rawText = readFileSync(path.join(tmpDir, `${slug}.json`), "utf8")
   .replace(/\bNaN\b/g, "null")
