@@ -19,6 +19,19 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **Admin: conversation is no longer mistaken for a knowledge gap, and studying shows progress.**
+  Owner saw "no source — knowledge gap?" on turns like "नहीं अभी के लिए इतना ही जय सियाराम" and
+  "मैं साधना कर ही नहीं रहा हूं अभी". `isUnanswered` flagged anything without a Source line — but
+  conversational turns never have one BY DESIGN. Now `isChat(e)` (chat|ack|negReply|unclear)
+  excludes them from the gap count AND from the questions list, with their own 💬 Conversation
+  chip so nothing is hidden. Verified live: All tab 300 cards / 16 real gaps, Conversation tab
+  3 cards / 0 gap badges — exactly the turns from the owner's screenshot. (Only turns logged
+  since today's flags carry them; older ones age out of view.)
+  Progress bar: `showStatus()` already accepted a `pct` but `statusFromJobs` never passed one.
+  Now determinate per item (done/total) during processing, and during the ~7-minute rebuild an
+  elapsed-time estimate capped at 95% with an honest "about N of ~7 minutes" label — the
+  rebuild reports no progress of its own, so it is labelled as an estimate rather than faked.
+
 - **First two PDFs taught — extraction was badly broken, and they are unreachable in Hindi.**
   Owner uploaded bhaiya_gyaan_qa_pairs.pdf and bhaiya_gyaan_knowledge_base.pdf.
   1. EXTRACTION WAS MANGLING WORDS. pypdf's default mode sprays spaces inside words —
