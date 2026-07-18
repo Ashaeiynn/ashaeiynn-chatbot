@@ -21,9 +21,19 @@ try {
   /* best effort — load() tolerates a missing file */
 }
 
-// Same-meaning questions score ~0.9+ with e5 query embeddings; related ~0.8+.
-export const DIRECT_MATCH = Number(process.env.CORRECTION_DIRECT || 0.9);
-export const HINT_MATCH = Number(process.env.CORRECTION_HINT || 0.8);
+// Calibrated against the live corrections with this exact embedding model
+// (measured 2026-07-18, e5 gives a HIGH similarity floor for same-language,
+// same-domain text — so a low bar matches everything):
+//   unrelated / a bare greeting …… 0.75 – 0.84   ← must NOT match
+//   genuine rewording of the Q …… 0.86 – 0.93   ← should match
+//   the identical question ………… 0.975
+// The old HINT of 0.80 sat INSIDE the noise band, so a correction was injected
+// as "Bhaiya's approved answer — outranks every excerpt" on nearly every
+// question (even greetings), dragging answers off-topic and generic.
+// Bias high on purpose: missing a borderline correction only means the bot
+// answers normally from the teachings, while a false match poisons every answer.
+export const DIRECT_MATCH = Number(process.env.CORRECTION_DIRECT || 0.93);
+export const HINT_MATCH = Number(process.env.CORRECTION_HINT || 0.88);
 
 let items = null; // [{ id, q, answer, at, vec }]
 
