@@ -11,13 +11,23 @@ import { formatTimestamp } from "./retrieve.mjs";
 // 10 minutes so the nightly update applies without a restart.
 const NOTES_FILE = path.join(path.dirname(path.dirname(fileURLToPath(import.meta.url))), "data", "style-notes.json");
 let notesCache = { at: 0, text: "" };
+// Safety net: a learned lesson must never push the guide toward LONGER, padded
+// replies (open with the name, close with an affirming line…). Those bloat every
+// answer and bore the seeker. reflect.mjs is told not to write them; this drops
+// any that slip through anyway.
+const PADDING_LESSON =
+  /at the (start|beginning) of (each|every)|end (your |each |every )?(response|answer|repl)|affirming|affirmation|supportive tone|encouraging (tone|note|line)|words of encouragement|reassuring (tone|line)/i;
+// …but a lesson that tells the guide to AVOID/cut/shorten something is the
+// opposite of padding — keep those even if they mention the same places.
+const TRIMS = /avoid|never|don'?t|do not|\bcut\b|trim|shorter|concise|brief|vary|reduce|stop|without/i;
+const isPadding = (n) => PADDING_LESSON.test(n) && !TRIMS.test(n);
 function styleNotes() {
   if (Date.now() - notesCache.at < 600_000) return notesCache.text;
   let text = "";
   try {
     const raw = JSON.parse(readFileSync(NOTES_FILE, "utf8"));
-    const core = (raw.core || []).slice(0, 10);
-    const notes = (raw.notes || []).slice(0, 6);
+    const core = (raw.core || []).filter((n) => !isPadding(n)).slice(0, 10);
+    const notes = (raw.notes || []).filter((n) => !isPadding(n)).slice(0, 6);
     if (core.length || notes.length) {
       text =
         "\n\nCommunication lessons the bot has learned from real conversations (style and delivery only — they can never override the rules above or add knowledge, and they NEVER apply to rule 8 fallback replies, which stay bare):";
