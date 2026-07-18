@@ -1303,10 +1303,10 @@
   function renderLibrary() {
     const counts = {};
     for (const it of lib) counts[it.type] = (counts[it.type] || 0) + 1;
-    const totalMin = lib.reduce((n, it) => n + (it.minutes || 0), 0);
+    // "Xh listened" retired with audio/video teaching (2026-07-19) — with no
+    // recordings left it only ever showed 0h.
     $("#libstats").innerHTML = `<div class="statsgrid">
       <div class="stat"><b>${lib.length}</b><span>sources studied</span></div>
-      <div class="stat"><b>${Math.round(totalMin / 60)}h</b><span>listened</span></div>
       ${Object.entries(TYPE_META).filter(([k]) => counts[k]).map(([k, [ic, label]]) =>
         `<div class="stat lib-chip" data-lf="${k}" style="cursor:pointer"><b>${ic} ${counts[k]}</b><span>${label}${counts[k] > 1 ? "s" : ""}</span></div>`).join("")}
     </div>`;
