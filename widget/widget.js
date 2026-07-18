@@ -883,6 +883,7 @@
   // (owner, 2026-07-19). Firing one silent utterance during the tap itself
   // unlocks speech for the rest of the visit. Harmless everywhere else.
   let voicePrimed = false;
+  let voiceMissingTold = false; // only mention a missing device voice once per visit
   function primeVoice() {
     if (voicePrimed || !("speechSynthesis" in window)) return;
     voicePrimed = true;
@@ -909,6 +910,19 @@
     speechSynthesis.cancel();
     const lang = hasDevanagari(clean) ? "hi-IN" : "en-IN";
     const voice = pickVoice(lang);
+    // A phone with no Hindi voice installed simply says NOTHING — no error, no
+    // clue for the seeker, who is left staring at a silent screen (owner's
+    // Android, 2026-07-19). Say what is wrong instead of leaving them guessing.
+    if (!voice && lang === "hi-IN" && speechSynthesis.getVoices().length && !voiceMissingTold) {
+      voiceMissingTold = true;
+      try {
+        console.warn("no Hindi voice on this device — install one in the phone's text-to-speech settings");
+        if (panel.dataset.mode === "voice")
+          showLive("🔈 इस फ़ोन में हिंदी आवाज़ नहीं है — phone की Settings › Text-to-speech में Hindi जोड़िए। तब तक उत्तर पढ़ लीजिए 🙏");
+      } catch {
+        /* notice is best-effort */
+      }
+    }
     const sentences = clean
       .split(/(?<=[।॥.!?])\s+/)
       .flatMap((s) => (s.length > 240 ? s.split(/(?<=,)\s+/) : [s]))
