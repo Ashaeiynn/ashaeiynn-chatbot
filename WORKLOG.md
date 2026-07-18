@@ -19,6 +19,22 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **The guide kept insisting a member was doing a साधना she had denied.** Soni told it
+  "मैं कोई गुरुतत्व साधना नहीं कर रहा हूँ अभी।" and later answers still opened
+  "सोनिया बहन, आपकी गुरु तत्व साधना के मार्ग पर…". The negative-reply handling DID fire — but it
+  only shaped that one reply. The cause is separate: a declared practice is remembered on the
+  seeker's device (`profile.sadhana`) and injected into every later prompt as "their ongoing
+  practice". Nothing ever cleared it. The mechanism existed (`sadhana: "-"` tells the app to
+  forget) but only the model could trigger it, and it never did.
+  FIX, in code: `deniesPractice` = a negation plus a practice word (साधना/जाप/abhyas/sadhna/
+  practice). When it fires, the remembered practice is (a) left OUT of this answer's prompt and
+  (b) the reply carries `sadhana: "-"` so the app forgets it for good. Rule 14 also extended:
+  "-" on denial, and never refer to it as theirs again.
+  Verified end to end with her exact words: reply carries "-", and the following question no
+  longer calls it her साधना.
+  LESSON: acknowledging something for one turn is not the same as remembering it. Anything the
+  seeker states about THEMSELVES has to reach the stored profile, not just the current reply.
+
 - **Admin progress panel was lying, and deletions looked like studying.** Four fixes:
   1. The live admin was polling `/api/admin/studio-status` — the studio Mac's relayed progress —
      while teaching happens ON THIS SERVER. An upload made here showed no progress at all and
