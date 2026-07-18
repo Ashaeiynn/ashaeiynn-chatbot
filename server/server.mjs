@@ -985,6 +985,15 @@ async function handleChat(req, res) {
     // into questions.log, so the admin's knowledge-gap review is unaffected —
     // and its PRESENCE still drives the deterministic no-source rules above.
     let shown = answer.replace(/\n\s*(?:Source|स्रोत)\s*[:：][^\n]*/gi, "").trimEnd();
+    // "ठीक है?" is Bhaiya's own habit, but the model turned it into a closing
+    // formula on nearly every answer, which reads as a tic (owner, 2026-07-19).
+    // Telling it to be sparing is not enough on its own, so: if it was used in
+    // the last two answers, take a trailing one off. It can still appear — it
+    // just can never repeat.
+    if (/ठीक\s*है\s*[?？]/.test(history.filter((m) => m.role === "assistant").slice(-2).map((m) => m.content).join(" "))) {
+      shown = shown.replace(/\s*(?:तो\s*)?ठीक\s*है\s*(?:ना|न)?\s*[?？]\s*$/u, "").trimEnd();
+    }
+
     // seatbelt: a quote marker the parser didn't recognize must never reach
     // the seeker as raw text (the framed quote uses data.quote, not this line)
     shown = shown.replace(/\n\s*(?:उद्धरण|quote)\s*[:：][^\n]*/gi, "").trimEnd();
