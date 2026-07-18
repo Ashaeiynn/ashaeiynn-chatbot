@@ -505,6 +505,14 @@ async function handleChat(req, res) {
     .concat(message)
     .join(" ");
   const sadhanaTopic = SADHANA_TOPIC.test(topicText);
+  // "देखो Rohan भाई," on EVERY answer reads as a machine (owner, 2026-07-18).
+  // Telling the model to vary was not enough — the persona rule pulls it back —
+  // so show it its own recent openings and forbid them outright.
+  const recentOpenings = history
+    .filter((m) => m.role === "assistant")
+    .slice(-3)
+    .map((m) => m.content.trim().split(/\s+/).slice(0, 4).join(" ").replace(/["\\]/g, ""))
+    .filter(Boolean);
   const rulesAsk = !isGreeting && isRulesQ(message);
   const aboutAsk = !isGreeting && !rulesAsk && (ABOUT_ASK.test(message) || MEANING_ASK.test(message));
   const rulesWithheld = rulesAsk && sadhanaTopic && !seekerMember;
@@ -647,7 +655,7 @@ async function handleChat(req, res) {
                 }${
                   seekerSadhana ? ` Their ongoing practice (self-declared${seekerSadhana.since ? `, since ${seekerSadhana.since}` : ""}): "${seekerSadhana.name}".` : ""
                 }${
-                  seekerName ? ` Address them by name ONCE, naturally — judge gender from the name: clearly male → "${seekerName} भाई" ("${seekerName} bhai" in English), clearly female → "${seekerName} बहन" ("${seekerName} behen"), unsure → "${seekerName} जी". Keep the same भाई/बहन form ANYWHERE you address them in this answer — never call a sister भाई.` : ""
+                  seekerName ? ` You MAY address them by name at most once, and only if it lands naturally — most answers need no name at all, and it must NOT become your opening formula. Judge gender from the name: clearly male → "${seekerName} भाई" ("${seekerName} bhai" in English), clearly female → "${seekerName} बहन" ("${seekerName} behen"), unsure → "${seekerName} जी". Keep the same भाई/बहन form ANYWHERE you address them in this answer — never call a sister भाई.` : ""
                 } Where it fits naturally, connect the answer to their ongoing journey in one warm phrase; never list their history back to them.${
                   leftover
                     ? ` FRESH conversation — their previous one (${leftover.when || "पिछली बार"}) ended around: "${leftover.q}". Answer the CURRENT question fully and cleanly first. If the current question is a DIFFERENT topic, you may close with ONE short warm bridge offering the old thread back ("वैसे ${leftover.when || "पिछली बार"} हम इस बारे में बात कर रहे थे — चाहें तो वहीं से आगे बढ़ें?") and make ONE of the सुझाव questions that continuation. If it's the same topic, continue naturally with no bridge. Never let the old thread hijack the new answer.`
@@ -660,6 +668,12 @@ async function handleChat(req, res) {
               : profile?.uid
                 ? `\n[NOT YET A MEMBER: this seeker has not joined Ashaeiynn yet. For personal matters (rule 15) guide them to book a screening at ashaeiynn.com. And when a moment is genuinely right — deep interest, a personal ask, a practice they want to begin — you may warmly mention ONCE in the conversation that their own journey with Ashaeiynn can begin with a screening. Inviting, never pushy, never in every answer.]`
                 : ""
+          }${
+            recentOpenings.length
+              ? `\n[VARY YOUR OPENING — your recent answers began: ${recentOpenings
+                  .map((o) => `"${o}…"`)
+                  .join(", ")}. Do NOT begin this answer with those words or anything close to them, and do not fall back on "देखो <name> भाई/बहन" again. Begin a different way — most naturally with the answer itself. Use their name only if you have not used it recently.]`
+              : ""
           }${
             rulesWithheld
               ? `\n[साधना निर्देश — NOT FOR THIS SEEKER. They are asking for the नियम/निर्देश of a साधना (rules, timings, food, method, count) and they have NOT joined Ashaeiynn. Ashaeiynn never hands साधना निर्देश to someone outside the family — they are given personally, with a guide, so the साधना is done rightly and safely. So: do NOT state a single rule, timing, food restriction, count or step, even though the excerpts below contain them. Instead, in 3-4 warm sentences — say what this साधना IS and why it matters in Bhaiya's teaching, explain kindly that its निर्देश are given personally once their own journey with Ashaeiynn begins, and invite them to book a screening. This is care, never secrecy: never sound like you are hiding something, and never hint at a rule while declining. End with the final line: सहायता: screening]`
