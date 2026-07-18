@@ -642,6 +642,40 @@ async function handleChat(req, res) {
       }
     }
 
+    // FIGURE FIDELITY — seekers act on the numbers in a साधना rule (3 बजे, 6 बजे),
+    // so a drifted digit is a real-world error, not a wording nit. Asking the model
+    // nicely did NOT hold: measured 2026-07-18 it turned Bhaiya's "6 बजे" into
+    // "8 बजे" in one run out of two. So we check the digits in code whenever an
+    // approved answer IS the answer: repair once (cheap, narrow task), and if the
+    // repair still disagrees, deliver Bhaiya's approved text as it stands.
+    // Accuracy of a rule outranks per-seeker phrasing.
+    if (approved && approved.score >= DIRECT_MATCH) {
+      const bare = (t) => String(t).replace(/^\s*(?:source|स्रोत)\s*[:：].*$/gim, "");
+      const digitsOf = (t) =>
+        new Set(bare(t).replace(/[०-९]/g, (d) => "०१२३४५६७८९".indexOf(d)).match(/\d{1,4}/g) || []);
+      const want = digitsOf(approved.answer);
+      const drifted = (a) => {
+        const got = digitsOf(a);
+        return [...want].some((d) => !got.has(d)) || [...got].some((d) => !want.has(d));
+      };
+      if (want.size && drifted(answer)) {
+        logEntry.figureFix = true;
+        try {
+          const fixed = await complete({
+            system:
+              "You fix numbers ONLY. You are given Bhaiya's APPROVED answer and a DRAFT that retells it for a seeker. Return the DRAFT with every number, clock time, count, duration and quantity made to agree exactly with the APPROVED answer — restore any figure the draft dropped, delete any it invented. Change NOTHING else: same language, same wording, same order, same lines. Output only the corrected draft.",
+            messages: [{ role: "user", content: `APPROVED:\n${approved.answer}\n\nDRAFT:\n${answer}` }],
+            maxTokens: 700,
+            light: true,
+            retry: false,
+          });
+          answer = fixed && !drifted(fixed) ? fixed.trim() : approved.answer;
+        } catch {
+          answer = approved.answer;
+        }
+      }
+    }
+
     // Deterministic rule: an answer WITHOUT a Source line is either a refusal
     // or a purely conversational reply (rule 4b) — never decorate it with
     // Watch links or teaching extras. Conversation may keep its follow-up
