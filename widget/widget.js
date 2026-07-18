@@ -1087,7 +1087,7 @@
       ans.textContent = data.answer;
       enrichAnswer(ans, data, text);
       capAdd(ans);
-      if (data.followups?.length) capAdd(chipsEl(data.followups));
+      if (data.followups?.length) capAdd(chipsEl(data.followups, ASK_MORE));
       maybeOfferBell();
       panel.dataset.hasAns = "1";
       // long answers: read from the beginning, not scrolled to the end
@@ -1431,7 +1431,7 @@
             : `Jai Siya Ram${journey.name ? `, ${journey.name} जी` : ""} 🙏 Ask me anything about the teachings — I'll find the answer from our videos.`,
         );
         if (cameBack) presentCheckin((q) => addMessage("bot", q));
-        if (cameBack && journey.lastFollowups?.length) msgs.appendChild(chipsEl(journey.lastFollowups));
+        if (cameBack && journey.lastFollowups?.length) msgs.appendChild(chipsEl(journey.lastFollowups, ASK_MORE));
       }
       input.focus();
     } else {
@@ -1592,9 +1592,23 @@
     displayAsBot(q);
   }
 
-  function chipsEl(followups) {
+  // The "watch these videos" block used to sit under every answer. With the
+  // recordings withdrawn from the library there is often nothing to watch, so
+  // the seeker's next step is a question, not a video — give those chips a
+  // heading of their own so they read as an invitation, not stray buttons.
+  const ASK_MORE = "🙏 आप यह भी पूछ सकते हैं";
+
+  function chipsEl(followups, heading) {
     const wrap = document.createElement("div");
     wrap.className = "vcb-chips";
+    if (heading) {
+      const h = document.createElement("div");
+      h.className = "vcb-lbl";
+      h.style.width = "100%";
+      h.style.justifyContent = "center";
+      h.textContent = heading;
+      wrap.appendChild(h);
+    }
     followups.slice(0, 3).forEach((q) => {
       const b = document.createElement("button");
       b.type = "button";
@@ -1646,7 +1660,11 @@
     if (data.sources?.length) {
       const lbl = document.createElement("div");
       lbl.className = "vcb-lbl";
-      lbl.textContent = "📿 देखिए";
+      // videos were deleted from the library — do not tell a seeker to "watch"
+      // an article. Label by what the links actually are.
+      lbl.textContent = data.sources.some((s2) => s2.url && /youtu|vimeo/i.test(s2.url))
+        ? "📿 देखिए"
+        : "📖 पढ़िए";
       el.appendChild(lbl);
       const vids = document.createElement("div");
       vids.className = "vcb-vids";
@@ -1979,7 +1997,7 @@
             d.textContent = q;
             capAdd(d);
           });
-          if (journey.lastFollowups?.length) capAdd(chipsEl(journey.lastFollowups));
+          if (journey.lastFollowups?.length) capAdd(chipsEl(journey.lastFollowups, ASK_MORE));
           fetchNextStep();
         }
       }
@@ -2015,7 +2033,7 @@
       if (panel.dataset.mode === "text") {
         addMessage("bot", data.answer, data, msg);
         if (data.followups?.length) {
-          msgs.appendChild(chipsEl(data.followups));
+          msgs.appendChild(chipsEl(data.followups, ASK_MORE));
           msgs.scrollTop = msgs.scrollHeight;
         }
       } else {
@@ -2024,7 +2042,7 @@
         ans.textContent = data.answer;
         enrichAnswer(ans, data, msg);
         capAdd(ans);
-        if (data.followups?.length) capAdd(chipsEl(data.followups));
+        if (data.followups?.length) capAdd(chipsEl(data.followups, ASK_MORE));
         panel.dataset.hasAns = "1";
         cap.scrollTop += ans.getBoundingClientRect().top - cap.getBoundingClientRect().top - 4;
         setVState("speaking");
@@ -2203,7 +2221,7 @@
       typing.remove();
       addMessage("bot", data.answer, data, text);
       if (data.followups?.length) {
-        msgs.appendChild(chipsEl(data.followups));
+        msgs.appendChild(chipsEl(data.followups, ASK_MORE));
         msgs.scrollTop = msgs.scrollHeight;
       }
       maybeOfferBell();
