@@ -978,11 +978,13 @@ async function handleChat(req, res) {
     // teaching and Bhaiya's quote. The log keeps the full answer regardless,
     // so the admin's knowledge-gap review is untouched.
     writeLog({ ...logEntry, answer, ms: Date.now() - t0 });
-    let shown = answer;
-    const srcLine = shown.match(/\n\s*(?:Source|स्रोत)\s*[:：][^\n]*/i);
-    if (srcLine && !sources.some((s) => s.timestamp && srcLine[0].includes(s.title))) {
-      shown = shown.replace(/\n\s*(?:Source|स्रोत)\s*[:：][^\n]*/gi, "").trimEnd();
-    }
+    // The Source line is ALWAYS taken off the seeker's screen now. The app shows
+    // the same links as tappable pills right underneath, so printing
+    // "Source: Article: … (0:00)" above them cost four lines of a phone screen
+    // to say the same thing twice (owner, 2026-07-19). The full line still goes
+    // into questions.log, so the admin's knowledge-gap review is unaffected —
+    // and its PRESENCE still drives the deterministic no-source rules above.
+    let shown = answer.replace(/\n\s*(?:Source|स्रोत)\s*[:：][^\n]*/gi, "").trimEnd();
     // seatbelt: a quote marker the parser didn't recognize must never reach
     // the seeker as raw text (the framed quote uses data.quote, not this line)
     shown = shown.replace(/\n\s*(?:उद्धरण|quote)\s*[:：][^\n]*/gi, "").trimEnd();
