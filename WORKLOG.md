@@ -19,6 +19,27 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **"हां ठीक है" was treated as a new question.** Owner: two questions about सिद्धि, then a
+  bare "हां ठीक है" — and the bot delivered a fresh teaching that wandered onto साधना rules.
+  Reproduced exactly (83 words + 3 sources for an acknowledgement). Cause: nothing marked a
+  bare agreement as conversation, so retrieval ran and the model wrote an essay. Fixed the
+  same way as greetings — `ACK_ONLY` in server.mjs (Hindi/Hinglish/English: हाँ · ठीक है ·
+  अच्छा · समझ गया · ओके · ok · thanks · got it …, up to 3 such words, ≤5 words total, and ONLY
+  when there is a previous assistant turn to be agreeing with). Skips retrieval, translation
+  and पंचांग; the injected note says stay on the CURRENT topic, one short line, and put the
+  follow-ups on that same topic. After: 16-24 words, 0 sources, chips still about सिद्धि.
+  Regression-checked: "सिद्धि क्या होती है?" still answers in full (107 words, 3 sources).
+
+- **Teaching is now from written material only** (owner's decision, 2026-07-18): folder upload,
+  audio/video upload and YouTube/Vimeo link teaching all REMOVED from the portal — machine
+  transcription had proved unreliable enough to damage the knowledge, so Bhaiya's recordings
+  come in as human-checked transcripts. Removed in both places: teach.mjs (`teachFile` media
+  branch and `teachLink`'s video branch now refuse with a message pointing to the transcript)
+  and admin.html (folder button/input and the drag-drop directory walk gone, file picker
+  accepts documents only, card text rewritten). The transcription pipeline itself is NOT
+  deleted — `node pipeline/6-audio.mjs "<file>" "<title>"` still works from the command line
+  if it is ever wanted again, and this is one `git revert` away.
+
 - **Cleared the video-era leftovers under every answer** (owner: the videos-to-watch are gone
   since we deleted them — "in their place lets give few questions to ask"). Sources were still
   arriving (3-5 per answer) but they are now ARTICLES, shown under a "📿 देखिए" (watch) heading
