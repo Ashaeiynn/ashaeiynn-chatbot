@@ -1768,9 +1768,10 @@
     const box = document.createElement("div");
     box.className = "vcb-fixbox";
     const p = document.createElement("p");
-    p.textContent = "🙏 अगर यह उत्तर सही नहीं था और आप जानते हैं कि Bhaiya इसे कैसे समझाते हैं, तो नीचे लिखिए — हमारी team देखकर आगे बढ़ाएगी।";
+    p.textContent =
+      "🙏 अगर यह उत्तर सही नहीं था और आप जानते हैं कि Bhaiya इसे कैसे समझाते हैं, तो सही उत्तर नीचे लिखिए — जैसे आप किसी साधक को समझाते हैं। बस उत्तर लिखिए, बाक़ी हम समझ लेंगे। हमारी team देखकर आगे बढ़ाएगी।";
     const ta = document.createElement("textarea");
-    ta.placeholder = "सही उत्तर यहाँ लिखिए…";
+    ta.placeholder = "सही उत्तर यहाँ लिखिए… (सिर्फ़ उत्तर — भूमिका लिखने की ज़रूरत नहीं)";
     ta.maxLength = 3000;
     const row = document.createElement("div");
     row.className = "vcb-bellrow";

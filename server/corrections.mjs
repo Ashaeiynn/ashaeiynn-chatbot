@@ -37,13 +37,18 @@ export const HINT_MATCH = Number(process.env.CORRECTION_HINT || 0.88);
 
 let items = null; // [{ id, q, answer, at, vec }]
 
+// A correction is keyed by its question AND a few natural rewordings of it, so
+// the same ask in different words — or the other language — still finds it.
+const keyVecs = (it) =>
+  Promise.all([it.q, ...(Array.isArray(it.alts) ? it.alts : [])].map((t) => embedQuery(t)));
+
 async function load() {
   if (items) return items;
   items = [];
   if (existsSync(FILE)) {
     try {
       const raw = JSON.parse(readFileSync(FILE, "utf8"));
-      for (const it of raw) items.push({ ...it, vec: await embedQuery(it.q) });
+      for (const it of raw) items.push({ ...it, vecs: await keyVecs(it) });
     } catch (err) {
       console.error("corrections load failed:", err?.message);
     }
@@ -52,22 +57,50 @@ async function load() {
 }
 
 function persist() {
-  writeFileSync(FILE, JSON.stringify(items.map(({ vec, ...it }) => it), null, 2));
+  writeFileSync(FILE, JSON.stringify(items.map(({ vecs, ...it }) => it), null, 2));
 }
 
 export async function listCorrections() {
-  return (await load()).map(({ vec, ...it }) => it).sort((a, b) => b.id.localeCompare(a.id));
+  return (await load()).map(({ vecs, ...it }) => it).sort((a, b) => b.id.localeCompare(a.id));
 }
 
-export async function addCorrection(q, answer) {
+export async function addCorrection(q, answer, alts = []) {
   const question = String(q || "").trim().slice(0, 2000);
   const text = String(answer || "").trim().slice(0, 8000);
   if (!question || !text) throw new Error("Both the question and the edited answer are needed.");
   await load();
+  const qv = await embedQuery(question);
+  // Rewordings are what make a correction survive a change of words OR script.
+  // MEASURED 2026-07-18: this embedding model compares SCRIPT as much as meaning
+  // across languages — against a Hinglish key, the very same question written in
+  // Devanagari scored 0.758 while an unrelated question scored 0.858. So cosine
+  // can only police a reworded key in the SAME script; a translation has to be
+  // trusted (the model that wrote it is reliable at translating) or a Hinglish
+  // correction would never reach the seekers who ask in Hindi.
+  // Cosine is only trustworthy Devanagari-to-Devanagari: English and Hinglish
+  // share the Latin alphabet, so gating those wrongly threw away the English
+  // wording (measured — it dropped a perfectly good one). Where the check is
+  // meaningful it still guards against a paraphrase broader than the question,
+  // which is how one correction once swallowed every nearby question.
+  const devanagari = (t) => /[ऀ-ॿ]/.test(t);
+  const clean = [];
+  for (const a of Array.isArray(alts) ? alts : []) {
+    const t = String(a || "").trim().slice(0, 300);
+    if (t.length < 8 || t.toLowerCase() === question.toLowerCase()) continue;
+    const bothHindi = devanagari(t) && devanagari(question);
+    if (!bothHindi || cosine(await embedQuery(t), qv) >= 0.85) clean.push(t);
+    if (clean.length >= 4) break;
+  }
   // one approved answer per question — editing again replaces the old one
   items = items.filter((it) => it.q.trim() !== question);
-  const it = { id: Date.now().toString(36), q: question, answer: text, at: new Date().toISOString() };
-  items.push({ ...it, vec: await embedQuery(question) });
+  const it = {
+    id: Date.now().toString(36),
+    q: question,
+    ...(clean.length ? { alts: clean } : {}),
+    answer: text,
+    at: new Date().toISOString(),
+  };
+  items.push({ ...it, vecs: await keyVecs(it) });
   persist();
   return it;
 }
@@ -86,7 +119,9 @@ export async function matchCorrection(question) {
   const qv = await embedQuery(question);
   let best = null;
   for (const it of all) {
-    const score = cosine(qv, it.vec);
+    // best of the question and its rewordings
+    let score = 0;
+    for (const v of it.vecs) score = Math.max(score, cosine(qv, v));
     if (!best || score > best.score) best = { id: it.id, q: it.q, answer: it.answer, score };
   }
   return best && best.score >= HINT_MATCH ? best : null;

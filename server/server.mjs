@@ -1350,10 +1350,40 @@ const server = createServer(async (req, res) => {
         u = uid ? users.byId?.(uid) : null;
       } catch { /* registry best-effort */ }
       if (!u || !u.member || u.deleted) return json(res, 403, { error: "members-only" });
+      // Members write corrections the way people talk — "I am correcting you,
+      // next time someone asks about X, say…". Filed literally, that sentence
+      // became the question key and the correction NEVER fired (seen live
+      // 2026-07-18). So read the exchange and work out what question this
+      // teaching actually answers, and keep only the teaching itself.
+      let qKey = String(p.q || "").trim();
+      let teaching = String(p.suggestion || "").trim();
+      try {
+        const raw = await complete({
+          system:
+            'A member of a spiritual centre is correcting the guide-bot. Read the exchange and the member\'s message, then output ONLY JSON: {"q": "<the question this teaching answers, written the way a seeker would actually ask it — if the member names the question (\\"next time someone asks about X\\") use THAT, otherwise use the question the bot was answering. Same language the member used.>", "answer": "<the member\'s teaching alone, with any framing removed — drop \\"I am correcting you\\", \\"next time someone asks\\", \\"you should say\\" and similar. Keep their words and every specific detail: numbers, timings, names.>"}',
+          messages: [
+            {
+              role: "user",
+              content: `Question the bot was answering: ${p.q}\n\nBot's answer: ${String(p.answer || "").slice(0, 1500)}\n\nMember's correction: ${teaching}`,
+            },
+          ],
+          maxTokens: 700,
+          light: true,
+          retry: false,
+        });
+        const m = raw.match(/\{[\s\S]*\}/);
+        const parsed = m ? JSON.parse(m[0]) : null;
+        if (parsed?.q?.trim()) qKey = parsed.q.trim().slice(0, 300);
+        if (parsed?.answer?.trim()) teaching = parsed.answer.trim();
+      } catch {
+        /* best-effort — fall back to exactly what the member sent */
+      }
       const item = addSuggestion({
-        q: p.q,
+        q: qKey,
+        askedQ: String(p.q || "").trim(),
+        rawSuggestion: String(p.suggestion || "").trim(),
         botAnswer: p.answer,
-        suggestion: p.suggestion,
+        suggestion: teaching,
         uid,
         nick: u.nick || u.name || "",
         member: true,
@@ -1664,7 +1694,27 @@ const server = createServer(async (req, res) => {
         // the SAME pipeline as the admin's own edits, so the bot learns it
         const text = String(p.answer || s.suggestion || "").trim();
         if (!text) return json(res, 400, { error: "Nothing to approve — add the correct answer first." });
-        const item = await addCorrection(s.q, text);
+        const question = String(p.question || s.q || "").trim();
+        // File it under a few natural rewordings too, so the next seeker who
+        // asks the same thing in their own words (or the other language) still
+        // gets Bhaiya's approved teaching. addCorrection drops any paraphrase
+        // that is not genuinely the same question.
+        let alts = [];
+        try {
+          const raw = await complete({
+            system:
+              'Output ONLY a JSON array of 4 strings: the SAME question as a seeker might really ask it — (1) in Hindi (Devanagari script), (2) in English, (3) in Hinglish (Hindi written in Latin letters), (4) one more natural rewording in Hindi. Same meaning exactly, never broader, never a related question. No explanation.',
+            messages: [{ role: "user", content: question }],
+            maxTokens: 300,
+            light: true,
+            retry: false,
+          });
+          const m = raw.match(/\[[\s\S]*\]/);
+          if (m) alts = JSON.parse(m[0]).filter((x) => typeof x === "string");
+        } catch {
+          /* best-effort — the main question key always works on its own */
+        }
+        const item = await addCorrection(question, text, alts);
         removeSuggestion(s.id);
         return json(res, 200, { approved: true, item });
       }

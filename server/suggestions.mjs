@@ -35,13 +35,18 @@ const save = (v) => {
 
 // A member flagged an answer. `suggestion` may be empty — that means "this was
 // wrong but I don't have the right words" — still worth the admin's eyes.
-export function addSuggestion({ q, botAnswer, suggestion, uid, nick, member }) {
+export function addSuggestion({ q, askedQ, rawSuggestion, botAnswer, suggestion, uid, nick, member }) {
   const question = String(q || "").trim().slice(0, 2000);
   if (!question) return null;
   const all = load();
   const item = {
     id: Date.now().toString(36) + Math.floor(performance.now()).toString(36).slice(-3),
+    // `q` is the question the bot will LEARN this for (worked out from the
+    // exchange); askedQ/rawSuggestion keep what the member literally sent, so
+    // the admin can always see the original.
     q: question,
+    askedQ: String(askedQ || "").trim().slice(0, 2000),
+    rawSuggestion: String(rawSuggestion || "").trim().slice(0, 4000),
     botAnswer: String(botAnswer || "").trim().slice(0, 4000),
     suggestion: String(suggestion || "").trim().slice(0, 4000),
     uid: String(uid || "").slice(0, 40),
