@@ -998,6 +998,12 @@ async function handleChat(req, res) {
     // the seeker as raw text (the framed quote uses data.quote, not this line)
     shown = shown.replace(/\n\s*(?:उद्धरण|quote)\s*[:：][^\n]*/gi, "").trimEnd();
     shown = shown.replace(/\n\s*(?:सुधार|correction)\s*[:：]\s*1?\s*$/gi, "").trimEnd();
+    // LAST seatbelt: the model sometimes MISSPELLS a marker — seen live
+    // "वाथी: जाप की प्रक्रिया में…" instead of "वापसी:" — and a misspelling slips
+    // past every named pattern above and is read out to the seeker. Any final
+    // line that is a short Devanagari label followed by a colon is one of ours;
+    // real answers are flowing speech and never end in a labelled line.
+    shown = shown.replace(/\n\s*[ऀ-ॿ]{2,10}\s*[:：]\s*\S[^\n]*$/u, "").trimEnd();
     if (inviteFix && seekerMember) writeLog({ at: new Date().toISOString(), q: message, flaggedWrong: true, member: true });
     // Every response costs ONE credit (owner's rule) — teaching answers,
     // handoffs, link replies alike. Only outright errors (the catch below) are free.
