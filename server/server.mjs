@@ -592,6 +592,16 @@ async function handleChat(req, res) {
     let quote = null; // verbatim Bhaiya line, verified against the excerpt below
     let chat = false; // rule-4b conversational turn, not a knowledge question
     let inviteFix = false; // member signalled the answer was wrong — offer a correction box
+    // Every marker below is anchored to the END of the answer, but the model does
+    // not always put Source last — when it wrote Source before सुझाव/वापसी, none of
+    // them matched and all of them leaked out as spoken text (seen live 2026-07-18).
+    // Lift the Source line out first, put it back once the markers are parsed.
+    let sourceLine = "";
+    const srcM = answer.match(/(?:^|\n)[ \t]*(?:source|स्रोत)[ \t]*[:：][^\n]*/i);
+    if (srcM) {
+      sourceLine = srcM[0].trim();
+      answer = (answer.slice(0, srcM.index) + answer.slice(srcM.index + srcM[0].length)).trimEnd();
+    }
     for (let pass = 0; pass < 4; pass++) {
       const sd = answer.match(/\n\s*(?:सुधार|correction)\s*[:：]\s*1?\s*$/i);
       if (sd) {
@@ -641,6 +651,7 @@ async function handleChat(req, res) {
         answer = answer.slice(0, he.index).trimEnd();
       }
     }
+    if (sourceLine) answer = `${answer}\n\n${sourceLine}`;
 
     // FIGURE FIDELITY — seekers act on the numbers in a साधना rule (3 बजे, 6 बजे),
     // so a drifted digit is a real-world error, not a wording nit. Asking the model
