@@ -19,6 +19,18 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **Denial now clears the stored practice BY ITSELF** (owner asked: won't her phone do this
+  automatically?). It would not have: the memory only cleared if the denial was the CURRENT
+  message, and Soni's denial predated the fix — she would have had to repeat herself. But her
+  recent questions and turns travel with every request, so the check now looks at those too:
+  the next thing she asks clears it, whatever she asks.
+  ⚠️ FIRST VERSION FALSE-CLEARED. "negation + practice word" fired on "आज साधना में मन नहीं लगा"
+  — a seeker confiding a hard day inside their practice — and forgot the practice they ARE
+  doing. That is the opposite of listening. Narrowed to `NOT_DOING`: the negation must sit
+  beside a doing verb ("साधना नहीं कर रहा", "कोई साधना नहीं"), or they say they stopped
+  ("छोड़ दी", "बंद कर दिया", "stopped my sadhna"). 14 cases tested both directions.
+  A fresh declaration in the same turn still wins over an older denial.
+
 - **The guide kept insisting a member was doing a साधना she had denied.** Soni told it
   "मैं कोई गुरुतत्व साधना नहीं कर रहा हूँ अभी।" and later answers still opened
   "सोनिया बहन, आपकी गुरु तत्व साधना के मार्ग पर…". The negative-reply handling DID fire — but it
