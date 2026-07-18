@@ -19,6 +19,17 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **Voice silent on Android too — code proved innocent.** Ran the real path in a browser with
+  the server voice down: the MIC path made 6 /api/tts calls, got 502 on every one, then fell
+  back and spoke through the device voice ("Lekha"); the TYPED path never calls the server at
+  all (by design — typed chats use the free device voice) and also spoke. So the fallback chain
+  is sound; the silence is on the device.
+  Most likely cause: the phone has NO Hindi text-to-speech voice installed, in which case
+  browserSpeak produces no sound and no error at all. Added a one-time notice so this stops
+  being invisible: "🔈 इस फ़ोन में हिंदी आवाज़ नहीं है — phone की Settings › Text-to-speech में
+  Hindi जोड़िए…" plus a console warning. STILL UNCONFIRMED on the owner's actual phone — needs
+  the 🔊 toggle state and whether Hindi TTS is installed there.
+
 - **Fallback voice had gone silent on iOS.** Owner: when the Gemini voice ran out, a different
   voice used to take over — it stopped. TWO separate things:
   1. The server voice IS currently down — /api/tts returns 502 (Gemini TTS 429, shared free
