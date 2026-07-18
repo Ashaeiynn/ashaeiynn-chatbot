@@ -31,6 +31,24 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   before approving, so a bad key can never again fail silently. Widget box also says plainly:
   write only the answer.
 
+- **The same cross-language problem, in the KNOWLEDGE BASE — and it was live.** Uploaded
+  material (PDF/Word/articles/transcripts) is stored in whatever language it was written in;
+  there are no translated copies. Cross-language reach comes entirely from translating the
+  QUESTION at ask time and searching both texts (searchMulti). Measured what happens when
+  that translation is missing: "dhyan me man kyu bhatakta hai" returned
+  "GMT20240122-173714_RecordingnewChat" and the bot's own about-page — matches by ALPHABET.
+  With the translation: the meditation and Bodh articles, correctly.
+  Then measured how often it was missing: the race was capped at 1.2s with no retry, and
+  **3 of 4 translations took 1.14-1.79s** (Gemini rate-limited → slower backup answering), so
+  the bot was quietly searching by alphabet much of the time. Raised the cap to 2.6s (it is a
+  race — a fast translation still costs nothing) and added an 800-entry cache, since seekers
+  re-ask and tap the same suggestion chips constantly. Verified live afterwards: that same
+  Hinglish question now cites The Hidden Science of Meditation / The Science of Bodh.
+  STILL OPEN (small): the raw Hinglish query still contributes its alphabet-matches to the
+  merged results, so boilerplate pages ("Website: Disclaimer") can appear in sources under an
+  otherwise correct answer. Excluding disclaimer/privacy/terms pages from retrieval would fix
+  it — not done, as it changes what the bot studies and that is the owner's call.
+
 - **⚠️ MAJOR FINDING — a Hinglish correction was invisible to Hindi seekers.** e5 compares
   SCRIPT as much as meaning across languages. Against a Latin-script (Hinglish) key:
   the SAME question in Devanagari scored 0.758, while an UNRELATED question ("ध्यान में मन
