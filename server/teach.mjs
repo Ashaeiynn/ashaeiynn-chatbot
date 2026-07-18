@@ -309,11 +309,11 @@ function saveTextTranscript(title, text, url, prefix) {
 
 async function extractDocText(filePath) {
   if (/\.pdf$/i.test(filePath)) {
-    return captureProcess("python3", [
-      "-c",
-      "import sys\nfrom pypdf import PdfReader\nr = PdfReader(sys.argv[1])\nprint('\\n\\n'.join((p.extract_text() or '') for p in r.pages))",
-      filePath,
-    ]);
+    // pipeline/pdf-text.py strips running headers, footers and page numbers,
+    // rejoins words split across a line break, and explains itself when the PDF
+    // turns out to be a scan. Raw pypdf output put the same header line into
+    // dozens of chunks, where it competed with Bhaiya's words during search.
+    return captureProcess("python3", [path.join(ROOT, "pipeline", "pdf-text.py"), filePath]);
   }
   if (/\.(txt|md)$/i.test(filePath)) return readFileSync(filePath, "utf8");
   if (/\.html?$/i.test(filePath)) return htmlToText(readFileSync(filePath, "utf8"));
