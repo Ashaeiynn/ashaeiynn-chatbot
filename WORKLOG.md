@@ -19,6 +19,21 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **A seeker on iOS saw "server 503 · groq key missing".** Investigated and could NOT reproduce:
+  the ear works (live /api/stt test returns 200 via Groq whisper-large-v3), /health reports
+  iosEar=groq-whisper, and .env on the VPS is clean — one GROQ_API_KEY line, no CR endings, no
+  trailing space, untouched since 2026-07-17. The failure window (19:37-19:39 UTC) sits between
+  two deploy restarts and left NO log line, because the refusal path returned before logging.
+  Root cause therefore unknown. Two changes so it cannot happen silently again:
+  1. The refusal now logs loudly ("stt REFUSED: GROQ_API_KEY missing from the running process"),
+     and before refusing it re-reads .env — if the key is on disk but absent from the process
+     (e.g. started before it was added), the request recovers instead of failing.
+  2. The seeker no longer sees server error strings. "server 503 · groq key missing" on a phone
+     mid-prayer is a bad look; the widget now says "आवाज़ सुनने की सेवा अभी उपलब्ध नहीं है — अभी
+     ⌨️ type कीजिए 🙏" and puts the technical detail in the browser console.
+  Also seen in that window: Gemini TTS 429 quota errors — the shared free tier being hit, partly
+  from my own testing. Worth watching if seekers report the voice going quiet.
+
 - **Credit system switched ON as a DAILY allowance** (owner, 2026-07-19): 50 questions per
   seeker per day, renewing in full every day. This REVERSES the earlier pay-as-you-use model —
   users.mjs had already migrated away from a daily one, so it went back the other way.
