@@ -19,6 +19,19 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **Fallback voice had gone silent on iOS.** Owner: when the Gemini voice ran out, a different
+  voice used to take over — it stopped. TWO separate things:
+  1. The server voice IS currently down — /api/tts returns 502 (Gemini TTS 429, shared free
+     tier exhausted, partly from my own testing today). It recovers on its own.
+  2. The browser-voice fallback is intact in code and works on Android/desktop, but on iPhone
+     Apple only allows speech that was started from a real tap. The guide always speaks LATER
+     — after the answer arrives and after the server voice has been tried and failed — so by
+     then the tap is gone and iOS silently refuses. Nothing had ever primed it.
+  FIX: `primeVoice()` fires one silent utterance during the tap itself (mic tap and Send), which
+  unlocks speech for the rest of the visit; also warms the async voice list via `voiceschanged`.
+  Verified deployed (primer present, wired at both entry points, fallback path untouched).
+  NOT verifiable from here — needs a real iPhone with the server voice still out of quota.
+
 - **A seeker on iOS saw "server 503 · groq key missing".** Investigated and could NOT reproduce:
   the ear works (live /api/stt test returns 200 via Groq whisper-large-v3), /health reports
   iosEar=groq-whisper, and .env on the VPS is clean — one GROQ_API_KEY line, no CR endings, no
