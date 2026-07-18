@@ -1024,14 +1024,14 @@
         if (!studyStartedAt) studyStartedAt = Date.now();
         const pct = Math.min(95, Math.round(((Date.now() - studyStartedAt) / 420000) * 100));
         const mins = Math.floor((Date.now() - studyStartedAt) / 60000);
-        showStatus("📖", "Studying — building searchable memory…",
-          `about ${mins} of ~7 minutes · the bot keeps answering with its old knowledge meanwhile`, pct);
+        showStatus("📖", `Learning — ${pct}%`,
+          `building searchable memory · about ${mins} min so far · the bot keeps answering with its old knowledge meanwhile`, pct);
       } else if (working) {
         studyStartedAt = 0;
         const doneN = (t.done || 0) + (t.ready || 0);
-        showStatus(working.kind === "media" || working.kind === "video-link" ? "🎧" : "⚙️",
-          `Studying ${doneN + 1} of ${t.total}: ${working.title}`,
-          (working.detail || "") + (activeN > 1 ? ` · ${activeN - 1} more waiting in queue` : ""),
+        showStatus("⚙️",
+          `Reading ${doneN + 1} of ${t.total} — ${Math.round((doneN / Math.max(1, t.total)) * 100)}%`,
+          `${working.title}${working.detail ? " · " + working.detail : ""}${activeN > 1 ? ` · ${activeN - 1} more waiting` : ""}`,
           Math.round((doneN / Math.max(1, t.total)) * 100));
       } else {
         studyStartedAt = 0;
@@ -1040,7 +1040,7 @@
       }
     } else if (t.total) {
       if (t.failed) showStatus("⚠️", `${t.done || 0} learnt · ${t.failed} failed`, "the list below shows what failed and why");
-      else if (t.done) showStatus("✅", `All done — ${t.done} item${t.done > 1 ? "s" : ""} learnt`, "the bot is already answering with this knowledge", 100);
+      else if (t.done) showStatus("✅", `Finished — 100% · ${t.done} item${t.done > 1 ? "s" : ""} learnt`, "the bot is already answering with this knowledge", 100);
     }
   }
 
@@ -1081,8 +1081,17 @@
   }
 
   async function loadJobs() {
-    // Cloud copy: display the studio Mac's live study progress (relayed every ~30s)
-    if (isCloud) {
+    // The cloud copy used to have no teaching of its own, so it mirrored the
+    // studio Mac's relayed progress. It teaches documents itself now — and while
+    // it was still watching the Mac, an upload made HERE showed no progress at
+    // all and the banner sat on "Uploading…" forever (owner, 2026-07-19).
+    // Watch our own queue first; fall back to the Mac only when nothing local is
+    // running, so a Mac transcription is still visible.
+    const mine = await fetch("/api/admin/jobs", { headers: { "x-admin-key": key() } })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+    const busy = (mine?.jobs || []).some((j) => ["queued", "working", "ready", "studying"].includes(j.status));
+    if (isCloud && !busy && !pendingUploads.length) {
       const r = await fetch("/api/admin/studio-status", { headers: { "x-admin-key": key() } });
       if (!r.ok) return;
       const d = await r.json();
@@ -1100,16 +1109,15 @@
       loadJobs.t = setTimeout(loadJobs, 15000);
       return;
     }
-    const r = await fetch("/api/admin/jobs", { headers: { "x-admin-key": key() } });
-    if (!r.ok) return;
-    const d = await r.json();
+    const d = mine;
+    if (!d) return;
     serverJobs = d.jobs || [];
     celebrateNewLearning(serverJobs);
     statusFromJobs(serverJobs, d.totals);
     renderJobs();
     if (pendingUploads.length || serverJobs.some((j) => ["queued", "working", "ready", "studying"].includes(j.status))) {
       clearTimeout(loadJobs.t);
-      loadJobs.t = setTimeout(loadJobs, 4000);
+      loadJobs.t = setTimeout(loadJobs, 2000); // it should feel live while it works
     }
   }
 
@@ -1197,7 +1205,7 @@
       const f = files[i];
       const p = entries[i];
       p.status = "uploading";
-      const label = `Uploading ${i + 1} of ${files.length}: ${f.name}`;
+      const label = `Uploading ${i + 1} of ${files.length} — ${f.name}`;
       const sub = `${(f.size / 1048576).toFixed(1)} MB` + (files.length > 1 ? ` · ${Math.round(totalMB)} MB total` + (skipped ? ` · ${skipped} skipped` : "") : "");
       showStatus("⬆️", label, sub, 0);
       renderJobs();
@@ -1205,7 +1213,7 @@
         await uploadWithProgress(f, files.length === 1 ? title : "", (pct) => {
           if (pct !== p.pct) {
             p.pct = pct;
-            showStatus("⬆️", label, sub, pct);
+            showStatus("⬆️", `${label} — ${pct}%`, sub, pct);
             renderJobs();
           }
         });
@@ -1225,6 +1233,11 @@
     }
     uploading = false;
     $("#up-title").value = "";
+    // The transfer is done — say so immediately. Waiting for the next poll left
+    // the banner reading "Uploading…" long after the file had arrived.
+    if (!failed.length && !dupes.length)
+      showStatus("📖", `Uploaded — now learning ${files.length > 1 ? `${files.length} files` : files[0].name}`,
+        "reading the file and building searchable memory…", 0);
     if (failed.length)
       showStatus("⚠️", `${files.length - failed.length} uploaded · ${failed.length} failed`, failed.join(" · ").slice(0, 200));
     else if (dupes.length)
