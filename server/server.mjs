@@ -1043,7 +1043,28 @@ async function handleStt(req, res) {
   // cost real money on a paid plan. If Groq fails, iOS gets the error, not a
   // silent fall-through. Everyone else keeps the Gemini ear untouched below.
   if (src === "ios-app") {
-    if (!process.env.GROQ_API_KEY) return json(res, 503, { error: "stt-not-configured", detail: "groq key missing" });
+    if (!process.env.GROQ_API_KEY) {
+      // This reached a seeker's phone once (2026-07-19) with the key present and
+      // correct in .env, and left NO trace in the log — so it could not be
+      // traced afterwards. Two guards now: shout in the log, and try re-reading
+      // .env before refusing, in case this process started before it was there.
+      try {
+        const envFile = path.join(ROOT, ".env");
+        if (existsSync(envFile)) {
+          for (const line of readFileSync(envFile, "utf8").split("\n")) {
+            const m = line.match(/^\s*GROQ_API_KEY\s*=\s*(.+?)\s*$/);
+            if (m) process.env.GROQ_API_KEY = m[1].replace(/^["']|["']$/g, "");
+          }
+        }
+      } catch {
+        /* fall through to the refusal below */
+      }
+      if (!process.env.GROQ_API_KEY) {
+        console.error("stt REFUSED: GROQ_API_KEY missing from the running process (iOS ear is down)");
+        return json(res, 503, { error: "stt-not-configured", detail: "groq key missing" });
+      }
+      console.warn("stt: GROQ_API_KEY was absent from the process — reloaded it from .env");
+    }
     const ext = mime.includes("webm") ? "webm" : mime.includes("wav") ? "wav" : mime.includes("ogg") ? "ogg" : "m4a";
     const bytes = Buffer.from(audio, "base64");
     const blob = new Blob([bytes], { type: mime });

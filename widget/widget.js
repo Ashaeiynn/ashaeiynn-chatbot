@@ -1284,6 +1284,12 @@
         }
       } catch (err) {
         if (liveEl) { liveEl.remove(); liveEl = null; }
+        // A seeker should never read "server 503 · groq key missing" mid-prayer
+        // (that reached a real phone, 2026-07-19). Keep the technical reason in
+        // the console where it can still be diagnosed.
+        try {
+          console.warn("stt failed:", err?.status || "", err?.error || "", err?.detail || "");
+        } catch {}
         if (target === "stage") {
           setVState("error");
           showLive(
@@ -1291,7 +1297,9 @@
               ? "⚠️ बहुत सारे सवाल एक साथ — 1-2 मिनट रुककर फिर बोलिए"
               : /429|quota/i.test(err?.detail || "")
                 ? "⚠️ आज का free voice-कोटा पूरा हो गया — अभी ⌨️ type कीजिए, आवाज़ दोपहर बाद अपने-आप लौट आएगी 🙏"
-                : `⚠️ आवाज़ record हुई पर समझी नहीं जा सकी (server ${err?.status || ""}${err?.detail ? " · " + err.detail : ""}) — एक बार फिर बोलिए`,
+                : /not-configured|key missing/i.test(`${err?.error || ""} ${err?.detail || ""}`)
+                  ? "⚠️ आवाज़ सुनने की सेवा अभी उपलब्ध नहीं है — अभी ⌨️ type कीजिए 🙏"
+                  : "⚠️ आवाज़ record हुई पर समझी नहीं जा सकी — एक बार फिर बोलिए",
           );
         } else {
           input.placeholder = "Couldn't transcribe — try again or type…";
