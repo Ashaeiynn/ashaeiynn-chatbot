@@ -19,6 +19,24 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **Credit system switched ON as a DAILY allowance** (owner, 2026-07-19): 50 questions per
+  seeker per day, renewing in full every day. This REVERSES the earlier pay-as-you-use model —
+  users.mjs had already migrated away from a daily one, so it went back the other way.
+  Design: no scheduled reset job. Each record holds `usedToday` + `dayKey`; the first question
+  after midnight IST notices the new day and zeroes the count. Nothing to cron, nothing to fail
+  silently. `DAILY_QUESTIONS` in .env overrides the 50.
+  The admin's Users tab now grants EXTRA questions (`bonus`) instead of topping up a balance:
+  extras sit on top of the daily 50, are only spent once the day's allowance is gone, and carry
+  over day to day. Wording updated everywhere ("questions left today", "Grant extra").
+  Migration drops the old `credits` field — nobody held a real balance, the system was off.
+  CREDITS_ON = true in all three files (server.mjs, widget.js, admin.html).
+  Verified: 8 logic cases offline (fresh seeker 50 → spend 50 → 0 → never negative → next day
+  renews → +10 bonus = 60 → daily gone leaves 10 → bonus spends down → admin sees the same
+  figure); live 50→49→48 on real questions; all 9 seekers migrated. The exhausted path was
+  checked live too, by temporarily setting the owner's own record to 50 used and restoring it
+  straight after — seeker sees "आज के आपके 50 प्रश्न पूरे हो गए। कल फिर से 50 प्रश्न मिल जाएँगे…"
+  with the Contact link, NOT the old "credits finished" wording.
+
 - **Installing on Android: grey "A" icon, and no install prompt.** A seeker's phone showed the
   app as a generic letter tile labelled with the PAGE TITLE ("Ask Your Guide — Ashaeiynn")
   instead of the manifest name ("Ashaeiynn Guide") — the signature of a plain bookmark shortcut,
