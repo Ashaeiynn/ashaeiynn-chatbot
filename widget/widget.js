@@ -1690,7 +1690,9 @@
         play.className = "vcb-play";
         play.textContent = s.url ? (img || /vimeo|youtu/.test(s.url) ? "▶" : "📖") : "📖";
         th.appendChild(play);
-        if (s.timestamp) {
+        // "0:00" is a leftover from the video era — an article has no position
+        // to jump to, so the badge just looked broken under every source.
+        if (s.timestamp && !/^0*:?0*0$/.test(s.timestamp.replace(/\s/g, ""))) {
           const b = document.createElement("b");
           b.textContent = s.timestamp;
           th.appendChild(b);
@@ -1714,11 +1716,11 @@
         a.href = data.suggest.url;
         a.target = "_blank";
         a.rel = "noopener";
-        a.textContent = `${data.suggest.title} (${data.suggest.timestamp})`;
+        a.textContent = data.suggest.timestamp && data.suggest.timestamp !== "0:00" ? `${data.suggest.title} (${data.suggest.timestamp})` : data.suggest.title;
         a.addEventListener("click", () => recoOpened(data.suggest.title));
         sug.appendChild(a);
       } else {
-        sug.append(`${data.suggest.title} (${data.suggest.timestamp})`);
+        sug.append(data.suggest.timestamp && data.suggest.timestamp !== "0:00" ? `${data.suggest.title} (${data.suggest.timestamp})` : data.suggest.title);
       }
       el.appendChild(sug);
     }

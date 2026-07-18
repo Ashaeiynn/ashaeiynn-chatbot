@@ -876,6 +876,10 @@ async function handleChat(req, res) {
       if (usedTitles.has(t) || seenTitles.has(t)) continue;
       if (c.title.startsWith("Bhaiya's approved answer")) continue;
       if (!publicUrl(c.url)) continue;
+      // "आगे देखिए" means WATCH NEXT. With the recordings withdrawn from the
+      // library this was offering website pages — "watch Website: Reviews
+      // (0:00)". Only a real video earns this spot now.
+      if (!/youtu\.?be|youtube\.com|vimeo/i.test(c.url)) continue;
       suggest = {
         title: c.title,
         timestamp: formatTimestamp(c.start_seconds),
