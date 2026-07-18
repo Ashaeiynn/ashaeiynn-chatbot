@@ -7,7 +7,8 @@ import path from "node:path";
 import { teachFile, teachLink, teachText, forget, publicJobs, jobTotals, uploadsDir } from "./teach.mjs";
 import { matchCorrection, addCorrection, removeCorrection, listCorrections, DIRECT_MATCH } from "./corrections.mjs";
 import { addSuggestion, listSuggestions, getSuggestion, removeSuggestion, pendingCount } from "./suggestions.mjs";
-import { toLatin, hasDevanagari as isDevanagari } from "./translit.mjs";
+import { toLatin } from "./translit.mjs";
+const isDevanagari = (t) => /[ऀ-ॿ]/.test(String(t || ""));
 import { ROOT } from "./env.mjs";
 import { searchMulti, formatTimestamp, thoughtCandidate } from "./retrieve.mjs";
 
