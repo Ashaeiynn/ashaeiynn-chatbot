@@ -19,6 +19,20 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **"ठीक है?" had become a tic** (owner: it is irritating). TWO rules were pushing it: the
+  persona line said use it "once or twice per answer", and rule 12 offered an "understanding
+  check" as a way to end answers — so nearly every reply closed with it. Persona line rewritten
+  (at most one answer in four or five, only after a genuinely difficult instruction, never as a
+  closing formula, never twice running); rule 12's check form marked as the rarest. Plus a code
+  guard, since wording alone has failed repeatedly today: if either of the last two answers used
+  it, a TRAILING "ठीक है?" is stripped — so it can still appear, but never twice in a row.
+  Measured over a 5-turn conversation: 0 of 5, twice.
+  BUG FOUND WHILE TESTING: an answer ended "वाथी: जाप की प्रक्रिया में…" — the model MISSPELLED
+  the internal marker "वापसी:", so no named pattern caught it and the label was shown (and read
+  aloud) to the seeker. Added a final seatbelt: any last line that is a short Devanagari label
+  followed by a colon is one of ours and is stripped. Real answers are flowing speech and never
+  end in a labelled line; verified it leaves normal answers untouched.
+
 - **iOS: mic dead, and typing laggy — Android fine. Both traced.**
   1. ⚠️ I CAUSED THE MIC FAILURE EARLIER THE SAME DAY. `primeVoice()` (the silent utterance that
      unlocks iOS speech) was wired to the mic tap — and speaking, even silently, flips iOS's
