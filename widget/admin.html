@@ -1357,7 +1357,11 @@
       const el = document.createElement("div");
       el.className = "lib";
       el.innerHTML = `<span>${ic}</span>
-        <div class="t"><div>${esc(it.title)}</div><div class="m">${esc(meta)}</div></div>
+        <div class="t"><div>${esc(it.title)}</div><div class="m">${esc(meta)}</div>${
+          it.duplicateOf
+            ? `<div class="m" style="color:#e3b766;margin-top:3px">⚠️ ${it.duplicateOf.share}% of this repeats “${esc(it.duplicateOf.title)}” — keeping both makes the bot say it twice</div>`
+            : ""
+        }</div>
         <button class="mini" data-a="view">👁️ View</button>
         ${it.url ? `<button class="mini" data-a="open">🔗 Open</button>` : ""}
         <button class="mini" data-a="dl">⬇️</button>

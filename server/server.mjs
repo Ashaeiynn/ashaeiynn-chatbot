@@ -9,7 +9,7 @@ import { matchCorrection, addCorrection, removeCorrection, listCorrections, DIRE
 import { addSuggestion, listSuggestions, getSuggestion, removeSuggestion, pendingCount } from "./suggestions.mjs";
 import { toLatin } from "./translit.mjs";
 import { ROOT } from "./env.mjs";
-import { searchMulti, formatTimestamp, thoughtCandidate } from "./retrieve.mjs";
+import { searchMulti, formatTimestamp, thoughtCandidate, duplicateSources } from "./retrieve.mjs";
 
 // पंचांग is an enhancement, never a dependency: if the module has any problem,
 // the guide simply answers without calendar awareness.
@@ -1937,6 +1937,17 @@ const server = createServer(async (req, res) => {
       }
     }
     items.sort((a, b) => b.added - a.added);
+    // Flag sources that teach the same thing as another — the admin decides what
+    // to do; nothing is removed automatically.
+    try {
+      const dupes = duplicateSources();
+      for (const it of items) {
+        const d = dupes.find((x) => x.title === it.title);
+        if (d) it.duplicateOf = { title: d.twin, share: d.share };
+      }
+    } catch {
+      /* the report is a convenience — never let it break the library list */
+    }
     return json(res, 200, { items });
   }
   if (url.pathname === "/api/admin/source") {

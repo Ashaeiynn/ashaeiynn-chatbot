@@ -101,12 +101,21 @@ export async function searchMulti(questions, limit = 8) {
   // crowding out other videos that teach the same topic. Cap chunks per video so the
   // model sees material from several videos.
   const PER_VIDEO_CAP = 3;
+  // …and the same guard across DIFFERENT sources. The cap above is keyed on the
+  // title, so one teaching uploaded twice under two names took 3 slots EACH —
+  // measured 2026-07-19: six of the twelve excerpts were the same teaching,
+  // leaving six for everything else. MEASURED THRESHOLD: chunks of one teaching
+  // in two versions score 0.925 median (up to 1.000); chunks from genuinely
+  // different teachings never exceeded 0.874. 0.90 sits in that gap.
+  const NEAR_DUPLICATE = 0.9;
   const perVideo = new Map();
   let top = [];
   for (const item of scored) {
     const key = item.chunk.title;
     const n = perVideo.get(key) ?? 0;
     if (n >= PER_VIDEO_CAP) continue;
+    // already saying this? spend the slot on something the seeker has not been told
+    if (top.some((t) => cosine(t.chunk.vec, item.chunk.vec) >= NEAR_DUPLICATE)) continue;
     perVideo.set(key, n + 1);
     top.push(item);
     if (top.length >= limit) break;
@@ -123,6 +132,45 @@ export async function searchMulti(questions, limit = 8) {
     url: chunk.url,
     score,
   }));
+}
+
+// Which sources are teaching the SAME thing? Uploading one teaching twice (a
+// second copy, or the same material rewritten) is easy to do by accident, and
+// the bot then spends part of every relevant answer repeating itself. This
+// reports it so the admin can decide — it never deletes anything, because two
+// versions of one teaching are sometimes deliberate (prose + Q&A, say).
+// Threshold measured 2026-07-19: same teaching 0.925 median, different
+// teachings never above 0.874.
+export function duplicateSources(minShare = 0.5) {
+  const all = load();
+  const bySource = new Map();
+  for (const c of all) {
+    if (!bySource.has(c.title)) bySource.set(c.title, []);
+    bySource.get(c.title).push(c);
+  }
+  const titles = [...bySource.keys()];
+  const out = [];
+  for (const title of titles) {
+    const mine = bySource.get(title);
+    if (mine.length < 2) continue; // too small to judge
+    const hits = new Map(); // other title → how many of my chunks it already covers
+    for (const c of mine) {
+      let best = { t: null, s: 0 };
+      for (const other of titles) {
+        if (other === title) continue;
+        for (const o of bySource.get(other)) {
+          const sim = cosine(c.vec, o.vec);
+          if (sim > best.s) best = { t: other, s: sim };
+        }
+      }
+      if (best.t && best.s >= 0.9) hits.set(best.t, (hits.get(best.t) ?? 0) + 1);
+    }
+    let twin = null;
+    for (const [t, n] of hits) if (!twin || n > twin.n) twin = { t, n };
+    if (twin && twin.n / mine.length >= minShare)
+      out.push({ title, twin: twin.t, share: Math.round((twin.n / mine.length) * 100) });
+  }
+  return out;
 }
 
 // आज का विचार: one substantive passage per day, the SAME for everyone —
