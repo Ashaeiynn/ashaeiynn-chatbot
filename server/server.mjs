@@ -508,6 +508,16 @@ async function handleChat(req, res) {
   // "देखो Rohan भाई," on EVERY answer reads as a machine (owner, 2026-07-18).
   // Telling the model to vary was not enough — the persona rule pulls it back —
   // so show it its own recent openings and forbid them outright.
+  // Warmth on a RHYTHM, decided here rather than left to the model — told simply
+  // to stop opening with the name it dropped every भाई/बहन and went cold, which
+  // is the opposite mistake. Address them when it has not happened lately.
+  const addressedRecently =
+    !!seekerName &&
+    history
+      .filter((m) => m.role === "assistant")
+      .slice(-2)
+      .some((m) => m.content.includes(seekerName) || /\b(भाई|बहन|bhai|behen)\b/.test(m.content));
+
   const recentOpenings = history
     .filter((m) => m.role === "assistant")
     .slice(-3)
@@ -655,7 +665,11 @@ async function handleChat(req, res) {
                 }${
                   seekerSadhana ? ` Their ongoing practice (self-declared${seekerSadhana.since ? `, since ${seekerSadhana.since}` : ""}): "${seekerSadhana.name}".` : ""
                 }${
-                  seekerName ? ` You MAY address them by name at most once, and only if it lands naturally — most answers need no name at all, and it must NOT become your opening formula. Judge gender from the name: clearly male → "${seekerName} भाई" ("${seekerName} bhai" in English), clearly female → "${seekerName} बहन" ("${seekerName} behen"), unsure → "${seekerName} जी". Keep the same भाई/बहन form ANYWHERE you address them in this answer — never call a sister भाई.` : ""
+                  seekerName ? `${
+                    addressedRecently
+                      ? " You addressed them warmly only a moment ago — do NOT use their name or भाई/बहन again in this answer. Speak to them directly; the warmth is already established."
+                      : " Address them warmly ONCE in this answer using their name — but NEVER as the opening words. Put it where it falls naturally: mid-sentence, or at the close."
+                  } Judge gender from the name: clearly male → "${seekerName} भाई" ("${seekerName} bhai" in English), clearly female → "${seekerName} बहन" ("${seekerName} behen"), unsure → "${seekerName} जी". Keep the same भाई/बहन form ANYWHERE you address them in this answer — never call a sister भाई.` : ""
                 } Where it fits naturally, connect the answer to their ongoing journey in one warm phrase; never list their history back to them.${
                   leftover
                     ? ` FRESH conversation — their previous one (${leftover.when || "पिछली बार"}) ended around: "${leftover.q}". Answer the CURRENT question fully and cleanly first. If the current question is a DIFFERENT topic, you may close with ONE short warm bridge offering the old thread back ("वैसे ${leftover.when || "पिछली बार"} हम इस बारे में बात कर रहे थे — चाहें तो वहीं से आगे बढ़ें?") and make ONE of the सुझाव questions that continuation. If it's the same topic, continue naturally with no bridge. Never let the old thread hijack the new answer.`
