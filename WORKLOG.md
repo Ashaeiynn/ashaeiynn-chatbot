@@ -19,6 +19,23 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **Saying "no" to the guide's own question triggered a lecture.** The bot asked "साधना कैसी
+  चल रही है?", the seeker answered "मैं साधना नहीं कर रहा हूँ अभी", and it replied with a
+  teaching about साधना — the one thing they had just said they were NOT doing. Fixed in code:
+  `isNegativeReply` = message contains a negation, contains NO interrogative and no "?", is ≤12
+  words, and there is a previous assistant turn to be answering. The injected note splits two
+  cases — (a) "I'm not doing that": accept warmly in one line, no persuasion, ask what they
+  WOULD like; (b) "समझ नहीं आया": say the same thing again in simpler words, never re-teach a
+  new topic. Verified live: 47 words, 0 sources, "कोई बात नहीं, साधना की जल्दी क्या है…"; the
+  re-explain branch stayed on सिद्धि with a homely example; and "साधना क्यों नहीं हो पा रही है?"
+  (a real question that contains a negation) still gets its full 107-word answer with sources.
+  ⚠️ TRAP WORTH REMEMBERING: `\b` in JavaScript is ASCII-only, so `/\b(नहीं)\b/` matches
+  NOTHING in Devanagari. The first version silently detected zero Hindi negations and the unit
+  test caught it. Also "ना" needs its own boundaries or it fires inside साध-ना.
+
+- **Microphone icon is now green** (owner's request) — the mic glyph gradient and its faint
+  inner fill only; the orb, its ring and every other colour left exactly as they were.
+
 - **Voice silent on Android too — code proved innocent.** Ran the real path in a browser with
   the server voice down: the MIC path made 6 /api/tts calls, got 502 on every one, then fell
   back and spoke through the device voice ("Lekha"); the TYPED path never calls the server at
