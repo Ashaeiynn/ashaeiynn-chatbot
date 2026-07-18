@@ -559,7 +559,7 @@ async function handleChat(req, res) {
               : ""
           }${(() => {
             try {
-              return `\n[पंचांग — use ONLY this to resolve time references (आज, कल, नवरात्रि के आख़िरी दिन…): ${panchangLine()}. Dates can differ from a local पंचांग by ±1 day, so on exact-date questions add "पंचांग से मिला लीजिएगा". Never invent dates beyond these.]`;
+              return `\n[पंचांग — reference ONLY, for resolving time references (आज, कल, नवरात्रि के आख़िरी दिन…) WHEN the seeker's message actually asks about time, dates or a festival: ${panchangLine()}. Do NOT volunteer festival or पंचांग information otherwise — never bring it into a greeting, a thank-you, or an unrelated question. Dates can differ from a local पंचांग by ±1 day, so on exact-date questions add "पंचांग से मिला लीजिएगा". Never invent dates beyond these.]`;
             } catch {
               return "";
             }

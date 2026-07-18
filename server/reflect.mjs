@@ -116,6 +116,7 @@ Separately, write "observations" — 3 to 6 short plain-ENGLISH sentences for th
 
 STRICT rules:
 - NEVER write guidelines about facts, content, teachings, or what the bot should know or claim — delivery, warmth and flow only.
+- BREVITY IS THE PRIORITY. Never write a lesson that would make answers LONGER: no "open with the seeker's name", no "close with an affirming/encouraging line", no "add reassurance", no extra courtesies. Those pad every reply and bore the seeker. Prefer lessons that make replies SHORTER, more specific and more to-the-point (answer the question in the first sentence; cut general spiritual filler; a bare greeting gets a one-line greeting back, not a teaching).
 - Output ONLY a JSON object, no prose: {"core": [..strings..], "daily": [..strings..], "observations": [..strings..]}
 - If nothing needs to change in a tier, return that tier unchanged.`,
     messages: [
