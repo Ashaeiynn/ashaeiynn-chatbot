@@ -19,6 +19,27 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **Ask back instead of answering vaguely** (owner: "if the bot is unable to find a proper
+  answer or understand the question, it can ask a question to the user"). Two halves:
+  - **Rule 7d in prompt.mjs** — ask ONE short question when the meaning is unclear OR the
+    excerpts do not actually answer it. Guardrails against over-asking: answer if you can;
+    read the conversation first (a short follow-up is clear from context); never twice in a
+    row; off-topic still gets rule 8's fallback; never ask for personal details.
+  - **`UNCLEAR_ONLY` in server.mjs** — a contentless OPENING message ("बताइए", "क्या करूँ?",
+    "help me", "मेरी समस्या है") is caught in code and skips retrieval/translation/पंचांग
+    entirely, like a greeting.
+  MEASURED FIRST, and it changed the design twice:
+  1. Retrieval score is USELESS as an "I don't know" signal — clear questions 0.812-0.878,
+     vague 0.807-0.838, off-topic 0.788-0.847. "what is the price of bitcoin" (0.847) scores
+     HIGHER than "सिया तत्व साधना क्या है?" (0.812). A confidence threshold would have
+     misfired constantly. Same narrow-band trap as the correction thresholds.
+  2. Rule 7d ALONE did not hold — the model still answered vague openers with 80-90 words of
+     general advice before getting to the question. Only the code trigger fixed it: those
+     openers now get 17-27 words + 3 tappable options.
+  Regression-checked: a clear question still gets its full teaching (109 words), "क्या करूँ?"
+  AFTER a real answer is answered in context (not re-asked), greetings stay greetings,
+  off-topic stays the fallback.
+
 - **"What IS this साधना?" vs "what are its नियम?" — two different questions** (owner:
   "if someone asks about the sadhana it should not contain the instruction… if they ask
   the rules, then only a member gets them"). Embedding similarity rated both the same, so
