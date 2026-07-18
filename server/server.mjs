@@ -103,6 +103,15 @@ const publicUrl = (u) => (u && /youtube\.com|youtu\.be|ashaeiynn\.com/i.test(Str
 const GREETING_ONLY =
   /^\s*(jai?\s*(shree\s*|shri\s*)?(siya\s*|sita\s*)?ram(\s*ji)?|जय\s*(श्री\s*)?(सिया\s*|सीता\s*)?राम(\s*जी)?|जय\s*सियाराम|जय\s*गुरुदेव|राधे\s*राधे|नमस्ते|नमस्कार|प्रणाम|राम\s*राम|हेलो|हाय|namaste|hello|hi|hey|good\s*(morning|afternoon|evening|night))\s*[!.,\s🙏]*$/i;
 
+// "बताइए", "क्या करूँ?", "help me" — a message that names nothing to answer.
+// Caught in code like the greeting, because asking the model to notice its own
+// confusion did NOT hold (measured 2026-07-18: rule 7d alone still produced
+// 80-90 words of general spiritual advice before getting round to the question).
+// Only applies to an opening message — mid-conversation these are clear from
+// context ("क्या करूँ?" after an answer means "about that").
+const UNCLEAR_ONLY =
+  /^\s*(कुछ\s*)?(बताइए|बताइये|बताओ|बताएं|बतायें|मदद\s*(कीजिए|करिए|करो)?|हेल्प|(मुझे\s*)?(कुछ\s*)?समझ\s*नहीं\s*आ\s*(रहा|रही|रहा है)|कुछ\s*समझ\s*नहीं\s*आता|(मैं\s*)?क्या\s*(करूँ|करुँ|करू|करु|करें|करूं)|(मेरी\s*)?समस्या\s*है|(मैं\s*)?परेशान\s*हूँ|help(\s*me)?|please\s*help|i\s*need\s*help|guide\s*me|tell\s*me|can\s*you\s*help(\s*me)?)\s*[?।!.\s🙏]*$/i;
+
 // Two very different asks about the same साधना (owner's rule, 2026-07-18):
 //   "सिया तत्व साधना क्या है?"      → teach WHAT it is, its meaning and benefit
 //   "इसके नियम क्या हैं?"            → the निर्देश — MEMBERS ONLY
@@ -382,6 +391,11 @@ async function handleChat(req, res) {
         .map((m) => ({ role: m.role, content: m.content.slice(0, 700) }))
     : [];
 
+  // An opening message that names nothing to answer: ask what they want to know
+  // rather than filling the silence with general teaching (owner, 2026-07-18).
+  const isUnclear =
+    !isGreeting && UNCLEAR_ONLY.test(message) && !history.some((m) => m.role === "user");
+
   // Personal-guide context card from the visitor's OWN device (widget diary or
   // the app). Used once for this answer, never stored — the server keeps no
   // per-person memory by design.
@@ -494,7 +508,7 @@ async function handleChat(req, res) {
     .slice(-1)
     .map((m) => m.content);
   let translated = null;
-  if (apiKeyConfigured && !isGreeting) {
+  if (apiKeyConfigured && !isGreeting && !isUnclear) {
     try {
       // Time-boxed: the translation improves cross-language recall but must
       // never hold the seeker hostage — 1.2s or we search without it.
@@ -515,7 +529,7 @@ async function handleChat(req, res) {
     }
   }
   // a greeting needs no teaching material — hand the model nothing to riff on
-  const chunks = isGreeting
+  const chunks = isGreeting || isUnclear
     ? []
     : await searchMulti([[...lastUserTurns, message].join(" "), translated], Number(process.env.RETRIEVE_K || 12));
 
@@ -552,6 +566,7 @@ async function handleChat(req, res) {
     // guided = related match (the correction was the highest-authority source)
     ...(approved ? (approved.score >= DIRECT_MATCH ? { corrected: true } : { guided: true }) : {}),
     ...(rulesWithheld ? { rulesWithheld: true } : aboutSadhana ? { aboutAsk: true } : {}),
+    ...(isUnclear ? { unclear: true } : {}),
     top: chunks.slice(0, 3).map((c) => ({ t: c.title, s: Number(c.score?.toFixed(3)) })),
   };
 
@@ -628,11 +643,15 @@ async function handleChat(req, res) {
               ? `\n[The seeker just OPENED the app by tapping this notification — the "question" above is that notification's text, not their words. Welcome them warmly for coming, then open a short living conversation about it (3-4 sentences grounded in the excerpts + one inviting question). This is a doorstep moment, not a lecture.]`
               : ""
           }${
-            isGreeting
-              ? `\n[THIS IS A BARE GREETING, not a question. Reply with ONE short sentence — greet them back (${seekerName ? `"${seekerName}" + भाई/बहन/जी as fits their name` : "भाई/बहन/जी"}) and ask one light question about how they are. About 15 words, NEVER more than 25. Absolutely NO teaching, NO पंचांग or festival note, NO praise of their devotion, NO advice, NO Source line, no excerpts needed. End with the final line: वार्ता: 1]`
+            isUnclear
+              ? `\n[THE SEEKER HAS NOT SAID WHAT THEY WANT TO KNOW. Their opening message names no topic at all and there is no conversation before it to explain it. Do NOT compose a teaching, do NOT give general spiritual advice, do NOT describe Ashaeiynn or its साधनाएँ, do NOT reassure them at length. Reply with ONE short warm line — about 20 words, NEVER more than 30 — that greets them${
+                  seekerName ? ` by name (भाई/बहन/जी as fits)` : ""
+                } and asks what they would like to know. Nothing else: no teaching, no पंचांग, no Source line. Then TWO final lines — a सुझाव line offering 2-3 concrete things they could ask (e.g. "ध्यान कैसे शुरू करें? | तीसरी आँख क्या है? | साधना के बारे में जानना है"), and the line: वार्ता: 1]`
+              : isGreeting
+                ? `\n[THIS IS A BARE GREETING, not a question. Reply with ONE short sentence — greet them back (${seekerName ? `"${seekerName}" + भाई/बहन/जी as fits their name` : "भाई/बहन/जी"}) and ask one light question about how they are. About 15 words, NEVER more than 25. Absolutely NO teaching, NO पंचांग or festival note, NO praise of their devotion, NO advice, NO Source line, no excerpts needed. End with the final line: वार्ता: 1]`
               : ""
           }${(() => {
-            if (isGreeting) return "";
+            if (isGreeting || isUnclear) return "";
             try {
               return `\n[पंचांग — reference ONLY, for resolving time references (आज, कल, नवरात्रि के आख़िरी दिन…) WHEN the seeker's message actually asks about time, dates or a festival: ${panchangLine()}. Do NOT volunteer festival or पंचांग information otherwise — never bring it into a greeting, a thank-you, or an unrelated question. Dates can differ from a local पंचांग by ±1 day, so on exact-date questions add "पंचांग से मिला लीजिएगा". Never invent dates beyond these.]`;
             } catch {
