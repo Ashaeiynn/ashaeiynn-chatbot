@@ -19,6 +19,33 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **Corrections now understand what is being corrected** (owner: the member should either be
+  told what to write, "or the bot should understand by itself when the user is correcting it").
+  Members write like people — "I am correcting you, next time someone ask about X, tell them…".
+  Filed literally, that whole sentence became the embedding key, so the correction never fired.
+  Now, on submit, the server reads the exchange and works out (a) the QUESTION this teaching
+  answers — using the member's own "next time someone asks about X" when they name it — and
+  (b) the teaching alone, preamble stripped, every figure kept. Verified on the real message
+  that failed: key → "siya tattva sadhana ke niyam ya khane ka samay kya hai?", teaching → the
+  3/3/6 rule with nothing lost. The admin card now SHOWS that question and lets it be edited
+  before approving, so a bad key can never again fail silently. Widget box also says plainly:
+  write only the answer.
+
+- **⚠️ MAJOR FINDING — a Hinglish correction was invisible to Hindi seekers.** e5 compares
+  SCRIPT as much as meaning across languages. Against a Latin-script (Hinglish) key:
+  the SAME question in Devanagari scored 0.758, while an UNRELATED question ("ध्यान में मन
+  क्यों भटकता है?") scored 0.858. So any correction a member wrote in Hinglish could never be
+  reached by seekers asking in Hindi — and voice input is Devanagari, i.e. most of them.
+  FIX: every approved correction is now also filed under 3-4 generated wordings — Hindi,
+  English and Hinglish — and matching takes the best of them (`alts` in corrections.mjs).
+  Measured after: an English asking of the same question went from 0.000 (dead) to 0.928;
+  Devanagari and Hinglish rewordings 0.936-0.985 (DIRECT). Different questions stay silent.
+  CAUTION for future work: do NOT use cosine to police a cross-language paraphrase — it is
+  meaningless there. The same-question check now only runs Devanagari-to-Devanagari (a first
+  version gated on "same script", which lumps English with Hinglish and silently threw away
+  the good English wording).
+  Old corrections (no alts) load and fire unchanged — verified live after deploy.
+
 - **Ask back instead of answering vaguely** (owner: "if the bot is unable to find a proper
   answer or understand the question, it can ask a question to the user"). Two halves:
   - **Rule 7d in prompt.mjs** — ask ONE short question when the meaning is unclear OR the
