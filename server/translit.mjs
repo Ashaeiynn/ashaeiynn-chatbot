@@ -100,3 +100,26 @@ function dropSchwa(w) {
   t = t.replace(new RegExp(`(${CONSONANT})${SCHWA}([^a-z\u0001]*)$`, "i"), "$1$2");
   return t;
 }
+
+// One word, many spellings. Bhaiya's material writes "pitra" (212 times in the
+// library); a spoken "पितृ" transliterates to "pitri" and a typed one may be
+// "pitru" or "pitar" — none of which appear in the knowledge at all. Owner,
+// 2026-07-19: "Pitru, Pitr, Pitar, all these are same".
+//
+// TO ADD A WORD: one line here — the pattern of every spelling people use, and
+// the spelling the LIBRARY uses. Applied to the search text only; nothing on
+// screen and nothing stored ever changes.
+const SPELLINGS = [
+  [/\bpit(?:ri|ru|ar|ra|r)(?=\b|paksh|dosh)/gi, "pitra"],
+  [/\bpitra\s*paksh/gi, "pitrapaksh"],
+  [/\bkul\s*(?:devta|dev|devata)\b/gi, "kuldevta"],
+  [/\bgur(?:u|oo)\s*dev(?:ta)?\b/gi, "gurudev"],
+  [/\bsadh(?:a|)na\b/gi, "sadhna"],
+  [/\bshakt(?:i|ee)y?an?\b/gi, "shakti"],
+  [/\bmantr(?:a|)\b/gi, "mantra"],
+  [/\bja(?:a|)p\b/gi, "jaap"],
+];
+
+export function normalizeSpelling(text) {
+  return SPELLINGS.reduce((acc, [re, to]) => acc.replace(re, to), String(text || ""));
+}

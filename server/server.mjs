@@ -7,7 +7,7 @@ import path from "node:path";
 import { teachFile, teachLink, teachText, forget, publicJobs, jobTotals, uploadsDir } from "./teach.mjs";
 import { matchCorrection, addCorrection, removeCorrection, listCorrections, DIRECT_MATCH } from "./corrections.mjs";
 import { addSuggestion, listSuggestions, getSuggestion, removeSuggestion, pendingCount } from "./suggestions.mjs";
-import { toLatin } from "./translit.mjs";
+import { toLatin, normalizeSpelling } from "./translit.mjs";
 import { ROOT } from "./env.mjs";
 import { searchMulti, formatTimestamp, thoughtCandidate, duplicateSources } from "./retrieve.mjs";
 
@@ -628,11 +628,17 @@ async function handleChat(req, res) {
           // spelling directly; an ENGLISH question gets it from the Hindi
           // translation above — otherwise English seekers still could not reach
           // teachings written in Hinglish (measured: 0 of 3 before this line).
-          isDevanagari
-            ? toLatin(message)
-            : translated && /[ऀ-ॿ]/.test(translated)
-              ? toLatin(translated)
-              : null,
+          // …and normalise the spelling to the one the library actually uses:
+          // पितृ / pitru / pitar / pitr are one word, but the knowledge writes
+          // "pitra" and contains no Devanagari पितृ at all, so an un-normalised
+          // "pitri" matched nothing (owner, 2026-07-19).
+          normalizeSpelling(
+            isDevanagari
+              ? toLatin(message)
+              : translated && /[ऀ-ॿ]/.test(translated)
+                ? toLatin(translated)
+                : message,
+          ),
         ],
         Number(process.env.RETRIEVE_K || 12),
       );
