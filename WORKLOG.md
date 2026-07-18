@@ -19,6 +19,19 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **"Talk to your mentor" was landing in almost every answer** (owner: it should only say that
+  when really necessary). Rule 15 was correctly scoped, but the MEMBER context block carried
+  *"For personal matters send them to THEIR OWN mentor: अपने mentor से बात कीजिए"* on EVERY
+  member request, keeping the referral permanently in view — so the bot reached for it as a safe
+  close even on "मंत्र कैसे चुनें?". Fixed by deciding in code: `PERSONAL_ASK` (health, fear,
+  crisis, black magic, their own condition or family — Hindi/Hinglish/English) picks the branch.
+  Personal → rule 15 applies, mentor referral. Otherwise the note now says explicitly: this is a
+  TEACHING question, answer it and do NOT refer them to their mentor, not even as a closing
+  suggestion. Verified live: 4 teaching questions → no mentor; "मुझे बहुत डर लगता है, रात को नींद
+  नहीं आती" → mentor, as it should. 16 offline cases for the detector.
+  NOTE: "मुझे साधना शुरू करनी है" is deliberately NOT personal — it is a beginner's teaching
+  question, and it was one of the answers that had been closing with a mentor referral.
+
 - **Every answer opened "देखो Rohan भाई," — the clearest tell of a machine.** Owner: "once or
   twice is good, but to build it as a conversation, its not something a human does". Two causes:
   1. prompt.mjs rule 2 literally said *Open teachings with "देखो…", "देखो भाई…"*. Rewritten:
