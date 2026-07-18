@@ -19,6 +19,16 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **iPhone spoke "गुरु" as "गुरुवार"** (Thursday). Apple's Hindi voice expands a standalone
+  गुरु; Android does not. Fixed with a device-voice-only respelling to the long ū ("गुरू"),
+  applied in browserSpeak behind the `isApple` check — the text on screen, the text sent to the
+  server voice, and questions.log are all untouched. Word boundaries tested: गुरुदेव, गुरुकुल
+  and गुरुवार itself are left alone; only a standalone गुरु is respelled.
+  `APPLE_SPEECH_FIXES` is a LIST — add a pair to it for any future word the iPhone voice
+  mangles, rather than inventing a new mechanism.
+  UNVERIFIED FROM HERE: no iPhone available; the respelling is a well-founded guess at what
+  breaks Apple's expansion, and the owner needs to confirm by ear.
+
 - **"ठीक है?" had become a tic** (owner: it is irritating). TWO rules were pushing it: the
   persona line said use it "once or twice per answer", and rule 12 offered an "understanding
   check" as a way to end answers — so nearly every reply closed with it. Persona line rewritten
