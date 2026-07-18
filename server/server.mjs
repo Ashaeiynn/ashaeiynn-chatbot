@@ -95,6 +95,14 @@ const fixMishearings = (t) => MISHEARD.reduce((s, [re, ok]) => s.replace(re, ok)
 // citable by title but never clickable. Address-book links are already ours.
 const publicUrl = (u) => (u && /youtube\.com|youtu\.be|ashaeiynn\.com/i.test(String(u)) ? u : null);
 
+// A bare greeting is a greeting — never an opening to teach. Detected here in
+// code rather than left to the model's judgement, because the model kept
+// treating "जय सिया राम" as a knowledge question and answering with a whole
+// teaching + source. A match skips retrieval, skips पंचांग, and asks for one
+// short line back (see handleChat).
+const GREETING_ONLY =
+  /^\s*(jai?\s*(shree\s*|shri\s*)?(siya\s*|sita\s*)?ram(\s*ji)?|जय\s*(श्री\s*)?(सिया\s*|सीता\s*)?राम(\s*जी)?|जय\s*सियाराम|जय\s*गुरुदेव|राधे\s*राधे|नमस्ते|नमस्कार|प्रणाम|राम\s*राम|हेलो|हाय|namaste|hello|hi|hey|good\s*(morning|afternoon|evening|night))\s*[!.,\s🙏]*$/i;
+
 // ——— the address book (data/links.json): channels & standing pages the bot
 // can hand out when a seeker asks for a link. Re-read every 10 minutes.
 const LINK_ASK =
@@ -335,6 +343,7 @@ async function handleChat(req, res) {
   const message = fixMishearings(String(payload.message ?? "").trim().slice(0, 2000));
   if (!message) return json(res, 400, { error: "Empty message." });
   const wantsLink = LINK_ASK.test(message);
+  const isGreeting = GREETING_ONLY.test(message) && message.trim().split(/\s+/).length <= 6;
 
   // Recent conversation history from the widget (kept short on purpose).
   const history = Array.isArray(payload.history)
@@ -433,7 +442,7 @@ async function handleChat(req, res) {
     .slice(-1)
     .map((m) => m.content);
   let translated = null;
-  if (apiKeyConfigured) {
+  if (apiKeyConfigured && !isGreeting) {
     try {
       // Time-boxed: the translation improves cross-language recall but must
       // never hold the seeker hostage — 1.2s or we search without it.
@@ -453,10 +462,10 @@ async function handleChat(req, res) {
       /* translation is best-effort — search proceeds with the original question */
     }
   }
-  const chunks = await searchMulti(
-    [[...lastUserTurns, message].join(" "), translated],
-    Number(process.env.RETRIEVE_K || 12),
-  );
+  // a greeting needs no teaching material — hand the model nothing to riff on
+  const chunks = isGreeting
+    ? []
+    : await searchMulti([[...lastUserTurns, message].join(" "), translated], Number(process.env.RETRIEVE_K || 12));
 
   // The approved answer joins the excerpts at the top — the model treats
   // Bhaiya's own edit as the most authoritative teaching (rule 7b). When the
@@ -557,7 +566,12 @@ async function handleChat(req, res) {
             payload.via === "notification"
               ? `\n[The seeker just OPENED the app by tapping this notification — the "question" above is that notification's text, not their words. Welcome them warmly for coming, then open a short living conversation about it (3-4 sentences grounded in the excerpts + one inviting question). This is a doorstep moment, not a lecture.]`
               : ""
+          }${
+            isGreeting
+              ? `\n[THIS IS A BARE GREETING, not a question. Reply with ONE short sentence — greet them back (${seekerName ? `"${seekerName}" + भाई/बहन/जी as fits their name` : "भाई/बहन/जी"}) and ask one light question about how they are. About 15 words, NEVER more than 25. Absolutely NO teaching, NO पंचांग or festival note, NO praise of their devotion, NO advice, NO Source line, no excerpts needed. End with the final line: वार्ता: 1]`
+              : ""
           }${(() => {
+            if (isGreeting) return "";
             try {
               return `\n[पंचांग — reference ONLY, for resolving time references (आज, कल, नवरात्रि के आख़िरी दिन…) WHEN the seeker's message actually asks about time, dates or a festival: ${panchangLine()}. Do NOT volunteer festival or पंचांग information otherwise — never bring it into a greeting, a thank-you, or an unrelated question. Dates can differ from a local पंचांग by ±1 day, so on exact-date questions add "पंचांग से मिला लीजिएगा". Never invent dates beyond these.]`;
             } catch {
@@ -633,7 +647,8 @@ async function handleChat(req, res) {
     // Watch links or teaching extras. Conversation may keep its follow-up
     // chips and check-in so the dialogue breathes; sources stay empty.
     // (Handoffs and link requests are the deliberate exceptions.)
-    if (!help && !wantsLink && !/source\s*[:：]/i.test(answer)) {
+    // the model sometimes writes the Hindi "स्रोत:" instead of "Source:" — treat both
+    if (!help && !wantsLink && !/(?:source|स्रोत)\s*[:：]/i.test(answer)) {
       // Safety net INSIDE the bare path: an answer that points to a mentor or
       // screening must still carry the human door — and ONLY that (members get
       // contact, never a screening pitch; no teaching links on handoffs).
@@ -733,9 +748,9 @@ async function handleChat(req, res) {
     // so the admin's knowledge-gap review is untouched.
     writeLog({ ...logEntry, answer, ms: Date.now() - t0 });
     let shown = answer;
-    const srcLine = shown.match(/\n\s*Source\s*[:：][^\n]*/i);
+    const srcLine = shown.match(/\n\s*(?:Source|स्रोत)\s*[:：][^\n]*/i);
     if (srcLine && !sources.some((s) => s.timestamp && srcLine[0].includes(s.title))) {
-      shown = shown.replace(/\n\s*Source\s*[:：][^\n]*/gi, "").trimEnd();
+      shown = shown.replace(/\n\s*(?:Source|स्रोत)\s*[:：][^\n]*/gi, "").trimEnd();
     }
     // seatbelt: a quote marker the parser didn't recognize must never reach
     // the seeker as raw text (the framed quote uses data.quote, not this line)
