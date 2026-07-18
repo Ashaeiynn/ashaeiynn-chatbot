@@ -100,6 +100,10 @@ const publicUrl = (u) => (u && /youtube\.com|youtu\.be|ashaeiynn\.com/i.test(Str
 // treating "जय सिया राम" as a knowledge question and answering with a whole
 // teaching + source. A match skips retrieval, skips पंचांग, and asks for one
 // short line back (see handleChat).
+// Cross-language search leans on translating the question, so the same question
+// asked twice should not pay for it twice (see the translation block below).
+const translationCache = new Map();
+
 const GREETING_ONLY =
   /^\s*(jai?\s*(shree\s*|shri\s*)?(siya\s*|sita\s*)?ram(\s*ji)?|जय\s*(श्री\s*)?(सिया\s*|सीता\s*)?राम(\s*जी)?|जय\s*सियाराम|जय\s*गुरुदेव|राधे\s*राधे|नमस्ते|नमस्कार|प्रणाम|राम\s*राम|हेलो|हाय|namaste|hello|hi|hey|good\s*(morning|afternoon|evening|night))\s*[!.,\s🙏]*$/i;
 
@@ -508,10 +512,17 @@ async function handleChat(req, res) {
     .slice(-1)
     .map((m) => m.content);
   let translated = null;
-  if (apiKeyConfigured && !isGreeting && !isUnclear) {
+  const tKey = message.trim().toLowerCase().slice(0, 300);
+  if (translationCache.has(tKey)) translated = translationCache.get(tKey);
+  else if (apiKeyConfigured && !isGreeting && !isUnclear) {
     try {
-      // Time-boxed: the translation improves cross-language recall but must
-      // never hold the seeker hostage — 1.2s or we search without it.
+      // Time-boxed, but NOT tight: this translation is load-bearing, not a bonus.
+      // Measured 2026-07-18 — searching a Hinglish question WITHOUT it returns
+      // matches by alphabet, not meaning ("dhyan me man kyu bhatakta hai" pulled
+      // up a Zoom recording filename and the bot's own about-page). At the old
+      // 1.2s cut-off, 3 of 4 translations were being thrown away whenever Gemini
+      // was rate-limited and the slower backup answered. It is a race, so a fast
+      // reply still costs nothing; only a slow one waits.
       const line = await Promise.race([
         complete({
           system:
@@ -521,9 +532,15 @@ async function handleChat(req, res) {
           light: true,
           retry: false, // best-effort helper — never make the visitor wait on retries
         }),
-        new Promise((resolve) => setTimeout(() => resolve(""), 1200)),
+        new Promise((resolve) => setTimeout(() => resolve(""), 2600)),
       ]);
       translated = (line || "").split("\n")[0].trim() || null; // first line only
+      // Seekers re-ask and tap the same suggestion chips constantly — cache it so
+      // the repeat costs nothing and never races the clock at all.
+      if (translated) {
+        translationCache.set(tKey, translated);
+        if (translationCache.size > 800) translationCache.delete(translationCache.keys().next().value);
+      }
     } catch {
       /* translation is best-effort — search proceeds with the original question */
     }
