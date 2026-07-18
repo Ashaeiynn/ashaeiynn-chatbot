@@ -8,7 +8,6 @@ import { teachFile, teachLink, teachText, forget, publicJobs, jobTotals, uploads
 import { matchCorrection, addCorrection, removeCorrection, listCorrections, DIRECT_MATCH } from "./corrections.mjs";
 import { addSuggestion, listSuggestions, getSuggestion, removeSuggestion, pendingCount } from "./suggestions.mjs";
 import { toLatin } from "./translit.mjs";
-const isDevanagari = (t) => /[ऀ-ॿ]/.test(String(t || ""));
 import { ROOT } from "./env.mjs";
 import { searchMulti, formatTimestamp, thoughtCandidate } from "./retrieve.mjs";
 
@@ -625,7 +624,7 @@ async function handleChat(req, res) {
           // so Bhaiya's Hinglish material was invisible to most seekers. Free:
           // plain transliteration rules, no AI call. (Hinglish questions get the
           // mirror of this from the translation step above.)
-          isDevanagari(message) ? toLatin(message) : null,
+          isDevanagari ? toLatin(message) : null, // `isDevanagari` is the boolean computed above for this very message
         ],
         Number(process.env.RETRIEVE_K || 12),
       );
