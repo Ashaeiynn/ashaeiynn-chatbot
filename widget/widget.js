@@ -1514,6 +1514,7 @@
       if (listening) {
         if (mediaRec && mediaRec.state === "recording") stopRecording();
         else rec?.stop();
+        primeVoice(); // mic is finished — safe now, and still inside the tap
       } else if (s === "speaking") {
         stopSpeaking();
         setVState("idle");
@@ -1553,7 +1554,7 @@
       setVState("idle");
     }
   }
-  kbdBtn.addEventListener("click", () => setMode("text"));
+  kbdBtn.addEventListener("click", () => { primeVoice(); setMode("text"); });
   micBtn.addEventListener("click", () => {
     // the mic in the typing bar returns to the voice stage and starts listening
     setMode("voice");
