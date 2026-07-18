@@ -19,6 +19,27 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **First two PDFs taught — extraction was badly broken, and they are unreachable in Hindi.**
+  Owner uploaded bhaiya_gyaan_qa_pairs.pdf and bhaiya_gyaan_knowledge_base.pdf.
+  1. EXTRACTION WAS MANGLING WORDS. pypdf's default mode sprays spaces inside words —
+     "Bhaiya k e discourse", "T one: war m", "gr eeting style", "users k o guide k arne".
+     Measured 30% of words came out as 1-2 letter fragments. `extraction_mode="layout"` fixes
+     it (18%, which is just the natural rate of short Hinglish words). New pipeline/pdf-text.py
+     also strips running headers/footers/page numbers, rejoins hyphen-split words, and explains
+     itself when a PDF is a scan. Both PDFs were re-extracted and re-ingested: 26-31% broken →
+     16-19%, segments 9→72 and 5→33, 937 chunks total from 104 sources.
+  2. ⚠️ THE REAL PROBLEM — the documents are written in HINGLISH (0% Devanagari), and this
+     embedding model matches script as much as meaning. Measured on the live bot:
+       Hinglish question  → top 3 chunks ALL from the PDF (0.859/0.857/0.856) — excellent
+       Devanagari question → PDF nowhere in the top 3 (articles won)
+       English question    → PDF not even in the top 40
+     Since voice input produces Devanagari, most seekers will never reach this material.
+     Told the owner: supply the teachings in Devanagari (or let a Devanagari version be stored
+     alongside each chunk — the same trick that fixed corrections). Awaiting their choice.
+  NOTE FOR FUTURE TESTING: `sources[]` in the API response is filtered by the public-link
+  policy, so uploaded documents NEVER appear there even when they were used. Judging "did the
+  bot use the PDF" by sources[] is wrong — read `top` in data/questions.log instead.
+
 - **Saying "no" to the guide's own question triggered a lecture.** The bot asked "साधना कैसी
   चल रही है?", the seeker answered "मैं साधना नहीं कर रहा हूँ अभी", and it replied with a
   teaching about साधना — the one thing they had just said they were NOT doing. Fixed in code:
