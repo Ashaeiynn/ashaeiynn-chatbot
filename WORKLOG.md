@@ -19,6 +19,35 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **Every teaching now reachable in Hindi, Hinglish AND English** (owner: "make sure each
+  knowledge no matter if in hinglish, also reach english and hindi user in the language they
+  asked"). Chose the QUERY side over the knowledge side: instead of translating 937 chunks
+  (LLM cost, a re-ingest, and it would have to be redone for every future upload), each question
+  is now searched in THREE forms — as asked, the AI translation, and a rule-based SCRIPT FLIP.
+  new server/translit.mjs — Devanagari→Latin, free, no AI call. It is not scholarly; it aims at
+  the spellings people type. Two things it must get right, both learned the hard way:
+    · SCHWA DELETION — जाप is "jaap" not "jaapa", करना is "karna" not "karana". Without it the
+      output matches nothing a human would write.
+    · Only the INHERENT vowel may be dropped, never a written matra. The first version deleted
+      both and turned जाप into "jp" and साधना into "sadhn". The inherent one is now marked with
+      a private character during conversion and resolved at the end.
+  Result: "मेरी शक्तियाँ काम करना बंद क्यों हो गईं?" → "meri shaktiyan kam karna band kyon ho gain?"
+  MEASURED on the Hinglish PDFs: Devanagari question 0/3 → 3/3 chunks in the top 3; Hinglish
+  3/3; English 0 → 4 chunks inside the 12 excerpts the model receives (English ARTICLES still
+  outrank it there, which is reasonable — that is also Bhaiya's teaching).
+  This needs no re-ingest and covers every source already in the library and every future upload.
+
+- ⚠️ **OUTAGE I CAUSED (~21:45-21:55 IST, real questions returned 502).** Shipping the above, I
+  imported a helper as `isDevanagari` — a name ALREADY used inside handleChat for a BOOLEAN
+  (line 495). The local shadowed my import, so `isDevanagari(message)` threw "not a function"
+  and the server crash-looped. `node --check` passes this happily; it is a runtime shadowing
+  bug, not a syntax one. GREETINGS still worked (they short-circuit before the search), which is
+  why my first probe returned 200 and I believed it was fixed — the outage was invisible to the
+  check I chose. Fixed by using the existing boolean instead of importing my own.
+  LESSONS: (1) grep for the identifier BEFORE introducing one in a 2000-line file; (2) after
+  deploying a change to the answer path, probe a REAL QUESTION, never a greeting — greetings
+  skip most of the pipeline and prove almost nothing.
+
 - **iPhone spoke "गुरु" as "गुरुवार"** (Thursday). Apple's Hindi voice expands a standalone
   गुरु; Android does not. Fixed with a device-voice-only respelling to the long ū ("गुरू"),
   applied in browserSpeak behind the `isApple` check — the text on screen, the text sent to the
