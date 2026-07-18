@@ -472,8 +472,14 @@ async function handleChat(req, res) {
   // and asserts it in later answers ("आपकी गुरु तत्व साधना के मार्ग पर…"), so
   // denying it has to actually FORGET it — acknowledging it for one turn is not
   // enough (a member said so and the bot kept it up, 2026-07-19).
-  const PRACTICE_WORD = /साधना|साधन|अभ्यास|जाप|sadh?na|sadhana|practice|jaap/i;
-  const deniesHere = (t) => NEGATION.test(t) && PRACTICE_WORD.test(t);
+  // The denial must be about DOING the practice — not about something that
+  // happened inside it. "आज साधना में मन नहीं लगा" is a seeker confiding a hard
+  // day; forgetting their practice over that would be the opposite of listening
+  // (caught in testing, 2026-07-19). So the negation has to sit next to a doing
+  // verb, or the seeker has to say they stopped.
+  const NOT_DOING =
+    /(?:साधना|साधन|अभ्यास|जाप)[^।.?!]{0,24}नहीं\s*(?:कर|करता|करती|करते|करूँ|करुँ|कर\s*रह)|नहीं\s*(?:कर|करता|करती|करते|कर\s*रह)[^।.?!]{0,24}(?:साधना|साधन|अभ्यास|जाप)|कोई\s*(?:साधना|अभ्यास|जाप)\s*नहीं|(?:साधना|अभ्यास|जाप)[^।.?!]{0,20}(?:छोड़|बंद\s*कर|रोक)\s*(?:दी|दिया|दिये|दिए)|\b(?:not|don'?t|do\s*not|no\s*longer)\s+(?:doing|do|practis\w*|following)\b[^.?!]{0,24}\b(?:sadh?na|sadhana|practice|jaap)\b|\bno\s+(?:sadh?na|sadhana|practice)\b|\b(?:stopped|quit|left)\s+(?:my\s+)?(?:sadh?na|sadhana|practice|jaap)\b/i;
+  const deniesHere = (t) => NOT_DOING.test(t);
   // Look at what the seeker has said RECENTLY, not only this message. Soni denied
   // her practice once and the guide kept asserting it, because the denial only
   // cleared the memory if it happened to be the current message. Her own recent
