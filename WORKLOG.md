@@ -19,6 +19,19 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **Tap feedback: buzz on Android, tick on iPhone, and light for everyone.**
+  Android gets `navigator.vibrate(18)`. Apple supports NO vibration on the web at all, so
+  iPhone gets a short synthesised tone instead (one shared AudioContext for the visit — making
+  one per tap would churn iOS's audio session, which is what silenced the mic earlier today).
+  ⚠️ BUT iOS also honours the physical ring/silent switch for web audio and a page cannot
+  override it, so a phone on silent stays silent whatever we do. Hence the real answer, at the
+  owner's steer: a VISUAL bloom at the touch point, in the tapped control's own colour.
+  It makes no sound and touches no audio session, so it fires on EVERY tap INCLUDING the one
+  that opens the microphone — the tap that until now had no feedback at all.
+  ⚠️ First version rendered rgba(0,0,0) — several buttons carry no text colour and compute to
+  black, i.e. invisible light on a dark panel. Now: use the control's colour only if it is
+  actually bright, else green for chips and gold for everything else. Verified per control.
+
 - **Denial now clears the stored practice BY ITSELF** (owner asked: won't her phone do this
   automatically?). It would not have: the memory only cleared if the denial was the CURRENT
   message, and Soni's denial predated the fix — she would have had to repeat herself. But her
