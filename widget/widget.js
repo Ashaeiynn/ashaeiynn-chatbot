@@ -731,6 +731,26 @@
     (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   if (isApple) panel.classList.add("lite");
 
+  // Feedback on every tap, in ONE place rather than button by button.
+  // Capture phase, so it fires even if a handler stops the event.
+  //
+  // DELIBERATE EXCEPTION: the tap that OPENS the microphone stays silent. A tone
+  // at that instant would either be recorded as part of the seeker's question or
+  // disturb iOS's audio session just as the recorder starts — the failure that
+  // silenced the mic earlier today. Stopping the mic, and every other control,
+  // gives feedback normally.
+  panel.addEventListener(
+    "click",
+    (e) => {
+      const hit = e.target.closest("button, .vcb-chip, .vcb-srcs a");
+      if (!hit) return;
+      if (hit.classList.contains("vcb-orbbig") && !listening) return; // opening the mic: silent
+      if (hit.classList.contains("vcb-mic") && !listening) return;
+      tap();
+    },
+    true,
+  );
+
   const cosmos = panel.querySelector(".vcb-cosmos");
   for (let i = 0; i < (isApple ? 6 : 16); i++) {
     const t = document.createElement("i");
@@ -912,6 +932,41 @@
       /* unsupported or blocked — never let a nicety throw */
     }
   };
+
+  // Apple gives a web page no vibration at all, so an iPhone got no feedback
+  // from a tap. A very short tone stands in for it. Synthesised, not a file:
+  // nothing extra to download, and it starts instantly.
+  //
+  // ONE audio context for the whole visit — created on the first tap and kept.
+  // Making a new one per tap would churn iOS's audio session, and churning that
+  // session next to the microphone is exactly what silenced the mic earlier
+  // today (2026-07-19).
+  let actx = null;
+  const clickSound = () => {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      actx = actx || new AC();
+      if (actx.state === "suspended") actx.resume();
+      const t = actx.currentTime;
+      const osc = actx.createOscillator();
+      const gain = actx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(660, t);
+      // a soft bell-ish tick, not a beep: quick in, quick out
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.09, t + 0.006);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.055);
+      osc.connect(gain).connect(actx.destination);
+      osc.start(t);
+      osc.stop(t + 0.07);
+    } catch {
+      /* no audio available — the tap still works, that is what matters */
+    }
+  };
+
+  // One feel per platform: Android buzzes, iPhone ticks.
+  const tap = () => (isApple ? clickSound() : buzz());
 
   let voicePrimed = false;
   let voiceMissingTold = false; // only mention a missing device voice once per visit
@@ -1529,7 +1584,6 @@
   // the big eye: idle→listen · listening→finish · speaking→stop
   {
     orb.addEventListener("click", () => {
-      buzz(); // a small acknowledgement that the tap landed
       // NO primeVoice() here. Speaking — even a silent utterance — flips iOS's
       // audio session to playback, and the very next thing this handler does is
       // start the microphone. That broke voice input on iPhone (owner,
@@ -1581,7 +1635,6 @@
   }
   kbdBtn.addEventListener("click", () => { primeVoice(); setMode("text"); });
   micBtn.addEventListener("click", () => {
-    buzz();
     // the mic in the typing bar returns to the voice stage and starts listening
     setMode("voice");
     startListening("stage");
