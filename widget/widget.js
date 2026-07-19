@@ -991,8 +991,17 @@
       const box = panel.getBoundingClientRect();
       const x = (e.clientX || box.left + box.width / 2) - box.left;
       const y = (e.clientY || box.top + box.height / 2) - box.top;
-      const rgb = getComputedStyle(el).color.match(/\d+/g) || [217, 169, 79];
-      const [r, g, b] = rgb;
+      // Take the control's own colour — but only if it is actually light. Some
+      // buttons carry no text colour and compute to black, and black light on a
+      // dark panel is invisible (caught in testing). Fall back to the theme:
+      // green for the chips, gold for everything else.
+      const own = (getComputedStyle(el).color.match(/\d+/g) || []).map(Number).slice(0, 3);
+      const bright = own.length === 3 && own[0] + own[1] + own[2] > 210;
+      const [r, g, b] = bright
+        ? own
+        : el.classList.contains("vcb-chip")
+          ? [52, 211, 153]
+          : [247, 227, 174];
       const dot = document.createElement("i");
       dot.className = "vcb-tapglow";
       dot.style.left = `${x}px`;
