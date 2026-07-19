@@ -820,6 +820,10 @@ async function handleChat(req, res) {
                 ? `\n[NOT YET A MEMBER: this seeker has not joined Ashaeiynn yet. For personal matters (rule 15) guide them to book a screening at ashaeiynn.com. And when a moment is genuinely right — deep interest, a personal ask, a practice they want to begin — you may warmly mention ONCE in the conversation that their own journey with Ashaeiynn can begin with a screening. Inviting, never pushy, never in every answer.]`
                 : ""
           }${
+            history.some((m) => m.role === "assistant")
+              ? ""
+              : `\n[FIRST MESSAGE — you have not said anything to this seeker yet in this conversation. So nothing has been interrupted, nothing was explained earlier, and there is no "what I was just saying". Any excerpt whose reply assumes an ongoing explanation ("पहले पूरा सुन लो", "जो बता रहा हूँ उसे सुनो", "as I was saying") belongs to a DIFFERENT moment and must not be used here — using it would scold someone who has done nothing. Welcome them and answer, or invite the question.]`
+          }${
             recentOpenings.length
               ? `\n[VARY YOUR OPENING — your recent answers began: ${recentOpenings
                   .map((o) => `"${o}…"`)
