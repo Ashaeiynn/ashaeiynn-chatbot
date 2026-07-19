@@ -92,8 +92,20 @@ for (const file of files) {
       chars = 0;
     }
   };
+  // A Q&A document (Bhaiya's session supplements are full of them) must be cut
+  // at each QUESTION, not every 1100 characters — otherwise one question is
+  // buried among four others and the whole block averages out to something too
+  // vague to match. A seeker asking "भैया की बात पर भरोसा कैसे करें?" could not
+  // reach Bhaiya's own answer to exactly that (owner, 2026-07-19).
+  const isQ = (x) => /^\s*(?:Q\s*\d*\s*[.:)]|प्रश्न\s*[:.]|सवाल\s*[:.])/i.test(x || "");
+  const qaStyle = t.segments.filter((x) => isQ(x.text)).length >= 5;
   for (const seg of t.segments) {
     if (!seg.text) continue;
+    // a new question starts a new chunk, carrying its answer with it
+    if (qaStyle && isQ(seg.text) && dirty) {
+      flush(false);
+      dirty = false;
+    }
     buf.push({ text: seg.text, start: seg.start ?? 0 });
     chars += seg.text.length;
     dirty = true;
