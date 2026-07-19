@@ -1613,6 +1613,14 @@ const server = createServer(async (req, res) => {
       // the iOS home-screen app's ONLY ear (Whisper via Groq — never Gemini)
       iosEar: process.env.GROQ_API_KEY ? "groq-whisper" : "not-configured",
       knowledgeBase: existsSync(path.join(ROOT, "data", "knowledge.db")) ? "built" : "missing",
+      // so a half-built memory is visible without reading the server log
+      ...(lastAudit
+        ? {
+            knowledge: lastAudit.missing.length
+              ? { ok: false, learnt: lastAudit.learnt, onDisk: lastAudit.onDisk, missing: lastAudit.missing.slice(0, 5) }
+              : { ok: true, sources: lastAudit.learnt },
+          }
+        : {}),
     });
   }
 
@@ -2115,11 +2123,60 @@ const server = createServer(async (req, res) => {
   json(res, 404, { error: "Not found" });
 });
 
+// Compare what is on disk with what the bot can actually search. A study that
+// is interrupted leaves knowledge.db PARTIALLY built and nothing says so — the
+// bot simply answers from less of Bhaiya's teaching, and the Library still lists
+// every file as though all were fine. That is exactly what happened
+// 2026-07-19 (down to 42 of 112 sources, unnoticed until a seeker's question
+// went unanswered). Now it shouts.
+function knowledgeAudit() {
+  const onDisk = [];
+  try {
+    for (const f of readdirSync(path.join(ROOT, "data", "transcripts"))) {
+      if (!f.endsWith(".json") || f.endsWith(".raw.json")) continue;
+      try {
+        const t = JSON.parse(readFileSync(path.join(ROOT, "data", "transcripts", f), "utf8")).title;
+        if (t) onDisk.push(t);
+      } catch {
+        /* unreadable file — the ingester will report it */
+      }
+    }
+  } catch {
+    return null;
+  }
+  let learnt;
+  try {
+    learnt = new Set(knownTitles());
+  } catch {
+    return null; // knowledge not loaded yet — nothing to compare against
+  }
+  const missing = onDisk.filter((t) => !learnt.has(t) && !isExcludedTitle(t));
+  return { onDisk: onDisk.length, learnt: learnt.size, missing };
+}
+
+let lastAudit = null;
+
 server.listen(PORT, () => {
   console.log(`Chatbot server running:  http://localhost:${PORT}`);
   console.log(`Provider: ${PROVIDER} (${ACTIVE_MODEL})   |   API key configured: ${apiKeyConfigured ? "yes" : "NO — edit .env"}`);
   // Warm the embedding model so the first question isn't slow.
-  warmup().then(() => console.log("Embedding model ready (cross-language search enabled).")).catch(() => {});
+  warmup()
+    .then(() => {
+      console.log("Embedding model ready (cross-language search enabled).");
+      lastAudit = knowledgeAudit();
+      if (!lastAudit) return;
+      if (lastAudit.missing.length) {
+        console.error(
+          `\n⚠️  KNOWLEDGE INCOMPLETE — ${lastAudit.missing.length} source(s) are on disk but NOT searchable.` +
+            `\n    The bot is answering from ${lastAudit.learnt} of ${lastAudit.onDisk} sources.` +
+            `\n    Run:  node pipeline/3-ingest.mjs   (then restart)` +
+            `\n    Missing: ${lastAudit.missing.slice(0, 8).join(" · ")}${lastAudit.missing.length > 8 ? " …" : ""}\n`,
+        );
+      } else {
+        console.log(`Knowledge check: all ${lastAudit.onDisk} sources are searchable.`);
+      }
+    })
+    .catch(() => {});
 });
 
 // The guide's rare whispers: checked hourly — Sunday's article, festival eves.
