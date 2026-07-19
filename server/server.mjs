@@ -145,6 +145,11 @@ const UNCLEAR_ONLY =
 const PERSONAL_ASK =
   /मेरी\s*(समस्या|तकलीफ़?|परेशानी|बीमारी|हालत|पत्नी|माँ|बेटी|बेटा)|मेरे\s*(पति|पिता|घर\s*में)|मुझे\s+(?:\S+\s+){0,2}(डर|तनाव|बीमारी|दिक्कत|परेशानी|तकलीफ़?|घबराहट)|बीमार|इलाज|दवा|अस्पताल|डिप्रेशन|अवसाद|घबराहट|काला\s*जादू|तंत्र[\s-]?मंत्र\s*किया|ऊपरी\s*हवा|नज़र\s*लग|टोना|आत्महत्या|जीना\s*नहीं|मेरे\s*साथ\s*(ऐसा|बुरा)|my\s+(problem|health|illness|disease|condition|wife|husband|son|daughter|family|situation)|i\s*am\s*(sick|ill|suffering|depressed|scared|afraid|not\s*well)|black\s*magic|depress|anxiety|suicid|panic\s*attack/i;
 
+// "mera credits kb renew hoga", "कितने प्रश्न बचे हैं?" — about the APP, not the
+// teachings. The search has nothing for these, so the server answers them itself.
+const QUOTA_ASK =
+  /\bcredits?\b|क्रेडिट|\bquota\b|कोटा|(?:कितने|kitne)\s*(?:प्रश्न|सवाल|prashn|sawaal|question)|(?:प्रश्न|सवाल|sawaal|question)[^।.?!]{0,14}(?:बचे|बाकी|शेष|bache|baaki|left|remaining)|(?:renew|रिन्यू|रीन्यू)|(?:कब|kab)[^।.?!]{0,14}(?:मिलेंगे|मिलेगा|milenge|milega)[^।.?!]{0,14}(?:प्रश्न|सवाल|prashn|sawaal)/i;
+
 // Two very different asks about the same साधना (owner's rule, 2026-07-18):
 //   "सिया तत्व साधना क्या है?"      → teach WHAT it is, its meaning and benefit
 //   "इसके नियम क्या हैं?"            → the निर्देश — MEMBERS ONLY
@@ -538,6 +543,41 @@ async function handleChat(req, res) {
     const contact = linkDirectory().filter((l) => l.title === "Contact Ashaeiynn").map((l) => ({ title: l.title, timestamp: "", url: l.url }));
     writeLog({ at: new Date().toISOString(), q: message, via: payload.via, ...(seekerWho ? { who: seekerWho } : {}), noCredits: true });
     return json(res, 200, { answer: outMsg, sources: contact, credits: 0, noCredits: true });
+  }
+
+  // A question about THE APP ITSELF, not about the teachings — "mera credits kb
+  // renew hoga". The bot only knows Bhaiya's teachings, so it had nothing to say
+  // and answered about something else entirely (owner, 2026-07-19). The server
+  // knows the real numbers, so it answers directly rather than searching.
+  if (CREDITS_ON && QUOTA_ASK.test(message)) {
+    const limit = users.DAILY_LIMIT ?? 50;
+    const left = seekerCredits;
+    // the allowance turns over at midnight India time
+    const nowIst = new Date(Date.now() + 5.5 * 3600e3);
+    const hrs = Math.max(1, 24 - nowIst.getUTCHours());
+    const quotaMsg = wantsHindi
+      ? `${left === null ? `हर दिन ${limit} प्रश्न मिलते हैं` : `आज आपके पास ${left} प्रश्न बचे हैं`} — और हर रात 12 बजे (भारतीय समय) यह फिर से पूरे ${limit} हो जाते हैं, यानी लगभग ${hrs} घंटे में। कुछ भी बचा हुआ अगले दिन नहीं जुड़ता, हर सुबह गिनती नई शुरू होती है।`
+      : `${left === null ? `You get ${limit} questions a day` : `You have ${left} questions left today`} — they go back up to ${limit} at midnight India time, about ${hrs} hour${hrs > 1 ? "s" : ""} from now. Nothing carries over; each day starts fresh.`;
+    writeLog({
+      at: new Date().toISOString(),
+      q: message,
+      via: payload.via,
+      ...(seekerWho ? { who: seekerWho } : {}),
+      chat: true,
+      quotaAsk: true,
+    });
+    if (seekerUid && seekerCredits !== null) {
+      try {
+        users.spendCredit(seekerUid, 1);
+      } catch {
+        /* registry best-effort */
+      }
+    }
+    return json(res, 200, {
+      answer: quotaMsg,
+      sources: [],
+      ...(left !== null ? { credits: Math.max(0, left - 1) } : {}),
+    });
   }
 
   // Bhaiya-approved answers: the bot LEARNS the correction, it doesn't parrot
