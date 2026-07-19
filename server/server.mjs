@@ -822,7 +822,7 @@ async function handleChat(req, res) {
           }${
             history.some((m) => m.role === "assistant")
               ? ""
-              : `\n[FIRST MESSAGE — you have not said anything to this seeker yet in this conversation. So nothing has been interrupted, nothing was explained earlier, and there is no "what I was just saying". Any excerpt whose reply assumes an ongoing explanation ("पहले पूरा सुन लो", "जो बता रहा हूँ उसे सुनो", "as I was saying") belongs to a DIFFERENT moment and must not be used here — using it would scold someone who has done nothing. Welcome them and answer, or invite the question.]`
+              : `\n[FIRST MESSAGE — you have not said anything to this seeker yet in this conversation. So nothing has been interrupted, nothing was explained earlier, and there is no "what I was just saying". Any excerpt whose reply assumes an ongoing explanation ("पहले पूरा सुन लो", "जो बता रहा हूँ उसे सुनो", "as I was saying") belongs to a DIFFERENT moment and must not be used here — using it would scold someone who has done nothing. Simply welcome them and answer, or invite the question. NEVER mention this to the seeker: do not say "nothing has been interrupted", do not explain that no explanation was in progress — they would have no idea what you meant. Just answer naturally.]`
           }${
             recentOpenings.length
               ? `\n[VARY YOUR OPENING — your recent answers began: ${recentOpenings
