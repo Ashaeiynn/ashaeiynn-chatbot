@@ -36,6 +36,24 @@ function isGarbled(text) {
 const BOILERPLATE_PAGE =
   /^website:\s*(disclaimer|terms|no refund|refund|shipping|privacy)/i;
 
+// Zoom MEETING CHAT logs — the participants' messages from a live session, not
+// Bhaiya's teaching: "please switch on your cameras", "Leave kr skte hai",
+// "Jai Siya Ram 🙏🙏". They are short and saturated with devotional words, so they
+// matched almost any heartfelt question and OUTRANKED the real teachings — a
+// seeker asking "भैया की बात पर भरोसा कैसे करें?" got meeting chatter instead of
+// Bhaiya's own answer (owner, 2026-07-19). Excluded from SEARCH; like the legal
+// pages they stay in the library, nothing is deleted.
+const MEETING_CHAT = /^chat$/i;
+// …and the same thing under its Zoom filename
+const CHAT_EXPORT = /recordingnewchat/i;
+// a transcript that is mostly "HH:MM:SS Name: message" lines is a chat log
+const CHAT_LINES = /\d{1,2}:\d{2}(?::\d{2})?\s+(?:From\s+)?[^:]{1,40}:/g;
+const looksLikeChatLog = (text) => {
+  const t = String(text || "");
+  const hits = (t.match(CHAT_LINES) || []).length;
+  return hits >= 3 && hits * 40 > t.length * 0.25; // dominated by timestamped lines
+};
+
 function load() {
   if (chunks) return chunks;
   if (!existsSync(dbFile)) throw new Error("Knowledge base not built yet — run: npm run ingest");
@@ -47,12 +65,22 @@ function load() {
     )
     .all();
   db.close();
-  const rows = all.filter((r) => !isGarbled(r.content) && !BOILERPLATE_PAGE.test(r.title || ""));
+  const rows = all.filter(
+    (r) =>
+      !isGarbled(r.content) &&
+      !BOILERPLATE_PAGE.test(r.title || "") &&
+      !MEETING_CHAT.test(r.title || "") &&
+      !CHAT_EXPORT.test(r.title || "") &&
+      !looksLikeChatLog(r.content),
+  );
   const dropped = all.length - rows.length;
   const legal = all.filter((r) => BOILERPLATE_PAGE.test(r.title || "")).length;
+  const chatter = all.filter(
+    (r) => MEETING_CHAT.test(r.title || "") || CHAT_EXPORT.test(r.title || "") || looksLikeChatLog(r.content),
+  ).length;
   if (dropped)
     console.log(
-      `retrieval: ${rows.length} usable chunks (skipped ${dropped - legal} garbled from bad transcriptions, ${legal} legal/admin pages)`,
+      `retrieval: ${rows.length} usable chunks (skipped ${dropped - legal - chatter} garbled, ${legal} legal/admin pages, ${chatter} meeting-chat logs)`,
     );
   chunks = rows.map((r) => ({
     title: r.title,
@@ -157,7 +185,8 @@ const SAME_TEACHING = 0.95;
 // against this so a file whose study failed cannot masquerade as learnt.
 // Deliberately excluded from search (legal/admin pages) — not a failure, so the
 // Library must not cry "study failed" over them.
-export const isExcludedTitle = (t) => BOILERPLATE_PAGE.test(String(t || ""));
+export const isExcludedTitle = (t) =>
+  BOILERPLATE_PAGE.test(String(t || "")) || MEETING_CHAT.test(String(t || "")) || CHAT_EXPORT.test(String(t || ""));
 
 export function knownTitles() {
   return [...new Set(load().map((c) => c.title))];
