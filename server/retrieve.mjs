@@ -75,7 +75,7 @@ export function reload() {
 // kya hai?") must always see the curated About entry — lectures mention these names
 // constantly, which drowns the About doc in embedding space.
 const BRAND_PATTERN =
-  /ashaeiynn|\basha[eiy]{1,3}nn?\b|asha\b|[अआ]शा\s?[ईइय]{1,2}न|aqua\s*foundation|path\s?shala|पाठ\s?शाला|bhaiy?ya|भ[ैइ]या|par[ie]{0,2}ksh[ie]+t|पर[ीि]क्षित|gurudev|गुरुदेव/i;
+  /ashaeiynn|\basha[eiy]{1,3}nn?\b|asha\b|[अआ]शा\s?[ईइय]{1,2}न|\b(?:aashray|ashray|aashraya)\b|आश्रय|aqua\s*foundation|path\s?shala|पाठ\s?शाला|bhaiy?ya|भ[ैइ]या|par[ie]{0,2}ksh[ie]+t|पर[ीि]क्षित|gurudev|गुरुदेव/i;
 const isAboutChunk = (c) => c.title.startsWith("About Ashaeiynn");
 
 export async function search(question, limit = 8) {

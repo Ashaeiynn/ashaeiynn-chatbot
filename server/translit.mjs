@@ -120,6 +120,19 @@ const SPELLINGS = [
   [/\bja(?:a|)p\b/gi, "jaap"],
 ];
 
+// Aashray and Ashaeiynn are the same place (owner, 2026-07-19), and Bhaiya's
+// material genuinely uses BOTH — 98 chunks say Aashray, 289 say Ashaeiynn. So a
+// question naming one would miss the other's teachings entirely. Rather than
+// rewrite one into the other (which would lose the chunks that use it), the
+// search text carries both names.
+const SAME_PLACE = [
+  [/\b(?:aashray|ashray|aashraya)\b|आश्रय/i, "Ashaeiynn"],
+  [/\bashaeiynn\b|आशाईन/i, "Aashray"],
+];
+
 export function normalizeSpelling(text) {
-  return SPELLINGS.reduce((acc, [re, to]) => acc.replace(re, to), String(text || ""));
+  let out = SPELLINGS.reduce((acc, [re, to]) => acc.replace(re, to), String(text || ""));
+  for (const [present, sibling] of SAME_PLACE)
+    if (present.test(out) && !new RegExp(`\\b${sibling}\\b`, "i").test(out)) out += ` ${sibling}`;
+  return out;
 }
