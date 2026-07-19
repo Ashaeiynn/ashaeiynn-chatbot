@@ -4,12 +4,12 @@ import { createServer } from "node:http";
 import { readFileSync, writeFileSync, existsSync, appendFileSync, createWriteStream, rmSync, readdirSync, statSync, mkdirSync } from "node:fs";
 import { spawn } from "node:child_process";
 import path from "node:path";
-import { teachFile, teachLink, teachText, forget, publicJobs, jobTotals, uploadsDir } from "./teach.mjs";
+import { teachFile, teachLink, teachText, forget, publicJobs, jobTotals, clearFinished, uploadsDir } from "./teach.mjs";
 import { matchCorrection, addCorrection, removeCorrection, listCorrections, DIRECT_MATCH } from "./corrections.mjs";
 import { addSuggestion, listSuggestions, getSuggestion, removeSuggestion, pendingCount } from "./suggestions.mjs";
 import { toLatin, normalizeSpelling } from "./translit.mjs";
 import { ROOT } from "./env.mjs";
-import { searchMulti, formatTimestamp, thoughtCandidate, duplicateSources } from "./retrieve.mjs";
+import { searchMulti, formatTimestamp, thoughtCandidate, duplicateSources, knownTitles } from "./retrieve.mjs";
 
 // पंचांग is an enhancement, never a dependency: if the module has any problem,
 // the guide simply answers without calendar awareness.
@@ -1701,6 +1701,12 @@ const server = createServer(async (req, res) => {
     if (!adminOk()) return;
     return json(res, 200, { jobs: publicJobs(), totals: jobTotals() });
   }
+  // The admin has read the outcome — drop finished and failed jobs so the
+  // panel stops showing them forever.
+  if (req.method === "POST" && url.pathname === "/api/admin/jobs/clear") {
+    if (!adminOk()) return;
+    return json(res, 200, { cleared: clearFinished() });
+  }
   // The studio Mac pushes its study progress here; the cloud portal displays it.
   if (url.pathname === "/api/admin/studio-status") {
     if (!adminOk()) return;
@@ -1979,6 +1985,15 @@ const server = createServer(async (req, res) => {
       } catch {
         /* skip unreadable file */
       }
+    }
+    // The Library lists transcript FILES. A file can exist while its study
+    // failed, and it then looked "learnt" here while the bot knew nothing of it
+    // (session8_aghor_panth, 2026-07-19). Mark what is actually searchable.
+    try {
+      const learnt = new Set(knownTitles());
+      for (const it of items) it.learnt = learnt.has(it.title);
+    } catch {
+      /* if we cannot tell, say nothing rather than something wrong */
     }
     items.sort((a, b) => b.added - a.added);
     // Flag sources that teach the same thing as another — the admin decides what

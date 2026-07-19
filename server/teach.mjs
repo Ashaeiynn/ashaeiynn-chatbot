@@ -140,6 +140,18 @@ export function publicJobs() {
     .slice(0, 250);
 }
 
+// Drop finished and failed jobs once the admin has seen them, so the progress
+// panel does not carry old outcomes forever.
+export function clearFinished() {
+  const before = jobs.length;
+  // `jobs` is a shared const array — mutate it in place, never reassign
+  const keep = jobs.filter((j) => !["done", "failed", "dup"].includes(j.status));
+  jobs.length = 0;
+  jobs.push(...keep);
+  persistQueue();
+  return before - jobs.length;
+}
+
 export function jobTotals() {
   const t = { total: jobs.length };
   for (const j of jobs) t[j.status] = (t[j.status] || 0) + 1;

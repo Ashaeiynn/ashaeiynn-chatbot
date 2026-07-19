@@ -1003,6 +1003,16 @@
   let uploading = false;
   let pendingUploads = []; // files chosen but not yet handed to the server
   let serverJobs = [];
+  // clear finished/failed jobs off the server's list so they stop coming back
+  async function clearFinishedJobs() {
+    try {
+      await fetch("/api/admin/jobs/clear", { method: "POST", headers: { "x-admin-key": key() } });
+      loadJobs();
+    } catch {
+      /* best effort — the banner is hidden either way */
+    }
+  }
+
   function hideStatus() {
     $("#teach-status").style.display = "none";
   }
@@ -1066,7 +1076,14 @@
           Math.round((((t.done || 0) + (t.ready || 0)) / Math.max(1, t.total)) * 100));
       }
     } else if (t.total) {
-      if (t.failed) showStatus("⚠️", `${t.done || 0} learnt · ${t.failed} failed`, "the list below shows what failed and why");
+      if (t.failed) {
+        showStatus("⚠️", `${t.done || 0} learnt · ${t.failed} failed`,
+          "the list below shows what failed and why · tap to dismiss");
+        // A failure must be SEEN, but it should not be permanent furniture — the
+        // owner had one sitting there through refreshes (2026-07-19).
+        $("#teach-status").style.cursor = "pointer";
+        $("#teach-status").onclick = () => { hideStatus(); clearFinishedJobs(); };
+      }
       else if (t.done) {
         const gone = jobs.filter((j) => j.kind === "forget" && j.status === "done").length;
         showStatus("✅",
@@ -1438,6 +1455,10 @@
         <div class="t"><div>${esc(it.title)}</div><div class="m">${esc(meta)}</div>${
           it.duplicateOf
             ? `<div class="m" style="color:#e3b766;margin-top:3px">⚠️ this looks like the same teaching as “${esc(it.duplicateOf.title)}” (${it.duplicateOf.share}% alike) — keeping both is fine, but the bot only uses one of them</div>`
+            : ""
+        }${
+          it.learnt === false
+            ? `<div class="m" style="color:#ffcf8a;margin-top:3px">⚠️ uploaded, but NOT in the bot's memory — its study failed. Delete and upload it again.</div>`
             : ""
         }</div>
         <button class="mini" data-a="view">👁️ View</button>

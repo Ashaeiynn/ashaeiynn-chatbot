@@ -234,12 +234,15 @@
        never inside the control, so it cannot clip a rounded edge or fight an
        existing animation. Colour is taken from whatever was tapped, so gold
        buttons bloom gold and the green chips bloom green. */
-    .vcb-tapglow{position:absolute;pointer-events:none;z-index:12;width:36px;height:36px;
-      margin:-18px 0 0 -18px;border-radius:50%;
+    .vcb-tapglow{position:absolute;pointer-events:none;z-index:12;width:40px;height:40px;
+      margin:-20px 0 0 -20px;border-radius:50%;border:2px solid currentColor;
       animation:vcbTapGlow .5s cubic-bezier(.22,.61,.36,1) forwards}
+    /* A ring that spreads from the fingertip and thins as it goes — a ripple,
+       which reads as touch far more clearly than a glow (owner's call). The
+       faint fill inside gives it body without turning it back into a blob. */
     @keyframes vcbTapGlow{
-      0%{transform:scale(.3);opacity:.85}
-      100%{transform:scale(2.9);opacity:0}}
+      0%{transform:scale(.25);opacity:.9;border-width:2.5px}
+      100%{transform:scale(3);opacity:0;border-width:.5px}}
     @media (prefers-reduced-motion:reduce){.vcb-tapglow{animation-duration:.01s}}
     .vcb-openin{display:flex;align-items:center;gap:8px;justify-content:center;
       padding:7px 12px;margin:0 10px 4px;border-radius:9px;
@@ -1006,8 +1009,9 @@
       dot.className = "vcb-tapglow";
       dot.style.left = `${x}px`;
       dot.style.top = `${y}px`;
-      dot.style.background =
-        `radial-gradient(circle, rgba(${r},${g},${b},.55) 0%, rgba(${r},${g},${b},.26) 45%, rgba(${r},${g},${b},0) 70%)`;
+      // the ring takes the colour; a whisper of fill keeps it from looking hollow
+      dot.style.color = `rgba(${r},${g},${b},.75)`;
+      dot.style.background = `radial-gradient(circle, rgba(${r},${g},${b},.18) 0%, rgba(${r},${g},${b},0) 65%)`;
       panel.appendChild(dot);
       dot.addEventListener("animationend", () => dot.remove());
       setTimeout(() => dot.remove(), 900); // belt and braces — never leave one behind

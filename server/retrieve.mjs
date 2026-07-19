@@ -153,6 +153,12 @@ export async function searchMulti(questions, limit = 8) {
 // so the line sits at 0.95.
 const SAME_TEACHING = 0.95;
 
+// Every source the bot can actually search right now — the Library compares
+// against this so a file whose study failed cannot masquerade as learnt.
+export function knownTitles() {
+  return [...new Set(load().map((c) => c.title))];
+}
+
 export function duplicateSources() {
   const all = load();
   const bySource = new Map();
