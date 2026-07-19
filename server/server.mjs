@@ -145,6 +145,15 @@ const UNCLEAR_ONLY =
 const PERSONAL_ASK =
   /मेरी\s*(समस्या|तकलीफ़?|परेशानी|बीमारी|हालत|पत्नी|माँ|बेटी|बेटा)|मेरे\s*(पति|पिता|घर\s*में)|मुझे\s+(?:\S+\s+){0,2}(डर|तनाव|बीमारी|दिक्कत|परेशानी|तकलीफ़?|घबराहट)|बीमार|इलाज|दवा|अस्पताल|डिप्रेशन|अवसाद|घबराहट|काला\s*जादू|तंत्र[\s-]?मंत्र\s*किया|ऊपरी\s*हवा|नज़र\s*लग|टोना|आत्महत्या|जीना\s*नहीं|मेरे\s*साथ\s*(ऐसा|बुरा)|my\s+(problem|health|illness|disease|condition|wife|husband|son|daughter|family|situation)|i\s*am\s*(sick|ill|suffering|depressed|scared|afraid|not\s*well)|black\s*magic|depress|anxiety|suicid|panic\s*attack/i;
 
+// A seeker speaking TO the guide as though it were Bhaiya himself — "भैया आप
+// हमारी तारीफ़ कर रहे हो?". Rare (they know they are talking to his helper), but
+// when it happens the model slips into his first person and answers AS him,
+// which the guide must never do. Adjacency matters: "भैया कहते हैं आप ध्यान
+// करें" is ABOUT him and must not trigger this.
+const ADDRESSED_AS_BHAIYA =
+  // NOTE: no \b — it is ASCII-only in JS and never matches beside Devanagari
+  /(?:भैया|भइया|bhaiya)\s*(?:जी|ji)?[,\s]*(?:आप|तुम|aap|tum)|(?:आप|तुम)\s*(?:भैया|bhaiya)/i;
+
 // "mera credits kb renew hoga", "कितने प्रश्न बचे हैं?" — about the APP, not the
 // teachings. The search has nothing for these, so the server answers them itself.
 const QUOTA_ASK =
@@ -819,6 +828,10 @@ async function handleChat(req, res) {
               : profile?.uid
                 ? `\n[NOT YET A MEMBER: this seeker has not joined Ashaeiynn yet. For personal matters (rule 15) guide them to book a screening at ashaeiynn.com. And when a moment is genuinely right — deep interest, a personal ask, a practice they want to begin — you may warmly mention ONCE in the conversation that their own journey with Ashaeiynn can begin with a screening. Inviting, never pushy, never in every answer.]`
                 : ""
+          }${
+            ADDRESSED_AS_BHAIYA.test(message)
+              ? `\n[THIS SEEKER IS SPEAKING TO YOU AS IF YOU WERE BHAIYA HIMSELF. You are his helper, not him (rule 5). Do NOT slip into his first person — never "मैं तारीफ़ नहीं कर रहा", never "हम कभी नहीं कहते". Answer warmly ABOUT him instead: "भैया तारीफ़ नहीं करते — वे कहते हैं कि…". Do not correct them or make a point of it; simply speak as yourself.]`
+              : ""
           }${
             history.some((m) => m.role === "assistant")
               ? ""
