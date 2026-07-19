@@ -19,6 +19,26 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   naming the साधना, do NOT guess and do NOT blend — reply in one short warm line asking
   which, and put the choices in the सुझाव line so the seeker just taps one. Verified live.
 
+- **⚠️ THE KNOWLEDGE BASE WAS SILENTLY HALF-BUILT — and nothing said so.** Chasing why
+  session8_aghor_panth showed "learnt" in the Library but "failed" in Teach, found the live bot
+  running on 288 chunks / 42 sources when there were 112 transcripts on disk (it had been
+  1146/111). An interrupted study leaves knowledge.db PARTIAL; the bot just answers from less of
+  Bhaiya's teaching and says nothing. My own `systemctl restart` during studies caused it.
+  Rebuilt to 1176 chunks / 112 sources; session8 now answers.
+  THREE GUARDS ADDED:
+  1. STARTUP AUDIT — compares transcripts on disk against what is actually searchable and logs
+     "⚠️ KNOWLEDGE INCOMPLETE — N source(s) on disk but NOT searchable … Run: node
+     pipeline/3-ingest.mjs". Also surfaced in /health as `knowledge:{ok,learnt,onDisk,missing}`
+     so it is visible without SSH. PROVEN by deliberately deleting 6 sources: the alarm fired
+     with the exact names, then the base was restored.
+  2. LIBRARY TRUTH — the Library lists FILES, so a failed study still looked learnt. Each card
+     now checks the bot's real memory and warns "uploaded, but NOT in the bot's memory".
+     Deliberately excluded legal pages are NOT flagged (isExcludedTitle).
+  3. A failed banner can be dismissed (POST /api/admin/jobs/clear) instead of living forever.
+  ⚠️ OPERATIONAL RULE FOR EVERY FUTURE SESSION: never `systemctl restart chatbot` while a study
+  is running. Check first: `ps -eo args | grep "[p]ipeline/3-ingest"` — note the BRACKET, a
+  plain grep matches its own command line and lies (that bug wasted an hour tonight).
+
 - **Tap feedback: buzz on Android, tick on iPhone, and light for everyone.**
   Android gets `navigator.vibrate(18)`. Apple supports NO vibration on the web at all, so
   iPhone gets a short synthesised tone instead (one shared AudioContext for the visit — making
