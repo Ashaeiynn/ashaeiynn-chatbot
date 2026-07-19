@@ -230,6 +230,17 @@
     .vcb-close{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;opacity:.85}
     .vcb-close:hover{opacity:1}
 
+    /* A drop of light where the seeker touched. Floats ABOVE everything and is
+       never inside the control, so it cannot clip a rounded edge or fight an
+       existing animation. Colour is taken from whatever was tapped, so gold
+       buttons bloom gold and the green chips bloom green. */
+    .vcb-tapglow{position:absolute;pointer-events:none;z-index:12;width:36px;height:36px;
+      margin:-18px 0 0 -18px;border-radius:50%;
+      animation:vcbTapGlow .5s cubic-bezier(.22,.61,.36,1) forwards}
+    @keyframes vcbTapGlow{
+      0%{transform:scale(.3);opacity:.85}
+      100%{transform:scale(2.9);opacity:0}}
+    @media (prefers-reduced-motion:reduce){.vcb-tapglow{animation-duration:.01s}}
     .vcb-openin{display:flex;align-items:center;gap:8px;justify-content:center;
       padding:7px 12px;margin:0 10px 4px;border-radius:9px;
       background:rgba(217,169,79,.10);border:1px solid rgba(217,169,79,.30);
@@ -744,7 +755,11 @@
     (e) => {
       const hit = e.target.closest("button, .vcb-chip, .vcb-srcs a");
       if (!hit) return;
-      if (hit.classList.contains("vcb-orbbig") && !listening) return; // opening the mic: silent
+      // The light always blooms — it makes no sound and touches no audio
+      // session, so even the tap that opens the microphone can have it. That
+      // tap had no feedback at all until now.
+      bloom(e, hit);
+      if (hit.classList.contains("vcb-orbbig") && !listening) return; // opening the mic: no sound
       if (hit.classList.contains("vcb-mic") && !listening) return;
       tap();
     },
@@ -967,6 +982,30 @@
 
   // One feel per platform: Android buzzes, iPhone ticks.
   const tap = () => (isApple ? clickSound() : buzz());
+
+  // …and everyone sees it. iPhone gives a web page no vibration, and no sound at
+  // all when the ring switch is off — so touch has to be answered with light
+  // (owner, 2026-07-19).
+  function bloom(e, el) {
+    try {
+      const box = panel.getBoundingClientRect();
+      const x = (e.clientX || box.left + box.width / 2) - box.left;
+      const y = (e.clientY || box.top + box.height / 2) - box.top;
+      const rgb = getComputedStyle(el).color.match(/\d+/g) || [217, 169, 79];
+      const [r, g, b] = rgb;
+      const dot = document.createElement("i");
+      dot.className = "vcb-tapglow";
+      dot.style.left = `${x}px`;
+      dot.style.top = `${y}px`;
+      dot.style.background =
+        `radial-gradient(circle, rgba(${r},${g},${b},.55) 0%, rgba(${r},${g},${b},.26) 45%, rgba(${r},${g},${b},0) 70%)`;
+      panel.appendChild(dot);
+      dot.addEventListener("animationend", () => dot.remove());
+      setTimeout(() => dot.remove(), 900); // belt and braces — never leave one behind
+    } catch {
+      /* decoration only — a tap must never fail because of it */
+    }
+  }
 
   let voicePrimed = false;
   let voiceMissingTold = false; // only mention a missing device voice once per visit
