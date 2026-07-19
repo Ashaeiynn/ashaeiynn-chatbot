@@ -1772,28 +1772,6 @@ const server = createServer(async (req, res) => {
     if (!adminOk()) return;
     return json(res, 200, { cleared: clearFinished() });
   }
-  // The studio Mac pushes its study progress here; the cloud portal displays it.
-  if (url.pathname === "/api/admin/studio-status") {
-    if (!adminOk()) return;
-    if (req.method === "POST") {
-      let body = "";
-      for await (const part of req) {
-        body += part;
-        if (body.length > 2_000_000) return json(res, 413, { error: "Too long." });
-      }
-      try {
-        const p = JSON.parse(body);
-        globalThis.__studioStatus = { jobs: p.jobs || [], totals: p.totals || null, at: Date.now() };
-        return json(res, 200, { ok: true });
-      } catch {
-        return json(res, 400, { error: "Invalid JSON." });
-      }
-    }
-    const s = globalThis.__studioStatus;
-    return json(res, 200, { at: s?.at || null, jobs: s?.jobs || [], totals: s?.totals || null });
-  }
-  // Queue a file that is ALREADY in data/uploads (no re-copying) — used to
-  // resume/curate big archives without pushing gigabytes through the browser.
   if (req.method === "POST" && url.pathname === "/api/admin/study-existing") {
     if (!adminOk()) return;
     let body = "";

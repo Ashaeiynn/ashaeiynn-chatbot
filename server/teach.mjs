@@ -3,7 +3,7 @@
 // the knowledge base is rebuilt once per batch and hot-reloaded into the server.
 // The queue is PERSISTED (data/teach-queue.json): a server restart or Mac reboot
 // resumes unfinished studying instead of silently dropping it.
-import { mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync, existsSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { ROOT } from "./env.mjs";
@@ -31,51 +31,7 @@ let seq = 1;
 let pumping = false;
 
 // Has a recording with this original file name already been studied? (Compares
-// the name minus the per-upload id prefix against existing transcript slugs.)
-function alreadyStudied(filePath) {
-  const base = path.basename(filePath).replace(/^[a-z0-9]+-/, "");
-  const core = base.replace(/\.[^.]+$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
-  return readdirSync(transcriptsDir).some((f) => {
-    if (!f.startsWith("audio_") || !f.endsWith(".json")) return false;
-    return f.slice(6, -5).replace(/^[a-z0-9]{8}-/, "") === core;
-  });
-}
-
 const RUNNERS = {
-  media: async (job) => {
-    if (alreadyStudied(job.spec.path)) {
-      job.detail = "same recording already studied earlier — skipped";
-      return;
-    }
-    // Live progress: we know the recording's length and transcription runs at
-    // roughly 5× realtime on this Mac, so elapsed time gives an honest live %.
-    let estMs = null;
-    try {
-      const out = await captureProcess(`${HOME}/.local/bin/ffprobe`, [
-        "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", job.spec.path,
-      ]);
-      const durSec = parseFloat(out.trim());
-      if (durSec > 0) estMs = (durSec / 5 + 45) * 1000;
-    } catch { /* no estimate — show elapsed time instead */ }
-    const started = Date.now();
-    const tick = setInterval(() => {
-      const el = Date.now() - started;
-      const mins = Math.max(1, Math.round(el / 60000));
-      job.detail = estMs
-        ? `सुन रहे हैं — transcribing… ~${Math.min(95, Math.round((el / estMs) * 100))}% (${mins} min of ~${Math.max(1, Math.round(estMs / 60000))} min)`
-        : `सुन रहे हैं — transcribing… ${mins} min elapsed`;
-    }, 10000);
-    try {
-      await runProcess(
-        process.execPath,
-        [path.join(ROOT, "pipeline", "6-audio.mjs"), job.spec.path, job.title],
-        job,
-        "सुन रहे हैं — transcribing…",
-      );
-    } finally {
-      clearInterval(tick);
-    }
-  },
   document: async (job) => {
     job.detail = "reading the document…";
     saveTextTranscript(job.title, await extractDocText(job.spec.path), "", "doc_");
@@ -91,31 +47,6 @@ const RUNNERS = {
     const t = (job.title || pageTitle || new URL(job.spec.url).hostname).trim();
     job.title = t;
     saveTextTranscript("Article: " + t.replace(/^Article:\s*/i, ""), htmlToText(html), job.spec.url, "web_");
-  },
-  "video-link": async (job) => {
-    const base = path.join(uploadsDir, "link-" + Date.now().toString(36));
-    await runProcess(
-      `${HOME}/.local/bin/yt-dlp`,
-      ["-f", "ba/b", "--socket-timeout", "30", "--retries", "3", "--no-part", "-o", `${base}.%(ext)s`, job.spec.url],
-      job,
-      "downloading from the link…",
-    );
-    const dl = readdirSync(uploadsDir).find((f) => f.startsWith(path.basename(base)));
-    if (!dl) throw new Error("Download produced no file.");
-    let t = (job.title || "").trim();
-    if (!t || t === job.spec.url) {
-      try {
-        t = (await captureProcess(`${HOME}/.local/bin/yt-dlp`, ["--get-title", "--socket-timeout", "20", job.spec.url]))
-          .trim().split("\n")[0];
-      } catch { /* fall back */ }
-    }
-    job.title = t || "New recording";
-    await runProcess(
-      process.execPath,
-      [path.join(ROOT, "pipeline", "6-audio.mjs"), path.join(uploadsDir, dl), job.title],
-      job,
-      "सुन रहे हैं — transcribing (long recordings take a while)…",
-    );
   },
 };
 
@@ -236,24 +167,6 @@ try {
   }
 } catch (err) {
   console.error("teach queue resume failed:", err?.message);
-}
-
-// The studio Mac reports its study progress to the live cloud portal every 30s,
-// so the admin can watch the bot studying from anywhere. (Bonus: the steady
-// heartbeat keeps the free cloud instance awake — no cold starts.)
-const SYNC_URL = (process.env.STUDIO_SYNC_URL || "").replace(/\/+$/, "");
-if (SYNC_URL) {
-  setInterval(async () => {
-    try {
-      await fetch(`${SYNC_URL}/api/admin/studio-status`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-admin-key": process.env.ADMIN_KEY || "" },
-        body: JSON.stringify({ jobs: publicJobs().slice(0, 150), totals: jobTotals() }),
-      });
-    } catch {
-      /* cloud unreachable — try again next tick */
-    }
-  }, 30_000).unref();
 }
 
 // After every successful study batch, send the new knowledge to GitHub — the
