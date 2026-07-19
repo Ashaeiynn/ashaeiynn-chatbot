@@ -567,7 +567,14 @@
       if (filter === "text" && e.via === "voice") return false;
       if (filter === "hi" && !e.hi) return false;
       if (filter === "en" && e.hi) return false;
-      if (q && !(e.q || "").toLowerCase().includes(q) && !(e.answer || "").toLowerCase().includes(q)) return false;
+      // searching a seeker's name should find everything they asked
+      if (
+        q &&
+        !(e.q || "").toLowerCase().includes(q) &&
+        !(e.answer || "").toLowerCase().includes(q) &&
+        !(e.who || "").toLowerCase().includes(q)
+      )
+        return false;
       return true;
     });
 
@@ -583,6 +590,7 @@
         e.testMode ? `<span class="badge">test mode</span>` : "",
         e.error ? `<span class="badge red">⚠ ${e.error}</span>` : "",
         isUnanswered(e) && !e.error ? `<span class="badge red">no source — knowledge gap?</span>` : "",
+        e.who ? `<span class="badge">${esc(e.who)}${e.member ? " ⭐" : ""}</span>` : "",
       ].join("");
       const srcs = (e.top || []).map((t) => `${t.t} (${t.s})`).join(" · ");
       // a corrected question shows YOUR approved answer — that is what the bot

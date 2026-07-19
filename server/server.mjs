@@ -452,11 +452,17 @@ async function handleChat(req, res) {
   // belongs (has their own mentor — never pitch screening/joining); everyone
   // else may be warmly invited toward a screening when the moment is natural.
   let seekerMember = false;
+  let seekerWho = ""; // who asked — shown beside the question in the admin
   const seekerUid = typeof profile?.uid === "string" ? profile.uid.slice(0, 30) : "";
   let seekerCredits = null; // null = anonymous/test caller (never charged)
   try {
     const u = users.touch(seekerUid);
     seekerMember = !!u?.member;
+    // Prefer the registry's name (it survives a rename on their device); fall
+    // back to what the app sent. Recorded per question so the admin can see who
+    // asked what — the log already holds the question and the answer, and it
+    // lives only on the VPS, never in git.
+    seekerWho = String(u?.nick || u?.name || profile?.name || "").trim().slice(0, 60);
     // pay-as-you-use balance (persistent; admin tops it up). Left null while the
     // credit system is paused → the gate, the deduction, and the balance-in-
     // response below all treat this caller as uncharged.
@@ -530,7 +536,7 @@ async function handleChat(req, res) {
       ? `🙏 आज के आपके ${users.DAILY_LIMIT} प्रश्न पूरे हो गए। कल फिर से ${users.DAILY_LIMIT} प्रश्न मिल जाएँगे — तब तक जो सुना है, उस पर थोड़ा ठहरिए। ज़रूरी बात हो तो Ashaeiynn team से संपर्क कीजिए।`
       : `🙏 That's all ${users.DAILY_LIMIT} of today's questions. Your ${users.DAILY_LIMIT} come back tomorrow — until then, sit a little with what you've heard. If something is urgent, do reach out to the Ashaeiynn team.`;
     const contact = linkDirectory().filter((l) => l.title === "Contact Ashaeiynn").map((l) => ({ title: l.title, timestamp: "", url: l.url }));
-    writeLog({ at: new Date().toISOString(), q: message, via: payload.via, noCredits: true });
+    writeLog({ at: new Date().toISOString(), q: message, via: payload.via, ...(seekerWho ? { who: seekerWho } : {}), noCredits: true });
     return json(res, 200, { answer: outMsg, sources: contact, credits: 0, noCredits: true });
   }
 
@@ -696,6 +702,8 @@ async function handleChat(req, res) {
     via: payload.via,
     lang: payload.lang,
     hi: wantsHindi,
+    ...(seekerWho ? { who: seekerWho } : {}),
+    ...(seekerUid ? { uid: seekerUid } : {}),
     ...(seekerMember ? { member: true } : {}),
     // corrected = same-meaning match (the correction IS the answer, adapted);
     // guided = related match (the correction was the highest-authority source)
