@@ -9,7 +9,7 @@ import { matchCorrection, addCorrection, removeCorrection, listCorrections, DIRE
 import { addSuggestion, listSuggestions, getSuggestion, removeSuggestion, pendingCount } from "./suggestions.mjs";
 import { toLatin, normalizeSpelling } from "./translit.mjs";
 import { ROOT } from "./env.mjs";
-import { searchMulti, formatTimestamp, thoughtCandidate, duplicateSources, knownTitles } from "./retrieve.mjs";
+import { searchMulti, formatTimestamp, thoughtCandidate, duplicateSources, knownTitles, isExcludedTitle } from "./retrieve.mjs";
 
 // पंचांग is an enhancement, never a dependency: if the module has any problem,
 // the guide simply answers without calendar awareness.
@@ -1991,7 +1991,8 @@ const server = createServer(async (req, res) => {
     // (session8_aghor_panth, 2026-07-19). Mark what is actually searchable.
     try {
       const learnt = new Set(knownTitles());
-      for (const it of items) it.learnt = learnt.has(it.title);
+      // a page we chose not to search is not a failure — leave it unflagged
+      for (const it of items) it.learnt = learnt.has(it.title) || isExcludedTitle(it.title);
     } catch {
       /* if we cannot tell, say nothing rather than something wrong */
     }

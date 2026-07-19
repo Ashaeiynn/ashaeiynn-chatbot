@@ -155,6 +155,10 @@ const SAME_TEACHING = 0.95;
 
 // Every source the bot can actually search right now — the Library compares
 // against this so a file whose study failed cannot masquerade as learnt.
+// Deliberately excluded from search (legal/admin pages) — not a failure, so the
+// Library must not cry "study failed" over them.
+export const isExcludedTitle = (t) => BOILERPLATE_PAGE.test(String(t || ""));
+
 export function knownTitles() {
   return [...new Set(load().map((c) => c.title))];
 }
