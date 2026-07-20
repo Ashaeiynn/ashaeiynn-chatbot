@@ -2,7 +2,7 @@
 // gave. Edits are stored with an embedding of their question — an incoming
 // question that means the same thing gets the approved answer verbatim, and a
 // merely similar one sees it as the highest-authority excerpt.
-import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, appendFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from "node:fs";
 import path from "node:path";
 import { ROOT } from "./env.mjs";
 import { embedQuery, cosine } from "./embed.mjs";
@@ -60,51 +60,74 @@ function persist() {
   writeFileSync(FILE, JSON.stringify(items.map(({ vecs, ...it }) => it), null, 2));
 }
 
-// LATEST KNOWLEDGE WINS (owner, 2026-07-20). When a file is uploaded or a website
-// article is found that REPUBLISHES the teaching of an older admin correction,
-// the newer source is the authority — the correction is retired so the bot
-// answers from the latest source. Runs after every ingest (see teach.mjs).
-//
-// ⚠️ HARD-LEARNED: this is NOT decided by an LLM. Asking a model "is this
-// correction now superseded?" gave wildly different verdicts on identical input
-// (measured 2026-07-20: 6, 7, and 16 retirements across three runs of the SAME
-// data, the 16 including clearly-wrong deletions like retiring a negativity
-// remedy because a havan file mentions negativity). For PERMANENT, no-undo
-// deletion that is unacceptable. So the rule is deterministic and conservative:
-// retire only when a NEWER source's content is NEAR-IDENTICAL to the correction's
-// own answer — i.e. the same teaching, republished. Merely covering the same
-// TOPIC (0.83–0.89) is never enough; that is exactly the case that must be kept.
+// LATEST KNOWLEDGE WINS — as a REVIEW, never automatically (owner, 2026-07-20).
+// When a file/article is added that REPUBLISHES a correction's teaching, the admin
+// is shown it and can UPDATE the correction's answer to the latest content. It is
+// never auto-applied, because:
+//   • DELETING the correction degrades answers — the correction is the retrieval
+//     GUARANTEE for its question; a newer source matching the correction's ANSWER
+//     does NOT mean the QUESTION will retrieve that source (measured: after retiring
+//     the Gupt Navratri correction its own newer source was not in the top 8).
+//   • An LLM cannot judge "is this superseded?" reliably — the same model on the
+//     same input returned 6, 7, and 16 retirements across three runs, some clearly
+//     wrong. So detection is deterministic (near-identical answer content) and the
+//     human decides the actual update.
 const SUPERSEDE_MIN = Number(process.env.SUPERSEDE_MIN || 0.9);
+const DISMISS_FILE = path.join(STATE_DIR, "supersede-dismissed.json");
+const loadDismissed = () => {
+  try {
+    return new Set(JSON.parse(readFileSync(DISMISS_FILE, "utf8")));
+  } catch {
+    return new Set();
+  }
+};
 
-export async function supersedeByNewer({ bestNewerMatch, apply = true }) {
+// Report-only: which corrections a NEWER source now republishes, for the admin to
+// review. Returns the correction, the newer source's title, and its best excerpt
+// (a starting point for the updated answer). Nothing is changed.
+export async function supersedeReview({ bestNewerMatch }) {
   const all = await load();
-  if (!all.length || typeof bestNewerMatch !== "function") return { checked: all.length, retired: [] };
-  const retired = [];
+  if (!all.length || typeof bestNewerMatch !== "function") return [];
+  const dismissed = loadDismissed();
+  const out = [];
   for (const c of all) {
     const afterMs = new Date(c.at).getTime();
     if (!afterMs) continue;
-    // match on the ANSWER content — the precise "same teaching" signal, not the
-    // question (which only measures topic overlap)
     const av = await embedQuery(String(c.answer || "").slice(0, 1500));
     const m = bestNewerMatch([av], afterMs);
-    if (m && m.score >= SUPERSEDE_MIN) {
-      retired.push({ id: c.id, q: c.q, by: m.title, score: Number(m.score.toFixed(3)), at: new Date().toISOString() });
-    }
+    if (!m || m.score < SUPERSEDE_MIN) continue;
+    if (dismissed.has(`${c.id}::${m.title}`)) continue; // admin already said "keep"
+    out.push({
+      id: c.id,
+      q: c.q,
+      currentAnswer: c.answer,
+      source: m.title,
+      excerpt: String(m.content || "").slice(0, 1200),
+      score: Number(m.score.toFixed(3)),
+    });
   }
-  if (apply && retired.length) {
-    const gone = new Set(retired.map((r) => r.id));
-    items = items.filter((it) => !gone.has(it.id));
-    persist();
-    // a forensic trail — deletion has no UI undo (owner's choice), so keep a
-    // server-side record of exactly what was retired and by which source
-    try {
-      appendFileSync(path.join(STATE_DIR, "corrections-retired.log"), retired.map((r) => JSON.stringify(r)).join("\n") + "\n");
-    } catch {
-      /* best effort */
-    }
-    for (const r of retired) console.log(`supersede: retired correction "${r.q.slice(0, 50)}" — newer source "${String(r.by).slice(0, 40)}" now covers it`);
+  return out;
+}
+
+// The admin chose to KEEP a correction despite a newer source — remember it so
+// that same pairing is not flagged again.
+export function dismissSupersede(correctionId, sourceTitle) {
+  const d = loadDismissed();
+  d.add(`${correctionId}::${sourceTitle}`);
+  try {
+    writeFileSync(DISMISS_FILE, JSON.stringify([...d], null, 2));
+  } catch {
+    /* best effort */
   }
-  return { checked: all.length, retired };
+}
+
+// The admin chose to UPDATE a correction's answer to the newer content. Reuses
+// addCorrection (replaces by question, regenerates alt-wordings) so the question
+// stays the retrieval anchor — only the answer is refreshed to the latest.
+export async function updateCorrectionAnswer(correctionId, newAnswer, alts = []) {
+  const c = (await load()).find((x) => x.id === correctionId);
+  if (!c) throw new Error("That correction no longer exists.");
+  return addCorrection(c.q, newAnswer, alts);
 }
 
 export async function listCorrections() {

@@ -386,6 +386,7 @@
     <button class="chip" data-f="corrected">✏️ Corrected</button>
     <button class="chip" data-f="chat">💬 Conversation</button>
     <button class="chip" data-f="suggestions" id="sugchip">📝 Suggestions</button>
+    <button class="chip" data-f="updates" id="updchip">🔄 Updates</button>
     <input type="date" id="qdate" title="Show one day only"
       style="background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 14px;color:var(--ink);font-size:13px;outline:none;color-scheme:dark">
     <input id="search" placeholder="Search a question, an answer, or a name…">
@@ -408,6 +409,7 @@
   let entries = [], filter = "all", query = "";
   let corrections = [];
   let suggestions = [];
+  let supersede = []; // corrections a newer source may update (review, never auto)
   const corrFor = (q) => corrections.find((c) => c.q.trim() === String(q || "").trim());
   async function loadCorr() {
     try {
@@ -424,6 +426,17 @@
     if (chip) {
       chip.textContent = suggestions.length ? `📝 Suggestions (${suggestions.length})` : "📝 Suggestions";
       chip.classList.toggle("hasnew", suggestions.length > 0);
+    }
+  }
+  async function loadSupersede() {
+    try {
+      const r = await fetch("/api/admin/supersede", { headers: { "x-admin-key": localStorage.getItem("adminKey") || "" } });
+      if (r.ok) supersede = (await r.json()).items || [];
+    } catch { /* best-effort */ }
+    const chip = $("#updchip");
+    if (chip) {
+      chip.textContent = supersede.length ? `🔄 Updates (${supersede.length})` : "🔄 Updates";
+      chip.classList.toggle("hasnew", supersede.length > 0);
     }
   }
 
@@ -449,6 +462,7 @@
     entries = (await r.json()).entries || [];
     await loadCorr();
     await loadSuggestions();
+    await loadSupersede();
     $("#login").style.display = "none";
     render();
     loadJobs(); // pick up any study work still running (shows the ● on the Teach tab)
@@ -522,6 +536,50 @@
         no.addEventListener("click", () => { if (confirm("Reject this suggestion? It will be discarded.")) act("reject"); });
         row.append(ok, no);
         card.append(head, q, keyLbl, qta, botLbl, bot, sugLbl, ta, row);
+        $("#list").appendChild(card);
+      }
+      return;
+    }
+
+    // "Updates" — a newer source now republishes an older correction's teaching.
+    // The admin decides: refresh the correction's answer to the latest, or keep it.
+    // Never automatic (deleting a correction was proven to make answers worse).
+    if (filter === "updates") {
+      $("#list").innerHTML = supersede.length ? "" : `<div class="empty">No knowledge updates right now. When a file or article you upload republishes the teaching of a correction you made, it appears here so you can refresh that answer to the latest.</div>`;
+      for (const s of supersede) {
+        const card = document.createElement("div");
+        card.className = "qa";
+        const head = document.createElement("div");
+        head.className = "meta";
+        head.innerHTML = `<span class="badge goldb">🔄 newer source found</span><span class="badge">${s.score} match</span>`;
+        const q = document.createElement("div"); q.className = "q"; q.textContent = s.q;
+        const curLbl = document.createElement("div"); curLbl.style.cssText = "font-size:11.5px;color:var(--dim);margin:8px 0 3px"; curLbl.textContent = "The correction's current answer:";
+        const cur = document.createElement("div"); cur.className = "a"; cur.textContent = s.currentAnswer || "";
+        cur.addEventListener("click", () => cur.classList.toggle("open"));
+        const newLbl = document.createElement("div"); newLbl.style.cssText = "font-size:11.5px;color:var(--gold2);margin:10px 0 3px"; newLbl.textContent = `Newer source “${s.source}” — edit this into the updated answer, then Update:`;
+        const ta = document.createElement("textarea");
+        ta.style.cssText = "width:100%;box-sizing:border-box;min-height:130px;background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-family:inherit;font-size:14px;padding:10px;outline:none";
+        ta.value = s.excerpt || "";
+        const row = document.createElement("div");
+        row.style.cssText = "margin-top:9px;display:flex;gap:8px;flex-wrap:wrap";
+        const ok = document.createElement("button"); ok.className = "gold-btn"; ok.textContent = "✅ Update the answer to this";
+        const keep = document.createElement("button"); keep.className = "mini"; keep.textContent = "Keep current — don't ask again";
+        const act = async (action) => {
+          ok.disabled = keep.disabled = true;
+          const r = await fetch("/api/admin/supersede", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-admin-key": key() },
+            body: JSON.stringify({ id: s.id, action, answer: ta.value, source: s.source }),
+          }).catch(() => null);
+          if (!r || !r.ok) { ok.disabled = keep.disabled = false; alert((r && (await r.json()).error) || "Could not save — try again."); return; }
+          await loadSupersede();
+          await loadCorr();
+          render();
+        };
+        ok.addEventListener("click", () => act("update"));
+        keep.addEventListener("click", () => act("dismiss"));
+        row.append(ok, keep);
+        card.append(head, q, curLbl, cur, newLbl, ta, row);
         $("#list").appendChild(card);
       }
       return;

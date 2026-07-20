@@ -5,7 +5,8 @@ import { readFileSync, writeFileSync, existsSync, appendFileSync, createWriteStr
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { teachFile, teachLink, teachText, forget, publicJobs, jobTotals, clearFinished, uploadsDir } from "./teach.mjs";
-import { matchCorrection, addCorrection, removeCorrection, listCorrections, DIRECT_MATCH } from "./corrections.mjs";
+import { matchCorrection, addCorrection, removeCorrection, listCorrections, DIRECT_MATCH, supersedeReview, dismissSupersede, updateCorrectionAnswer } from "./corrections.mjs";
+import { bestNewerMatch } from "./retrieve.mjs";
 import { addSuggestion, listSuggestions, getSuggestion, removeSuggestion, pendingCount } from "./suggestions.mjs";
 import { toLatin, normalizeSpelling } from "./translit.mjs";
 import { ROOT } from "./env.mjs";
@@ -1947,6 +1948,39 @@ const server = createServer(async (req, res) => {
   if (req.method === "DELETE" && url.pathname === "/api/admin/correction") {
     if (!adminOk()) return;
     return json(res, 200, { removed: await removeCorrection(url.searchParams.get("id")) });
+  }
+
+  // ——— "latest knowledge wins" review: newer sources that may update a correction ———
+  if (req.method === "GET" && url.pathname === "/api/admin/supersede") {
+    if (!adminOk()) return;
+    try {
+      return json(res, 200, { items: await supersedeReview({ bestNewerMatch }) });
+    } catch (err) {
+      return json(res, 200, { items: [], error: String(err?.message || err).slice(0, 120) });
+    }
+  }
+  if (req.method === "POST" && url.pathname === "/api/admin/supersede") {
+    if (!adminOk()) return;
+    let body = "";
+    for await (const part of req) {
+      body += part;
+      if (body.length > 100_000) return json(res, 413, { error: "Too long." });
+    }
+    try {
+      const p = JSON.parse(body);
+      if (p.action === "dismiss") {
+        dismissSupersede(String(p.id || ""), String(p.source || ""));
+        return json(res, 200, { dismissed: true });
+      }
+      // "update" — refresh the correction's answer to the newer content (edited by
+      // the admin). The correction stays as the retrieval anchor for its question.
+      const text = String(p.answer || "").trim();
+      if (!text) return json(res, 400, { error: "The updated answer is empty." });
+      const item = await updateCorrectionAnswer(String(p.id || ""), text);
+      return json(res, 200, { updated: true, item });
+    } catch (err) {
+      return json(res, 400, { error: String(err?.message || err).slice(0, 200) });
+    }
   }
 
   // ——— seeker-suggested corrections: the admin's approval gate ———
