@@ -2,12 +2,13 @@
 // Loads all chunk vectors into memory once, then ranks by cosine similarity to the
 // query embedding. Handles Hindi and English questions against Hindi content.
 import { DatabaseSync } from "node:sqlite";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { ROOT } from "./env.mjs";
 import { embedQuery, cosine } from "./embed.mjs";
 
 const dbFile = path.join(ROOT, "data", "knowledge.db");
+const transcriptsDir = path.join(ROOT, "data", "transcripts");
 
 let chunks = null; // in-memory: [{ id, title, content, start_seconds, url, vec }]
 
@@ -82,14 +83,46 @@ function load() {
     console.log(
       `retrieval: ${rows.length} usable chunks (skipped ${dropped - legal - chatter} garbled, ${legal} legal/admin pages, ${chatter} meeting-chat logs)`,
     );
+  // When each SOURCE was added — the transcript file's mtime, keyed by title.
+  // Used to decide "newer than a correction" for the supersede check.
+  const dates = new Map();
+  try {
+    for (const f of readdirSync(transcriptsDir)) {
+      if (!f.endsWith(".json") || f.endsWith(".raw.json")) continue;
+      try {
+        const t = JSON.parse(readFileSync(path.join(transcriptsDir, f), "utf8")).title;
+        if (t) dates.set(t, Math.max(dates.get(t) || 0, statSync(path.join(transcriptsDir, f)).mtimeMs));
+      } catch {
+        /* skip unreadable */
+      }
+    }
+  } catch {
+    /* no transcripts dir — dates stay empty, supersede check just no-ops */
+  }
   chunks = rows.map((r) => ({
     title: r.title,
     content: r.content,
     start_seconds: r.start_seconds,
     url: r.url,
+    sourceAt: dates.get(r.title) || 0,
     vec: new Float32Array(r.embedding.buffer, r.embedding.byteOffset, r.embedding.byteLength / 4),
   }));
   return chunks;
+}
+
+// The strongest content match from sources added AFTER `afterMs`, for any of the
+// given vectors. Returns { score, title, content } or null. This is the CHEAP
+// screen for the supersede check — an LLM confirms the real coverage after.
+export function bestNewerMatch(vecs, afterMs) {
+  let best = null;
+  for (const c of load()) {
+    if (c.sourceAt <= afterMs) continue;
+    for (const v of vecs) {
+      const s = cosine(v, c.vec);
+      if (!best || s > best.score) best = { score: s, title: c.title, content: c.content };
+    }
+  }
+  return best;
 }
 
 // Re-read knowledge.db after the admin portal teaches the bot something new,
