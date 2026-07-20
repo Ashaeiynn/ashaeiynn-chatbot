@@ -1026,24 +1026,24 @@ async function handleChat(req, res) {
       });
     }
 
-    // Top sources so the widget can link to the exact video moments.
-    // Owner's rule: ONLY our public channels (YouTube + ashaeiynn.com) are
-    // ever shown to seekers — studio material (Vimeo/Zoom/audio) appears
-    // nowhere on screen; the admin log still keeps the full picture.
-    const seen = new Set();
+    // Owner's rule (2026-07-20): do NOT list the sources an answer was drawn
+    // from. Show AT MOST ONE thing — a Pathshala ARTICLE genuinely worth reading
+    // on the question, which opens on the website when tapped — and nothing
+    // otherwise. So this is not a citation list; it is a single "read more"
+    // suggestion, offered only when a real article clearly matches.
+    // Only "Article:" titles (individual ashaeiynn.com pages) qualify — not the
+    // "Website: …" landing pages, not the About doc, not video moments. chunks
+    // are already ranked, so the first qualifying one is the best match; the
+    // floor keeps a barely-related article from being pushed onto every answer.
+    const ARTICLE_MIN = Number(process.env.ARTICLE_SUGGEST_MIN || 0.84);
     const sources = [];
     for (const c of chunks) {
-      if (c.title.startsWith("Bhaiya's approved answer")) continue; // internal, not a linkable source
+      if (!/^\s*Article:/i.test(c.title)) continue; // a real Pathshala article, not a page or the About doc
       if (!publicUrl(c.url)) continue;
-      const key = `${c.title}@${c.start_seconds}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      sources.push({
-        title: c.title,
-        timestamp: formatTimestamp(c.start_seconds),
-        url: `${c.url}#t=${Math.floor(c.start_seconds)}s`,
-      });
-      if (sources.length >= 3) break;
+      if (typeof c.score === "number" && c.score < ARTICLE_MIN) break; // ranked list — nothing below here qualifies
+      if (seenTitles.has(c.title.toLowerCase())) continue; // don't re-suggest one they've already read
+      sources.push({ title: c.title, timestamp: "", url: c.url }); // the article page itself, no video timestamp
+      break;
     }
 
     // Asked for a link? Add the matching channels/pages from the address book.
