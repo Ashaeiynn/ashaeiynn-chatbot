@@ -101,6 +101,7 @@ export async function supersedeByNewer({ complete, bestNewerMatch, apply = true 
       messages: [{ role: "user", content: JSON.stringify(payload) }],
       maxTokens: 400,
       retry: false,
+      strong: true, // permanent deletion — use the capable model, not the fast lite one
     });
     const mm = raw.match(/\[[\s\S]*\]/);
     if (mm) retireIds = JSON.parse(mm[0]).map(String);

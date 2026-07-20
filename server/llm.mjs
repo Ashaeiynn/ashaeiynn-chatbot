@@ -53,7 +53,18 @@ async function completeAnthropic({ system, messages, maxTokens, cacheSystem }) {
   }
 }
 
-export async function complete({ system, messages, maxTokens = 1024, cacheSystem = false, light = false, retry = true }) {
+export async function complete({ system, messages, maxTokens = 1024, cacheSystem = false, light = false, retry = true, strong = false }) {
+  // A few rare, high-stakes judgments (e.g. deciding to RETIRE an admin
+  // correction) need a more capable model than the fast lite tier — route them
+  // straight to the Anthropic model when it is configured. Cheap: these fire at
+  // most once per upload, never on a seeker's question.
+  if (strong && ANTHROPIC_KEY) {
+    try {
+      return await completeAnthropic({ system, messages, maxTokens, cacheSystem });
+    } catch {
+      /* backup unavailable — fall through to the normal path */
+    }
+  }
   if (PROVIDER === "gemini") {
     try {
       return await completeGemini({ system, messages, maxTokens, light, retry });
