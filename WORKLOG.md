@@ -13,6 +13,17 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
+- **The seeker's name is now an occasional touch, not every reply (owner: felt robotic).**
+  The per-question context block used to instruct "address them ONCE using their name" whenever the
+  name/भाई/बहन hadn't appeared in the last 2 turns — so the name showed up almost every answer. New
+  rhythm (server.mjs): `useName = !nameUsedRecently && (firstReply || Math.random()<0.3)` — the name
+  is a rare personal touch (first reply, then ~1 in a few), and the OTHER replies must still carry
+  warmth via family address (भाई male / बहन female / जी unclear), never going cold and never as the
+  opener. Gender is judged from the name (never call a बहन भाई). Reinforced the same in prompt.mjs
+  rule 2. Removed the old `addressedRecently`. Verified live: male "Rohan" → name 1/6, भाई the other
+  5/6; female "Priya" → बहन every reply, never भाई. (Earlier the naive "use the name less" had made it
+  drop all warmth — the fallback now explicitly insists on भाई/बहन.)
+
 - **Guide stays BIG while its answer shows.** Owner: with the answer coming, the guide shrank
   (has-ans → 126px). Since the conversation is saved in the Chats tab, the stage needn't shrink the
   guide to hold a transcript. Raised the `data-has-ans` figure 126→196px (still a light trim from the
