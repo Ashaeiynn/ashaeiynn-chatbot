@@ -11,6 +11,29 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ---
 
+## 2026-07-20 (MacBook Pro session, with the owner)
+
+- **Removed the dead media/video-link code** (owner: "if these are not required, remove these").
+  Since audio/video teaching was withdrawn 2026-07-18, three things were unreachable: the `media`
+  and `"video-link"` job RUNNERS in teach.mjs (the latter called yt-dlp, absent on the VPS), the
+  `/api/admin/studio-status` endpoint + its 30s heartbeat (STUDIO_SYNC_URL is set on no machine),
+  and the `alreadyStudied` helper. All gone; the four live handlers (document/note/forget/article)
+  and the media/video-link REFUSAL messages stay. Verified: .txt upload still 200, studio-status
+  now 404, restart clean. pipeline/6-audio.mjs kept for command-line use.
+
+- **Sources no longer listed under answers — at most ONE relevant article instead** (owner:
+  "No need to show the sources to the users. Only if an article is to be suggested based on the
+  question, suggest the article which opens on the website, or else don't show sources").
+  server.mjs: replaced the up-to-3 public-source list with a single suggestion — the highest-ranked
+  `Article:` chunk (an individual ashaeiynn.com Pathshala page, NOT a "Website:" landing page or the
+  About doc), above `ARTICLE_SUGGEST_MIN` (0.84, env-overridable), and not one the seeker has already
+  read. Its URL is the article page itself (no `#t=` video fragment). Nothing shown if no article
+  clears the bar. PRESERVED: explicit link requests still return the asked link; personal handoffs
+  still return Book-a-screening/Contact (those are the human door, not citations). Verified live:
+  on-topic → 1 clean article URL; off-topic → 0; link request → channel link; handoff → screening.
+  The video "आगे देखिए" watch-next is now permanently dormant (0 youtube/vimeo urls in the library),
+  so only articles can surface — matches the intent exactly.
+
 ## 2026-07-18 (MacBook Pro session, with the owner)
 
 - **Ambiguous साधना questions now ask WHICH one** (owner: "in ashaeiynn we do many
