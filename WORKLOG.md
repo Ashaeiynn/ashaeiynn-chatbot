@@ -13,6 +13,21 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-20 (MacBook Pro session, with the owner)
 
+- **Complete knowledge-base audit** (owner asked to confirm all files + corrections are in).
+  RESULT: fully prepared. Every uploaded file produces searchable chunks (0 missing), /health
+  self-check green, all 33 approved corrections verified firing (tested a spread live). Note:
+  many corrections are sadhana/havan RULES — they correctly fire for MEMBERS and are withheld
+  from non-members by the members-only gate (a non-member test looked like "no match" until
+  re-run as a member, where all fired CORRECTED). 0 pending suggestions.
+  FOUND & FIXED: two exact-content duplicate uploads — session10_hawan_parikrama (same title,
+  uploaded twice → chunks doubled to 98) and "Kul Devta" ≡ "Kul Part 2 Mool tattva" (identical
+  content, two names). Both confirmed byte-identical, redundant copies removed, rebuilt:
+  1536→1473 chunks, 122→121 sources, session10 back to 49 chunks. Committed on VPS.
+  NOTED (not changed): 11 of 33 corrections have 0 generated alt-wordings (older ones) — they
+  still fire on their own question but are less robust across script/language than the 22 with
+  4 alts; re-approving them through the Suggestions flow would regenerate the alts if wanted.
+  Left the two "chat" meeting-log duplicates alone (already excluded from search, harmless).
+
 - **Voice: long pause after every sentence** (owner: should be a very short pause, just a
   new-sentence feel). Cause: browserSpeak spoke EACH sentence as its own SpeechSynthesisUtterance
   with a 150ms breath — and a separate utterance also carries the device speech-engine's restart
