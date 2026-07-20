@@ -13,6 +13,16 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-20 (MacBook Pro session, with the owner)
 
+- **Daily allowance changed 50 → 25** (owner). The model was already exactly what was asked —
+  the daily part resets each morning to the limit (whatever was left does NOT carry), and an
+  admin-granted bonus sits on top and carries forward until used. So the only real change was
+  the number: `DAILY_LIMIT` 50→25 in users.mjs (+ the hardcoded fallbacks for consistency).
+  Also made the credits answer HONEST about the split — with a bonus present it was saying
+  "nothing carries over," which is false for the bonus. New `balance(id)` returns
+  {dailyLeft, bonus, left, limit}; the quota answer now says e.g. "43 right now — 24 of today's
+  and 19 extra from the team; the daily 25 refill at midnight, your 19 extra stay until used."
+  A fresh user with no bonus gets the plain "25 a day, resets each night." Both verified live.
+
 - **Chats tab — the seeker's own 24h conversation, on their phone, with a new bottom menu**
   (owner: "Save the chats of each user for 24 hours which will show to the user as Chats… a menu
   option at the bottom… be creative"). KEY FINDING before building: two of the three things the
