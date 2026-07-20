@@ -782,7 +782,7 @@
     loadUsers();
   }
   async function addCredits(u) {
-    const raw = prompt(`Grant extra questions to ${u.name} (they have ${(u.credits || 0).toLocaleString("en-IN")} left right now).\n\nEveryone gets ${u.dailyLimit || 50} questions a day automatically, and that comes back in full every morning — you do not need to top anyone up for normal use.\n\nExtra questions granted here sit ON TOP of the daily allowance and are only used once the day's ${u.dailyLimit || 50} are gone. They carry over day to day.\n\nHow many extra questions?`, "25");
+    const raw = prompt(`Grant extra questions to ${u.name} (they have ${(u.credits || 0).toLocaleString("en-IN")} left right now).\n\nEveryone gets ${u.dailyLimit || 25} questions a day automatically, and that comes back in full every morning — you do not need to top anyone up for normal use.\n\nExtra questions granted here sit ON TOP of the daily allowance and are only used once the day's ${u.dailyLimit || 25} are gone. They carry over day to day.\n\nHow many extra questions?`, "25");
     if (raw === null) return;
     const amount = Math.floor(Number(raw));
     if (!amount || amount <= 0) { alert("Please enter a positive whole number."); return; }

@@ -16,7 +16,7 @@ const ACTIVE_DAYS = 15;
 // so there is no scheduled job to run or to fail silently.
 // The admin's Users tab can still grant EXTRA questions to one seeker; that
 // bonus sits on top and is only touched once the day's allowance is spent.
-export const DAILY_LIMIT = Number(process.env.DAILY_QUESTIONS || 50);
+export const DAILY_LIMIT = Number(process.env.DAILY_QUESTIONS || 25);
 export const WELCOME_CREDITS = DAILY_LIMIT; // kept for older callers
 const istDay = () => new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(0, 10);
 

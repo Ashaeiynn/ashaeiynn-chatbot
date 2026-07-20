@@ -38,7 +38,7 @@ let users = {
   },
   touch: () => {},
   byId: () => null,
-  DAILY_LIMIT: 50,
+  DAILY_LIMIT: 25,
   credits: () => 0,
   addCredits: () => null,
   spendCredit: () => null,
@@ -559,7 +559,7 @@ async function handleChat(req, res) {
   // and answered about something else entirely (owner, 2026-07-19). The server
   // knows the real numbers, so it answers directly rather than searching.
   if (CREDITS_ON && QUOTA_ASK.test(message)) {
-    const limit = users.DAILY_LIMIT ?? 50;
+    const limit = users.DAILY_LIMIT ?? 25;
     const left = seekerCredits;
     // the allowance turns over at midnight India time
     const nowIst = new Date(Date.now() + 5.5 * 3600e3);
