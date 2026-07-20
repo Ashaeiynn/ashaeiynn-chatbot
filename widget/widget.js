@@ -711,13 +711,18 @@
     /* ——— the guide: a meditating figure replacing the mic orb, animated by
        the voice state (idle=rest · listening · thinking=reflect · speaking) ——— */
     .vcb-orbbig{background:transparent!important;box-shadow:none!important;
-      width:150px;height:146px;border-radius:0;overflow:visible}
+      width:214px;height:208px;border-radius:0;overflow:visible;perspective:660px;
+      -webkit-tap-highlight-color:transparent;outline:none;-webkit-user-select:none;user-select:none}
+    .vcb-orbbig:focus,.vcb-orbbig:focus-visible{outline:none}
     .vcb-orbbig::after{display:none!important}
     .vcb-panel[data-vstate="listening"] .vcb-orbbig,
     .vcb-panel[data-vstate="thinking"] .vcb-orbbig,
     .vcb-panel[data-vstate="speaking"] .vcb-orbbig{animation:none!important;box-shadow:none!important}
-    .vcb-panel[data-has-ans] .vcb-orbbig{width:92px!important;height:90px!important;margin:2px 0!important}
+    .vcb-panel[data-has-ans] .vcb-orbbig{width:126px!important;height:122px!important;margin:2px 0!important}
     .mg-svg{width:100%;height:100%;display:block;overflow:visible;pointer-events:none}
+    /* the 3D tilt lives on an HTML wrapper — SVG elements ignore CSS 3D transforms */
+    .mg-3d{display:block;width:100%;height:100%;transform-style:preserve-3d;will-change:transform;
+      transform:rotateX(var(--mgtx,0deg)) rotateY(var(--mgty,0deg));transition:transform .28s ease}
     .mg-a{transform-box:fill-box;transform-origin:center}
     .mg-vb{transform-box:view-box}
     .mg-aura{opacity:.16;transition:opacity .6s ease}
@@ -835,6 +840,7 @@
     <div class="vcb-stage">
       <div class="vcb-cap"></div>
       <button class="vcb-orbbig" type="button" aria-label="Ask by voice">
+        <span class="mg-3d">
         <svg class="mg-svg" viewBox="0 0 260 250" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <defs>
             <radialGradient id="e-aura" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#d9a94f" stop-opacity=".5"/><stop offset="100%" stop-color="#d9a94f" stop-opacity="0"/></radialGradient>
@@ -878,6 +884,7 @@
           <circle class="mg-a mg-spark" cx="156" cy="186" r="1.6" fill="#f3d795" style="animation-delay:.6s"/>
           <circle class="mg-a mg-spark" cx="130" cy="190" r="1.5" fill="#e8c877" style="animation-delay:1.7s"/>
         </svg>
+        </span>
       </button>
       <div class="vcb-spacer"></div>
       <div class="vcb-status"></div>
@@ -2064,6 +2071,29 @@
         setVState("idle");
       } else if (s !== "thinking") startListening("stage");
     });
+
+    // A living, 3D feel: the guide leans in space toward your finger/cursor and
+    // eases back when you let go. Pure CSS-3D on the figure — no library, and the
+    // tap-to-speak click is untouched (this only sets a tilt as the pointer moves).
+    {
+      const MAX = 15;
+      const lean = (e) => {
+        const r = orb.getBoundingClientRect();
+        if (!r.width) return;
+        const px = (e.clientX - r.left) / r.width - 0.5;
+        const py = (e.clientY - r.top) / r.height - 0.5;
+        orb.style.setProperty("--mgty", (px * MAX).toFixed(1) + "deg");
+        orb.style.setProperty("--mgtx", (-py * MAX).toFixed(1) + "deg");
+      };
+      const level = () => {
+        orb.style.setProperty("--mgty", "0deg");
+        orb.style.setProperty("--mgtx", "0deg");
+      };
+      orb.addEventListener("pointermove", lean);
+      orb.addEventListener("pointerleave", level);
+      orb.addEventListener("pointercancel", level);
+      orb.addEventListener("pointerup", level);
+    }
 
     // language switch: Hindi ↔ English recognition
     langBtn.addEventListener("click", () => {

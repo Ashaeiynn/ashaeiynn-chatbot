@@ -13,6 +13,20 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
+- **Guide character: bigger, no tap-box, interactive 3D tilt.** Three owner fixes to the new figure
+  (`widget/widget.js`): (1) enlarged the `.vcb-orbbig` figure 150→214px (has-ans shrink 92→126px).
+  (2) The "blue box" on tap was the button's mobile tap-highlight (now a square because the orb is a
+  non-rounded box) — killed with `-webkit-tap-highlight-color:transparent` + `outline:none` +
+  `user-select:none`. (3) Interactive 3D: the figure now leans in 3D toward the pointer/finger and
+  eases back (pointermove→CSS var `--mgtx/--mgty`→`rotateX/rotateY`, `perspective:660px` on the orb,
+  reset on pointerleave/up). GOTCHA: CSS 3D transforms are IGNORED on `<svg>` elements (even 2D) — had
+  to wrap the SVG in an HTML `<span class="mg-3d">` and tilt that. Also: `getComputedStyle().transform`
+  reads the PRE-transition value right after a change (looks like identity); force reflow + kill the
+  transition, or wait > the transition, to verify — cost 20 min chasing a non-bug. Verified: 214px,
+  tap-highlight transparent, tilt returns matrix3d. NOTE for later: this is an interactive tilt (feels
+  3D), NOT a volumetric 3D model — a true rotatable 3D model needs a .glb asset + a WebGL lib
+  (model-viewer/three.js), a separate project if the owner wants photoreal 3D.
+
 - **The voice orb is now a meditating guide character (replaces the mic icon).**
   Owner picked, from 3 animated concepts, the symbolic meditating figure with an opening third eye
   (generic, NOT a likeness of Bhaiya — per the persona rule). Built as hand-drawn SVG + CSS in
