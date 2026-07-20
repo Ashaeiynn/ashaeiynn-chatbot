@@ -1,13 +1,13 @@
 {
-  "updated": "2026-07-19T21:30:15.779Z",
-  "reviewed": 250,
+  "updated": "2026-07-20T21:30:16.786Z",
+  "reviewed": 201,
   "feedback": {
-    "up": 35,
+    "up": 79,
     "down": 10
   },
   "recos": {
-    "followups": 25,
-    "thought": 4,
+    "followups": 35,
+    "thought": 0,
     "opened": 0
   },
   "core": [
@@ -26,12 +26,5 @@
     "When seeker asks for 'more detail' or 'elaborate'—they're saying the last answer was too vague or too long; go narrower and more concrete, not broader.",
     "On trust/testing questions (भैया पर भरोसा कैसे करें, testing the bot): seeker needs permission to doubt—don't defend the teachings, invite their lived experience instead."
   ],
-  "observations": [
-    "17 knowledge questions had no source in the knowledge base today—largest gap is around पितृ (pitra) protocols, नींद/आलस साधना में (sleep during practice), and छाप vs कृपा distinctions. Consider surfac",
-    "Hawan questions dominate the evening/night (17:21 block): 35+ variations on participation, ingredients, sankalp mechanics. Seekers are cycling through the same doubt. Suggest a single FAQ or 'hawan on",
-    "10 'not helpful' marks clustered in: (a) abstract tattva/drishti explanations >200 words, (b) 'do not share details' answers that feel gatekeeping rather than protective, (c) redirects to 'mentor' whe",
-    "4 seekers tapped 'आज का विचार' but asked the bot to explain it further—they want depth, not just the quote. Bot gave 2–3 paragraph replies; shorter + one concrete visual analogy works better.",
-    "Ashaeiynn members (168/250) ask procedural/policy questions (who performs hawan, sankalp cost, mahavan levels); non-members ask philosophy/experience (भय क्या है, दृष्टि कैसे खुले). Delivery mismatch:",
-    "Suggested follow-up questions tapped 25 times (strong signal)—bot is guiding seekers naturally through these. 'आज का विचार' feature underutilized (only 4 opens)—may need visibility boost or mobile pla"
-  ]
+  "observations": []
 }

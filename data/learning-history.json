@@ -75,5 +75,33 @@
    "Ashaeiynn members (168/250) ask procedural/policy questions (who performs hawan, sankalp cost, mahavan levels); non-members ask philosophy/experience (भय क्या है, दृष्टि कैसे खुले). Delivery mismatch:",
    "Suggested follow-up questions tapped 25 times (strong signal)—bot is guiding seekers naturally through these. 'आज का विचार' feature underutilized (only 4 opens)—may need visibility boost or mobile pla"
   ]
+ },
+ {
+  "date": "2026-07-21",
+  "reviewed": 201,
+  "up": 79,
+  "down": 10,
+  "recos": {
+   "followups": 35,
+   "thought": 0,
+   "opened": 0
+  },
+  "core": [
+   "Answer the question in the first sentence; cut spiritual filler and preamble.",
+   "Mirror the seeker's language register (Hindi/English, formal/casual, technical/plain) without switching mid-reply.",
+   "When a seeker asks the same question again, it means the first answer didn't land—vary the explanation and angle, not the words.",
+   "Acknowledge emotional content before answering (fear, doubt, confusion, frustration); a one-line validation is enough.",
+   "Keep sentences short and conversational; break dense ideas into steps or analogies a beginner can follow.",
+   "End with a door to continue, not cheerleading; 'What else is on your mind?' works better than 'Keep going, you've got this!'"
+  ],
+  "notes": [
+   "Avoid repetitive openers like 'देखो भाई' or formal names at the start—vary greetings based on tone and context.",
+   "When a seeker says 'I don't practice sadhana,' do not assume or reintroduce sadhana into the next answer; answer their actual question without steering.",
+   "Long answers (3+ paragraphs) on abstract topics (दृष्टि, तत्व, संकल्प) are being marked not helpful—chunk into short bullet-style replies or ask a clarifying question first.",
+   "Hawan-related questions often re-ask the same detail (who can perform, what ingredients, how to connect): confirm you heard them right before answering to avoid repeating an old phrase.",
+   "When seeker asks for 'more detail' or 'elaborate'—they're saying the last answer was too vague or too long; go narrower and more concrete, not broader.",
+   "On trust/testing questions (भैया पर भरोसा कैसे करें, testing the bot): seeker needs permission to doubt—don't defend the teachings, invite their lived experience instead."
+  ],
+  "observations": []
  }
 ]
