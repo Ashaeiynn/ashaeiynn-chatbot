@@ -7,7 +7,9 @@ import { mkdirSync, readFileSync, writeFileSync, rmSync, existsSync } from "node
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { ROOT } from "./env.mjs";
-import { reload } from "./retrieve.mjs";
+import { reload, bestNewerMatch } from "./retrieve.mjs";
+import { complete } from "./llm.mjs";
+import { supersedeByNewer } from "./corrections.mjs";
 
 const HOME = process.env.HOME;
 // ffmpeg lives in ~/.local/bin, mlx_whisper in the Python user bin — neither is
@@ -137,6 +139,16 @@ async function pump() {
           j.detail = "";
         });
         console.log(`teach: knowledge refreshed (+${batch.length} source${batch.length > 1 ? "s" : ""})`);
+        // LATEST KNOWLEDGE WINS: retire any older correction the freshly-taught
+        // material now genuinely answers (owner, 2026-07-20). LLM-confirmed, so a
+        // merely-related upload can't wipe a careful correction. Best-effort —
+        // never let it break the teach flow.
+        try {
+          const r = await supersedeByNewer({ complete, bestNewerMatch, apply: true });
+          if (r.retired.length) console.log(`teach: ${r.retired.length} correction(s) superseded by the new material`);
+        } catch (e) {
+          console.error("supersede check skipped:", e?.message);
+        }
         await autoPushKnowledge(batch.length);
       } catch (err) {
         batch.forEach((j) => {
