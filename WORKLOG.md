@@ -13,6 +13,25 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
+- **Approved answer asked-in-Hindi came back in English — figure guard was reverting the translation.**
+  Owner sent a screenshot: "Gupt navaratri ke sadhana ka niyam batao" (Hinglish) → the admin-approved
+  answer delivered in full ENGLISH. Root cause in `server/server.mjs` figure-fidelity guard: it compares
+  the digit-SET of the generated answer against the approved answer. The approved text has "7:00 PM /
+  11:00 PM"; a faithful Hindi translation naturally writes "7 बजे / 11 बजे" and DROPS the ":00" minutes.
+  The guard saw the "00" tokens vanish, declared a figure drift, and — since a wrong figure is a serious
+  error — threw the Hindi away and shipped Bhaiya's verbatim ENGLISH approved text as the safe fallback.
+  Fix: `digitsOf()` now normalises a whole-hour "H:00" → "H" and drops bare-zero tokens BEFORE comparing,
+  so want becomes {7,11} instead of {00,7,11}. A faithful Hindi rendering ({7,11}) now passes and is kept;
+  a genuine 7→8 change still drifts and is still caught (verified deterministically both ways). Runs only
+  on DIRECT correction matches (the block was already gated on `approved.score >= DIRECT_MATCH`).
+- **Studio-source hardening.** The same screenshot showed a stale phone app suggesting
+  "session11_malin_samay_complete (0:00)" (a studio session). Diagnosed as a phone home-screen app that
+  had not reloaded since the widget's "आगे देखिए" rename — the CURRENT code already blocks it (video 79
+  has an empty url; `publicUrl` passes only YouTube/ashaeiynn.com). Belt-and-braces: removed the
+  contradictory `|vimeo` from the `suggest` allow-list regex so a studio recording can never surface as a
+  "watch next", even if `publicUrl` is ever loosened. Owner should fully close & reopen the phone app to
+  pick up the latest widget (SW caches nothing, so a reopen is enough).
+
 - **Full-UI language toggle — the language button now switches the WHOLE widget, not just some labels.**
   Owner: "changing the language from hindi to english should change entire UI to english, thats not
   happening currently." Root causes and fixes, all in `widget/widget.js`:
