@@ -980,8 +980,20 @@ async function handleChat(req, res) {
     // Accuracy of a rule outranks per-seeker phrasing.
     if (approved && approved.score >= DIRECT_MATCH) {
       const bare = (t) => String(t).replace(/^\s*(?:source|स्रोत)\s*[:：].*$/gim, "");
+      // A clock time is the same fact in every language, but its written FORM is
+      // not: English "7:00 PM" becomes Hindi "शाम 7 बजे" — the ":00" minutes drop.
+      // So normalise a whole-hour "H:00" to just "H", and ignore bare zero tokens,
+      // before comparing. Without this the vanished "00" read as a drifted figure
+      // and a faithful Hindi translation of an approved answer was thrown away and
+      // replaced by the original English (owner, 2026-07-21).
       const digitsOf = (t) =>
-        new Set(bare(t).replace(/[०-९]/g, (d) => "०१२३४५६७८९".indexOf(d)).match(/\d{1,4}/g) || []);
+        new Set(
+          (bare(t)
+            .replace(/[०-९]/g, (d) => "०१२३४५६७८९".indexOf(d))
+            .replace(/(\d):00(?!\d)/g, "$1")
+            .match(/\d{1,4}/g) || []
+          ).filter((d) => Number(d) !== 0)
+        );
       const want = digitsOf(approved.answer);
       const drifted = (a) => {
         const got = digitsOf(a);
