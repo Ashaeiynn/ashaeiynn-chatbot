@@ -13,6 +13,18 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-20 (MacBook Pro session, with the owner)
 
+- **Voice: long pause after every sentence** (owner: should be a very short pause, just a
+  new-sentence feel). Cause: browserSpeak spoke EACH sentence as its own SpeechSynthesisUtterance
+  with a 150ms breath — and a separate utterance also carries the device speech-engine's restart
+  latency, so the real gap was ~150ms + engine latency after every full stop. Fix: GROUP sentences
+  into ~160-char utterances (a lone >200-char sentence splits on a comma so it still can't hit
+  Chrome's ~15s single-utterance cut), and drop the breath 150→30ms. Now the engine flows through
+  several sentences in one breath and its OWN natural short pause at each "।" gives the new-sentence
+  feel — a 5-sentence / 123-char answer went from 5 utterances to 1. Server-voice (Gemini) chunk
+  path untouched. AUDIBLE result needs the owner's ear (no audio in the test browser); grouping
+  verified in node. If it now runs together with NO pause, the engine is under-pausing at the danda
+  and the next step is 2-sentence chunks with a ~50ms gap.
+
 - **Daily allowance changed 50 → 25** (owner). The model was already exactly what was asked —
   the daily part resets each morning to the limit (whatever was left does NOT carry), and an
   admin-granted bonus sits on top and carries forward until used. So the only real change was
