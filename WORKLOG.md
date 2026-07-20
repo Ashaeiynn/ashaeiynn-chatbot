@@ -13,6 +13,12 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
+- **Guide stays BIG while its answer shows.** Owner: with the answer coming, the guide shrank
+  (has-ans → 126px). Since the conversation is saved in the Chats tab, the stage needn't shrink the
+  guide to hold a transcript. Raised the `data-has-ans` figure 126→196px (still a light trim from the
+  214px rest size so the answer has room). Verified: even a long answer keeps the guide big and fully
+  on-screen — the answer scrolls in its own capped area instead of pushing the guide down.
+
 - **Guide character: bigger, no tap-box, interactive 3D tilt.** Three owner fixes to the new figure
   (`widget/widget.js`): (1) enlarged the `.vcb-orbbig` figure 150→214px (has-ans shrink 92→126px).
   (2) The "blue box" on tap was the button's mobile tap-highlight (now a square because the orb is a

@@ -718,7 +718,9 @@
     .vcb-panel[data-vstate="listening"] .vcb-orbbig,
     .vcb-panel[data-vstate="thinking"] .vcb-orbbig,
     .vcb-panel[data-vstate="speaking"] .vcb-orbbig{animation:none!important;box-shadow:none!important}
-    .vcb-panel[data-has-ans] .vcb-orbbig{width:126px!important;height:122px!important;margin:2px 0!important}
+    /* the conversation is saved in the Chats tab, so the stage keeps the guide BIG
+       even while its answer shows — only a light trim so the answer has room */
+    .vcb-panel[data-has-ans] .vcb-orbbig{width:196px!important;height:190px!important;margin:2px 0!important}
     .mg-svg{width:100%;height:100%;display:block;overflow:visible;pointer-events:none}
     /* the 3D tilt lives on an HTML wrapper — SVG elements ignore CSS 3D transforms */
     .mg-3d{display:block;width:100%;height:100%;transform-style:preserve-3d;will-change:transform;
