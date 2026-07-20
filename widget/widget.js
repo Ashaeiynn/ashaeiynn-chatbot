@@ -917,14 +917,122 @@
   const kbdBtn = panel.querySelector(".vcb-kbd");
   const creditEl = panel.querySelector(".vcb-credit");
 
+  // ——— UI language: the भाषा/Language toggle switches the whole interface, not
+  // just speech recognition (owner, 2026-07-20). The bot's ANSWERS still follow
+  // the language of the question; this is only the chrome. ———
+  let uiLang = (() => {
+    try {
+      const saved = localStorage.getItem("ashaiUiLang");
+      if (saved === "hi" || saved === "en") return saved;
+    } catch {
+      /* private mode */
+    }
+    return recLang.startsWith("hi") ? "hi" : "en";
+  })();
+  // keep speech recognition in step with the chosen UI language
+  recLang = uiLang === "en" ? "en-IN" : "hi-IN";
+  const T = {
+    hi: {
+      lang: "भाषा: हिंदी",
+      placeholder: "अपना सवाल लिखिए…",
+      typeInstead: "⌨️ लिखकर पूछें",
+      send: "भेजें",
+      navGuide: "गाइड",
+      navChats: "बातचीत",
+      chatsTitle: "आपकी बातचीत",
+      chatsSub: "इसी फ़ोन पर 24 घंटे तक सुरक्षित 🙏",
+      clear: "मिटाएँ",
+      chatsEmpty: "अभी कोई बातचीत नहीं।<br>guide से कुछ भी पूछिए — आपकी बातें यहाँ 24 घंटे तक रहेंगी।",
+      startAsking: "पूछना शुरू करें",
+      reAsk: "फिर से पूछें",
+      today: "आज",
+      yesterday: "कल",
+      read: "📖 पढ़िए",
+      watch: "📿 देखिए",
+      askMore: "🙏 आप यह भी पूछ सकते हैं",
+      thoughtTitle: "🙏 आज का विचार",
+      thoughtTap: "👆 tap करें — इस विचार पर guide से बात कीजिए",
+      idle: 'माइक को दबाइए और <b>बोलिए</b><br>Tap the mic and <b>speak</b> your question',
+      listening: '🎙️ <b>सुन रहे हैं… बोलिए</b> · listening — tap to finish',
+      speaking: '🔊 <b>उत्तर</b> · tap to stop',
+      speakNow: "🎙️ बोलिए… रुकते ही भेज दिया जाएगा (auto-sends when you pause)",
+      listeningPh: "🎙️ बोलिए… (listening)",
+      clearConfirm: "इस फ़ोन से अपनी सारी बातचीत मिटा दें?",
+      thinking: "🔎 उत्तर खोज रहे हैं… finding your answer…",
+      micError: "Mic नहीं चला — फिर से दबाइए · mic didn't start, tap again",
+      closeMsg: "आप जब चाहें लौट आइए — the door is always open.",
+      corrPrompt: "🙏 अगर यह उत्तर सही नहीं था और आप जानते हैं कि Bhaiya इसे कैसे समझाते हैं, तो सही उत्तर नीचे लिखिए। बस उत्तर लिखिए, बाक़ी हम समझ लेंगे। हमारी team देखकर आगे बढ़ाएगी।",
+      corrPh: "सही उत्तर यहाँ लिखिए… (सिर्फ़ उत्तर)",
+      corrSend: "भेजिए 🙏",
+      corrSkip: "रहने दीजिए",
+    },
+    en: {
+      lang: "Language: English",
+      placeholder: "Type your question…",
+      typeInstead: "⌨️ type instead",
+      send: "Send",
+      navGuide: "Guide",
+      navChats: "Chats",
+      chatsTitle: "Your chats",
+      chatsSub: "Kept on this phone for 24 hours 🙏",
+      clear: "Clear",
+      chatsEmpty: "No conversations yet.<br>Ask the guide anything — your chats stay here for 24 hours.",
+      startAsking: "Start asking",
+      reAsk: "Ask again",
+      today: "Today",
+      yesterday: "Yesterday",
+      read: "📖 Read",
+      watch: "📿 Watch",
+      askMore: "🙏 You can also ask",
+      thoughtTitle: "🙏 Thought of the day",
+      thoughtTap: "👆 Tap to talk about this with the guide",
+      idle: 'Tap the mic and <b>speak</b> your question',
+      listening: '🎙️ <b>Listening… speak</b> — tap to finish',
+      speaking: '🔊 <b>Answer</b> · tap to stop',
+      speakNow: "🎙️ Speak… it sends when you pause",
+      listeningPh: "🎙️ Listening…",
+      clearConfirm: "Clear all your conversation from this phone?",
+      thinking: "🔎 Finding your answer…",
+      micError: "Mic didn't start — tap again",
+      closeMsg: "Come back whenever you like — the door is always open.",
+      corrPrompt: "🙏 If this answer wasn't right and you know how Bhaiya explains it, write the correct answer below. Just the answer — our team will review it.",
+      corrPh: "Write the correct answer here…",
+      corrSend: "Send 🙏",
+      corrSkip: "Not now",
+    },
+  };
+  const t = (k) => (T[uiLang] && T[uiLang][k]) ?? T.hi[k] ?? k;
+  // Push the current language onto every static UI element. Called at start and
+  // whenever the language is toggled; dynamic views (Chats, sources, chips) read
+  // t() directly when they render.
+  function applyLang() {
+    panel.dataset.uilang = uiLang;
+    langBtn.textContent = t("lang");
+    input.placeholder = t("placeholder");
+    kbdBtn.textContent = t("typeInstead");
+    const sendBtn = panel.querySelector(".vcb-send");
+    if (sendBtn) sendBtn.textContent = t("send");
+    panel.querySelectorAll(".vcb-nav button[data-nav]").forEach((b) => {
+      const ic = b.dataset.nav === "guide" ? "🎙️" : "💬";
+      b.innerHTML = `<span class="ic">${ic}</span>${t(b.dataset.nav === "guide" ? "navGuide" : "navChats")}${b.dataset.nav === "chats" ? '<span class="nb-dot"></span>' : ""}`;
+    });
+    const ct = panel.querySelector(".vcb-chats-top h4");
+    if (ct) ct.textContent = t("chatsTitle");
+    const cs = panel.querySelector(".vcb-chats-top .sub");
+    if (cs) cs.textContent = t("chatsSub");
+    const cc = panel.querySelector(".vcb-chats-clear");
+    if (cc) cc.textContent = t("clear");
+    if (typeof renderChats === "function" && panel.dataset.view === "chats") renderChats();
+  }
+
   // ——— Chats tab: the seeker's own conversation, kept 24h on this phone ———
   const chatsScroll = panel.querySelector(".vcb-chats-scroll");
   const navBtns = [...panel.querySelectorAll(".vcb-nav button[data-nav]")];
   const whenLabel = (ms) => {
     const d = new Date(ms);
     const today = new Date().toDateString() === d.toDateString();
-    const t = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-    return `${today ? "आज" : "कल"} · ${t}`;
+    const tm = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    return `${today ? t("today") : t("yesterday")} · ${tm}`;
   };
   function renderChats() {
     if (!chatsScroll) return;
@@ -933,8 +1041,8 @@
     if (!log.length) {
       chatsScroll.innerHTML =
         '<div class="vcb-chats-empty"><div class="em-ic">💬</div>' +
-        "<p>अभी कोई बातचीत नहीं।<br>guide से कुछ भी पूछिए — आपकी बातें यहाँ 24 घंटे तक रहेंगी।</p>" +
-        '<button class="go" type="button">पूछना शुरू करें</button></div>';
+        `<p>${t("chatsEmpty")}</p>` +
+        `<button class="go" type="button">${t("startAsking")}</button></div>`;
       chatsScroll.querySelector(".go")?.addEventListener("click", () => showView("guide"));
       return;
     }
@@ -953,7 +1061,7 @@
       b.className = "vcb-cbubble " + (m.r === "u" ? "u" : "b");
       b.textContent = m.t;
       if (m.r === "u") {
-        b.title = "फिर से पूछें";
+        b.title = t("reAsk");
         b.addEventListener("click", () => {
           showView("guide");
           askChip(m.t, "chats");
@@ -971,7 +1079,7 @@
   navBtns.forEach((b) => b.addEventListener("click", () => showView(b.dataset.nav)));
   panel.dataset.view = "guide";
   panel.querySelector(".vcb-chats-clear")?.addEventListener("click", () => {
-    if (!journey.chatlog.length || !confirm("इस फ़ोन से अपनी सारी बातचीत मिटा दें?")) return;
+    if (!journey.chatlog.length || !confirm(t("clearConfirm"))) return;
     journey.chatlog = [];
     saveJourney();
     renderChats();
@@ -1455,16 +1563,10 @@
   }
 
   // ——— voice-first stage: state machine (idle → listening → thinking → speaking) ———
-  const STATUS = {
-    idle: 'माइक को दबाइए और <b>बोलिए</b> — हिंदी या English<br>Tap the mic and <b>speak</b> your question',
-    listening: '🎙️ <b>सुन रहे हैं… बोलिए</b> · listening — tap to finish',
-    thinking: '🔎 उत्तर खोज रहे हैं… finding your answer…',
-    speaking: '🔊 <b>उत्तर</b> · tap to stop',
-    error: 'Mic नहीं चला — फिर से दबाइए · mic didn\'t start, tap again',
-  };
+  const stateKey = { idle: "idle", listening: "listening", thinking: "thinking", speaking: "speaking", error: "micError" };
   function setVState(s) {
     panel.dataset.vstate = s;
-    statusEl.innerHTML = STATUS[s] || "";
+    statusEl.innerHTML = stateKey[s] ? t(stateKey[s]) : "";
   }
   function capAdd(el) {
     cap.appendChild(el);
@@ -1496,7 +1598,7 @@
       ans.textContent = data.answer;
       enrichAnswer(ans, data, text);
       capAdd(ans);
-      if (data.followups?.length) capAdd(chipsEl(data.followups, ASK_MORE));
+      if (data.followups?.length) capAdd(chipsEl(data.followups, ASK_MORE()));
       maybeOfferBell();
       panel.dataset.hasAns = "1";
       // long answers: read from the beginning, not scrolled to the end
@@ -1665,10 +1767,10 @@
     listening = true;
     if (target === "stage") {
       setVState("listening");
-      showLive("🎙️ बोलिए… रुकते ही भेज दिया जाएगा (auto-sends when you pause)");
+      showLive(t("speakNow"));
     } else {
       micBtn.classList.add("listening");
-      input.placeholder = "🎙️ बोलिए… (listening)";
+      input.placeholder = t("listeningPh");
     }
     recTimer = setTimeout(stopRecording, 12000);
   }
@@ -1722,7 +1824,7 @@
         showLive("");
       } else {
         micBtn.classList.add("listening");
-        input.placeholder = "🎙️ बोलिए… (listening)";
+        input.placeholder = t("listeningPh");
       }
     } catch {
       listening = false;
@@ -1831,7 +1933,13 @@
     // language switch: Hindi ↔ English recognition
     langBtn.addEventListener("click", () => {
       recLang = recLang.startsWith("hi") ? "en-IN" : "hi-IN";
-      langBtn.textContent = recLang.startsWith("hi") ? "भाषा: हिंदी" : "Language: English";
+      uiLang = recLang.startsWith("hi") ? "hi" : "en";
+      applyLang(); // switch the WHOLE interface, not just speech recognition
+      try {
+        localStorage.setItem("ashaiUiLang", uiLang);
+      } catch {
+        /* private mode — the choice just won't persist */
+      }
       if (listening) {
         if (mediaRec && mediaRec.state === "recording") cancelRecording();
         else rec?.stop();
@@ -1847,14 +1955,20 @@
       if (listening) { rec?.stop(); cancelRecording(); }
       if (!greeted) {
         greeted = true;
+        const nm = journey.name ? `, ${journey.name}${uiLang === "hi" ? " जी" : ""}` : "";
+        const lastQ = cameBack ? journey.asked[journey.asked.length - 1].q.slice(0, 80) : "";
         addMessage(
           "bot",
           cameBack
-            ? `${todGreet()}${journey.name ? `, ${journey.name} जी` : ""} 🙏 वापसी पर स्वागत! पिछली बार आपने पूछा था: “${journey.asked[journey.asked.length - 1].q.slice(0, 80)}” — आगे जो मन में हो, पूछिए।`
-            : `Jai Siya Ram${journey.name ? `, ${journey.name} जी` : ""} 🙏 Ask me anything about the teachings — I'll find the answer from our videos.`,
+            ? uiLang === "hi"
+              ? `${todGreet()}${nm} 🙏 वापसी पर स्वागत! पिछली बार आपने पूछा था: “${lastQ}” — आगे जो मन में हो, पूछिए।`
+              : `Welcome back${nm} 🙏 Last time you asked: “${lastQ}” — ask me anything more.`
+            : uiLang === "hi"
+              ? `जय सिया राम${nm} 🙏 भगवान की शिक्षाओं के बारे में जो पूछना हो, पूछिए।`
+              : `Jai Siya Ram${nm} 🙏 Ask me anything about the teachings — I'll find the answer for you.`,
         );
         if (cameBack) presentCheckin((q) => addMessage("bot", q));
-        if (cameBack && journey.lastFollowups?.length) msgs.appendChild(chipsEl(journey.lastFollowups, ASK_MORE));
+        if (cameBack && journey.lastFollowups?.length) msgs.appendChild(chipsEl(journey.lastFollowups, ASK_MORE()));
       }
       input.focus();
     } else {
@@ -1867,6 +1981,7 @@
     setMode("voice");
     startListening("stage");
   });
+  applyLang(); // paint the whole UI in the chosen language before anything shows
   panel.dataset.mode = SR || canRecord ? "voice" : "text";
 
   // ——— opening blessing: splash rises, then docks into the golden strip ———
@@ -1968,7 +2083,7 @@
       journey.seen = [];
       journey.convo = [];
       h.textContent = "🙏 Account deleted";
-      p.textContent = "आप जब चाहें लौट आइए — the door is always open.";
+      p.textContent = t("closeMsg");
       del.remove();
       back.textContent = "Close";
     });
@@ -2020,7 +2135,7 @@
   // recordings withdrawn from the library there is often nothing to watch, so
   // the seeker's next step is a question, not a video — give those chips a
   // heading of their own so they read as an invitation, not stray buttons.
-  const ASK_MORE = "🙏 आप यह भी पूछ सकते हैं";
+  const ASK_MORE = () => t("askMore");
 
   function chipsEl(followups, heading) {
     const wrap = document.createElement("div");
@@ -2087,7 +2202,7 @@
       // videos were deleted from the library — do not tell a seeker to "watch"
       // an article. Label by what the links actually are.
       const anyVideo = data.sources.some((s2) => s2.url && /youtu|vimeo/i.test(s2.url));
-      lbl.textContent = anyVideo ? "📿 देखिए" : "📖 पढ़िए";
+      lbl.textContent = anyVideo ? t("watch") : t("read");
       el.appendChild(lbl);
       const wrap = document.createElement("div");
       wrap.className = "vcb-srcs";
@@ -2199,19 +2314,18 @@
     const box = document.createElement("div");
     box.className = "vcb-fixbox";
     const p = document.createElement("p");
-    p.textContent =
-      "🙏 अगर यह उत्तर सही नहीं था और आप जानते हैं कि Bhaiya इसे कैसे समझाते हैं, तो सही उत्तर नीचे लिखिए — जैसे आप किसी साधक को समझाते हैं। बस उत्तर लिखिए, बाक़ी हम समझ लेंगे। हमारी team देखकर आगे बढ़ाएगी।";
+    p.textContent = t("corrPrompt");
     const ta = document.createElement("textarea");
-    ta.placeholder = "सही उत्तर यहाँ लिखिए… (सिर्फ़ उत्तर — भूमिका लिखने की ज़रूरत नहीं)";
+    ta.placeholder = t("corrPh");
     ta.maxLength = 3000;
     const row = document.createElement("div");
     row.className = "vcb-bellrow";
     const send = document.createElement("button");
     send.className = "vcb-bellyes";
-    send.textContent = "भेजिए 🙏";
+    send.textContent = t("corrSend");
     const skip = document.createElement("button");
     skip.className = "vcb-bellno";
-    skip.textContent = "रहने दीजिए";
+    skip.textContent = t("corrSkip");
     send.addEventListener("click", () => {
       const suggestion = ta.value.trim();
       if (!suggestion) { ta.focus(); return; }
@@ -2410,7 +2524,7 @@
             d.textContent = q;
             capAdd(d);
           });
-          if (journey.lastFollowups?.length) capAdd(chipsEl(journey.lastFollowups, ASK_MORE));
+          if (journey.lastFollowups?.length) capAdd(chipsEl(journey.lastFollowups, ASK_MORE()));
           fetchNextStep();
         }
       }
@@ -2446,7 +2560,7 @@
       if (panel.dataset.mode === "text") {
         addMessage("bot", data.answer, data, msg);
         if (data.followups?.length) {
-          msgs.appendChild(chipsEl(data.followups, ASK_MORE));
+          msgs.appendChild(chipsEl(data.followups, ASK_MORE()));
           msgs.scrollTop = msgs.scrollHeight;
         }
       } else {
@@ -2455,7 +2569,7 @@
         ans.textContent = data.answer;
         enrichAnswer(ans, data, msg);
         capAdd(ans);
-        if (data.followups?.length) capAdd(chipsEl(data.followups, ASK_MORE));
+        if (data.followups?.length) capAdd(chipsEl(data.followups, ASK_MORE()));
         panel.dataset.hasAns = "1";
         cap.scrollTop += ans.getBoundingClientRect().top - cap.getBoundingClientRect().top - 4;
         setVState("speaking");
@@ -2548,12 +2662,12 @@
         box.setAttribute("role", "button");
         const head = document.createElement("div");
         head.style.cssText = "color:#e8c987;font-weight:700;margin-bottom:6px;font-size:13px";
-        head.textContent = "🙏 आज का विचार";
+        head.textContent = t("thoughtTitle");
         box.appendChild(head);
         box.appendChild(document.createTextNode(t.text));
         const src = document.createElement("div");
         src.className = "vcb-src";
-        src.textContent = "👆 tap करें — इस विचार पर guide से बात कीजिए";
+        src.textContent = t("thoughtTap");
         box.appendChild(src);
         box.addEventListener("click", () => {
           askChip(`आज का विचार: "${t.text.slice(0, 140)}" — इसे और गहराई से समझाइए`, "thought");
@@ -2641,7 +2755,7 @@
       typing.remove();
       addMessage("bot", data.answer, data, text);
       if (data.followups?.length) {
-        msgs.appendChild(chipsEl(data.followups, ASK_MORE));
+        msgs.appendChild(chipsEl(data.followups, ASK_MORE()));
         msgs.scrollTop = msgs.scrollHeight;
       }
       maybeOfferBell();
