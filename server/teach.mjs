@@ -7,8 +7,7 @@ import { mkdirSync, readFileSync, writeFileSync, rmSync, existsSync } from "node
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { ROOT } from "./env.mjs";
-import { reload, bestNewerMatch } from "./retrieve.mjs";
-import { supersedeByNewer } from "./corrections.mjs";
+import { reload } from "./retrieve.mjs";
 
 const HOME = process.env.HOME;
 // ffmpeg lives in ~/.local/bin, mlx_whisper in the Python user bin — neither is
@@ -138,16 +137,18 @@ async function pump() {
           j.detail = "";
         });
         console.log(`teach: knowledge refreshed (+${batch.length} source${batch.length > 1 ? "s" : ""})`);
-        // LATEST KNOWLEDGE WINS: retire any older correction the freshly-taught
-        // material now REPUBLISHES (owner, 2026-07-20). Deterministic near-identical
-        // match only — a merely-related upload can't wipe a careful correction.
-        // Best-effort — never let it break the teach flow.
-        try {
-          const r = await supersedeByNewer({ bestNewerMatch, apply: true });
-          if (r.retired.length) console.log(`teach: ${r.retired.length} correction(s) superseded by the new material`);
-        } catch (e) {
-          console.error("supersede check skipped:", e?.message);
-        }
+        // LATEST KNOWLEDGE WINS — AUTO-DELETE DISABLED (finding, 2026-07-20):
+        // deleting a correction the moment a newer source republishes its content
+        // made answers WORSE, not better. A correction exists precisely because
+        // the question did not retrieve the right content well; the correction is
+        // the retrieval GUARANTEE. Matching the correction's ANSWER to a newer
+        // source (0.90+) does NOT mean the QUESTION will find that source — and
+        // it did not: after retiring the Gupt Navratri correction, its own newer
+        // guidelines source was not even in the top 8 for the question, so the
+        // bot fell back to a generic answer. The correct way to honour "latest
+        // wins" is to UPDATE the correction's answer to the newer content, not
+        // delete it — pending the owner's confirmation. Left the supersede detector
+        // in place (report-only) for that future update flow.
         await autoPushKnowledge(batch.length);
       } catch (err) {
         batch.forEach((j) => {
