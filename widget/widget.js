@@ -48,6 +48,25 @@
   journey.asked = Array.isArray(journey.asked) ? journey.asked : [];
   journey.seen = Array.isArray(journey.seen) ? journey.seen : [];
   journey.convo = Array.isArray(journey.convo) ? journey.convo : [];
+  // The seeker's own conversation, kept on THIS phone for 24 hours (owner,
+  // 2026-07-20) — viewable in the Chats tab, and never sent anywhere or stored
+  // on a server. Each entry: { r:'u'|'b' (user/bot), t:text, at:ms }.
+  journey.chatlog = Array.isArray(journey.chatlog) ? journey.chatlog : [];
+  const CHAT_TTL = 24 * 3600 * 1000;
+  function pruneChatlog() {
+    const cutoff = Date.now() - CHAT_TTL;
+    journey.chatlog = journey.chatlog.filter((m) => m && typeof m.at === "number" && m.at >= cutoff);
+    if (journey.chatlog.length > 300) journey.chatlog.splice(0, journey.chatlog.length - 300);
+  }
+  pruneChatlog();
+  function logChat(role, text) {
+    const t = String(text || "").trim();
+    if (!t) return;
+    journey.chatlog.push({ r: role === "user" ? "u" : "b", t: t.slice(0, 2000), at: Date.now() });
+    pruneChatlog();
+    saveJourney();
+    if (typeof renderChats === "function" && panel?.dataset.view === "chats") renderChats();
+  }
   // returning after 3+ hours (not just a page reload in the same sitting)?
   const cameBack =
     journey.asked.length > 0 &&
@@ -311,6 +330,58 @@
       box-shadow:0 2px 10px rgba(52,211,153,.3)}
     .vcb-send:hover{filter:brightness(1.06)}
     .vcb-send:disabled{opacity:.5;cursor:default}
+
+    /* ——— bottom menu: Guide (ask) ↔ Chats (24h history) ——— */
+    .vcb-nav{position:relative;z-index:4;display:flex;flex-shrink:0;
+      border-top:1px solid rgba(52,211,153,.18);background:rgba(2,2,6,.9)}
+    .vcb-nav button{position:relative;flex:1;background:none;border:none;cursor:pointer;
+      color:#7f8794;font-size:11px;font-weight:600;letter-spacing:.3px;
+      padding:7px 4px calc(6px + env(safe-area-inset-bottom));
+      display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .18s;
+      font-family:-apple-system,'Segoe UI',Roboto,sans-serif}
+    .vcb-nav button .ic{font-size:17px;line-height:1;transition:transform .18s}
+    .vcb-nav button:hover{color:#c9cdd6}
+    .vcb-nav button.on{color:#f3d795}
+    .vcb-nav button.on .ic{transform:translateY(-1px);filter:drop-shadow(0 0 7px rgba(243,215,149,.55))}
+    .vcb-nav button.on::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);
+      width:26px;height:2px;border-radius:0 0 3px 3px;background:linear-gradient(90deg,#f7e3ae,#d9a94f)}
+    .vcb-nav .nb-dot{position:absolute;top:6px;right:calc(50% - 20px);width:6px;height:6px;border-radius:50%;
+      background:#34d399;box-shadow:0 0 6px rgba(52,211,153,.8);display:none}
+    .vcb-nav .nb-dot.show{display:block}
+
+    /* ——— Chats view (the seeker's own 24h history, on this phone only) ——— */
+    .vcb-chats{display:none}
+    .vcb-panel[data-view="chats"] .vcb-stage,
+    .vcb-panel[data-view="chats"] .vcb-msgs,
+    .vcb-panel[data-view="chats"] .vcb-form{display:none !important}
+    .vcb-panel[data-view="chats"] .vcb-chats{position:relative;z-index:2;flex:1;
+      display:flex;flex-direction:column;min-height:0}
+    .vcb-chats-top{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+      padding:9px 14px 8px;border-bottom:1px solid rgba(255,255,255,.06)}
+    .vcb-chats-top h4{margin:0;font-size:13.5px;font-weight:700;color:#f3d795;
+      font-family:-apple-system,'Segoe UI',Roboto,sans-serif}
+    .vcb-chats-top .sub{font-size:10.5px;color:#7f8794;margin-top:1px}
+    .vcb-chats-clear{background:none;border:none;color:#8b93a0;font-size:12px;cursor:pointer;padding:4px}
+    .vcb-chats-clear:hover{color:#ffcf8a}
+    .vcb-chats-scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:12px 12px 16px;
+      display:flex;flex-direction:column;gap:9px;min-height:0}
+    .vcb-cgap{align-self:center;font-size:10.5px;color:#6f7683;letter-spacing:.5px;
+      margin:6px 0 2px;font-family:-apple-system,'Segoe UI',Roboto,sans-serif}
+    .vcb-cbubble{max-width:82%;padding:9px 12px;border-radius:15px;font-size:13.5px;line-height:1.5;
+      white-space:pre-wrap;word-wrap:break-word;font-family:-apple-system,'Segoe UI',Roboto,sans-serif}
+    .vcb-cbubble.u{align-self:flex-end;color:#f7e9c9;background:rgba(217,169,79,.15);
+      border:1px solid rgba(217,169,79,.32);border-bottom-right-radius:5px;cursor:pointer}
+    .vcb-cbubble.u:hover{background:rgba(217,169,79,.24)}
+    .vcb-cbubble.b{align-self:flex-start;color:#e9dfc6;background:rgba(52,211,153,.08);
+      border:1px solid rgba(52,211,153,.16);border-bottom-left-radius:5px}
+    .vcb-ctime{align-self:inherit;font-size:9.5px;color:#666d78;margin:-4px 3px 2px}
+    .vcb-chats-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      text-align:center;color:#8b93a0;padding:24px;gap:8px}
+    .vcb-chats-empty .em-ic{font-size:30px;opacity:.5}
+    .vcb-chats-empty p{margin:0;font-size:13px;line-height:1.5;
+      font-family:-apple-system,'Segoe UI',Roboto,sans-serif}
+    .vcb-chats-empty .go{margin-top:6px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.4);
+      color:#b8f5dc;border-radius:999px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer}
 
     .vcb-typing{align-self:flex-start;display:flex;gap:5px;padding:12px 16px;
       background:rgba(255,255,255,.065);border:1px solid rgba(255,255,255,.09);
@@ -698,7 +769,21 @@
       </button>
       <input class="vcb-input" type="text" placeholder="Type your question…" maxlength="2000" autocomplete="off"/>
       <button class="vcb-send" type="submit">Send</button>
-    </form>`;
+    </form>
+    <div class="vcb-chats">
+      <div class="vcb-chats-top">
+        <div>
+          <h4>आपकी बातचीत · Your chats</h4>
+          <div class="sub">इसी फ़ोन पर 24 घंटे तक सुरक्षित 🙏</div>
+        </div>
+        <button class="vcb-chats-clear" type="button">मिटाएँ</button>
+      </div>
+      <div class="vcb-chats-scroll"></div>
+    </div>
+    <nav class="vcb-nav">
+      <button type="button" data-nav="guide" class="on"><span class="ic">🎙️</span>Guide</button>
+      <button type="button" data-nav="chats"><span class="ic">💬</span>Chats<span class="nb-dot"></span></button>
+    </nav>`;
 
   document.body.append(btn, nudge, panel);
 
@@ -831,6 +916,67 @@
   const langBtn = panel.querySelector(".vcb-lang");
   const kbdBtn = panel.querySelector(".vcb-kbd");
   const creditEl = panel.querySelector(".vcb-credit");
+
+  // ——— Chats tab: the seeker's own conversation, kept 24h on this phone ———
+  const chatsScroll = panel.querySelector(".vcb-chats-scroll");
+  const navBtns = [...panel.querySelectorAll(".vcb-nav button[data-nav]")];
+  const whenLabel = (ms) => {
+    const d = new Date(ms);
+    const today = new Date().toDateString() === d.toDateString();
+    const t = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    return `${today ? "आज" : "कल"} · ${t}`;
+  };
+  function renderChats() {
+    if (!chatsScroll) return;
+    pruneChatlog();
+    const log = journey.chatlog;
+    if (!log.length) {
+      chatsScroll.innerHTML =
+        '<div class="vcb-chats-empty"><div class="em-ic">💬</div>' +
+        "<p>अभी कोई बातचीत नहीं।<br>guide से कुछ भी पूछिए — आपकी बातें यहाँ 24 घंटे तक रहेंगी।</p>" +
+        '<button class="go" type="button">पूछना शुरू करें</button></div>';
+      chatsScroll.querySelector(".go")?.addEventListener("click", () => showView("guide"));
+      return;
+    }
+    chatsScroll.innerHTML = "";
+    let lastAt = 0;
+    for (const m of log) {
+      if (m.at - lastAt > 30 * 60 * 1000) {
+        // a fresh time header whenever more than half an hour has passed
+        const g = document.createElement("div");
+        g.className = "vcb-cgap";
+        g.textContent = whenLabel(m.at);
+        chatsScroll.appendChild(g);
+      }
+      lastAt = m.at;
+      const b = document.createElement("div");
+      b.className = "vcb-cbubble " + (m.r === "u" ? "u" : "b");
+      b.textContent = m.t;
+      if (m.r === "u") {
+        b.title = "फिर से पूछें";
+        b.addEventListener("click", () => {
+          showView("guide");
+          askChip(m.t, "chats");
+        });
+      }
+      chatsScroll.appendChild(b);
+    }
+    chatsScroll.scrollTop = chatsScroll.scrollHeight;
+  }
+  function showView(v) {
+    panel.dataset.view = v;
+    navBtns.forEach((b) => b.classList.toggle("on", b.dataset.nav === v));
+    if (v === "chats") renderChats();
+  }
+  navBtns.forEach((b) => b.addEventListener("click", () => showView(b.dataset.nav)));
+  panel.dataset.view = "guide";
+  panel.querySelector(".vcb-chats-clear")?.addEventListener("click", () => {
+    if (!journey.chatlog.length || !confirm("इस फ़ोन से अपनी सारी बातचीत मिटा दें?")) return;
+    journey.chatlog = [];
+    saveJourney();
+    renderChats();
+  });
+
   // Credit system paused (owner's call — will implement later). While off the
   // 🪙 coin never shows and no balance is fetched. Flip to true to re-enable.
   const CREDITS_ON = true;
@@ -1264,6 +1410,8 @@
     history.push({ role: "user", content: text }, { role: "assistant", content: data.answer });
     if (history.length > 12) history.splice(0, history.length - 12);
     journey.convo = history.slice(-12);
+    logChat("user", text);
+    logChat("bot", data.answer);
     if (data.followups?.length) journey.lastFollowups = data.followups.slice(0, 3);
     if (data.checkin) journey.checkin = data.checkin;
     if (data.sadhana) {
@@ -1835,6 +1983,7 @@
     journey.checkin = "";
     history.push({ role: "assistant", content: q });
     journey.convo = history.slice(-12);
+    logChat("bot", q);
     saveJourney();
     displayAsBot(q);
   }
