@@ -1022,7 +1022,9 @@
     if (cs) cs.textContent = t("chatsSub");
     const cc = panel.querySelector(".vcb-chats-clear");
     if (cc) cc.textContent = t("clear");
+    // re-render the two live views so a mid-session toggle updates them
     if (typeof renderChats === "function" && panel.dataset.view === "chats") renderChats();
+    if (typeof setVState === "function" && panel.dataset.vstate) setVState(panel.dataset.vstate);
   }
 
   // ——— Chats tab: the seeker's own conversation, kept 24h on this phone ———
