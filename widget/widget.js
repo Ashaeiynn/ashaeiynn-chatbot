@@ -30,6 +30,9 @@
   const COLOR = script?.dataset.color || "#0b0b0f";
   const SPLASH = script?.dataset.splash || "जय सिया राम";
   const SPLASH_SUB = script?.dataset.splashSub || "JAI SIYA RAM";
+  // Only the DEFAULT blessing follows the UI language (जय सिया राम ↔ Jai Siya Ram);
+  // a site that set its own data-splash keeps that exact text in both languages.
+  const SPLASH_CUSTOM = !!script?.dataset.splash;
 
   const history = [];
 
@@ -965,6 +968,7 @@
       corrPh: "सही उत्तर यहाँ लिखिए… (सिर्फ़ उत्तर)",
       corrSend: "भेजिए 🙏",
       corrSkip: "रहने दीजिए",
+      bless: "जय सिया राम",
     },
     en: {
       lang: "Language: English",
@@ -999,6 +1003,7 @@
       corrPh: "Write the correct answer here…",
       corrSend: "Send 🙏",
       corrSkip: "Not now",
+      bless: "Jai Siya Ram",
     },
   };
   const t = (k) => (T[uiLang] && T[uiLang][k]) ?? T.hi[k] ?? k;
@@ -1022,6 +1027,10 @@
     if (cs) cs.textContent = t("chatsSub");
     const cc = panel.querySelector(".vcb-chats-clear");
     if (cc) cc.textContent = t("clear");
+    if (!SPLASH_CUSTOM) {
+      const bl = panel.querySelector(".vcb-bless span");
+      if (bl) bl.textContent = t("bless");
+    }
     // re-render the two live views so a mid-session toggle updates them
     if (typeof renderChats === "function" && panel.dataset.view === "chats") renderChats();
     if (typeof setVState === "function" && panel.dataset.vstate) setVState(panel.dataset.vstate);
@@ -1996,7 +2005,13 @@
 
     const s = document.createElement("div");
     s.className = "vcb-splash";
-    const words = SPLASH.split(/\s+/)
+    // Default blessing follows the UI language: Devanagari headline + Latin sub in
+    // Hindi, flipped to Latin headline + Devanagari sub in English. A custom
+    // data-splash is shown exactly as the site set it, in both languages.
+    const splashMain = !SPLASH_CUSTOM && uiLang === "en" ? "Jai Siya Ram" : SPLASH;
+    const splashSub = SPLASH_CUSTOM ? SPLASH_SUB : uiLang === "en" ? "जय सिया राम" : SPLASH_SUB;
+    const words = splashMain
+      .split(/\s+/)
       .map((w, i) => `<span style="animation-delay:${0.12 + i * 0.22}s">${w}</span>`)
       .join("");
     s.innerHTML = `
@@ -2004,7 +2019,7 @@
       <div class="vcb-splash-inner">
         <div class="vcb-splash-hi">${words}</div>
         <div class="vcb-splash-line"></div>
-        <div class="vcb-splash-en">${SPLASH_SUB}</div>
+        <div class="vcb-splash-en">${splashSub}</div>
       </div>`;
 
     // floating diya sparks
