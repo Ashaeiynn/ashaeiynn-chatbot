@@ -13,7 +13,22 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-20 (MacBook Pro session, with the owner)
 
-- **"Latest knowledge wins" — attempted, and REVERTED after a decisive finding.** Owner wants a
+- **"Latest knowledge wins" — shipped as a REVIEW (owner's final choice: flag for review).**
+  After the delete approach was proven harmful (see next bullet), the owner chose "flag it for
+  your review, you approve the update." Built:
+  - `retrieve.bestNewerMatch(vecs, afterMs)` + per-chunk `sourceAt` (transcript mtime).
+  - `corrections.supersedeReview()` — report-only, deterministic: flags a correction when a source
+    added AFTER it matches the correction's ANSWER at ≥0.90 (near-identical republish), honouring a
+    per-pair dismissed set. `updateCorrectionAnswer()` refreshes the answer via addCorrection (keeps
+    the question as the retrieval anchor). `dismissSupersede()` remembers "keep".
+  - Endpoints GET/POST `/api/admin/supersede`; a new "🔄 Updates" chip in the admin Questions view
+    shows each: the correction, its current answer, and the newer source content pre-filled to edit
+    → "Update the answer to this" or "Keep current — don''t ask again". Never automatic.
+  Verified live: the endpoint surfaces exactly 1 genuine case (Gupt Navratri, 0.902), empty-answer
+  → 400, no-key → 401, item stays live for the owner to action. The bot answers it correctly from
+  the (restored) correction meanwhile.
+
+- **"Latest knowledge wins" — the delete approach, attempted and REVERTED after a decisive finding.** Owner wants a
   newer file/article to supersede an older correction on the same topic; chose (via AskUserQuestion)
   "newer wins, delete the old correction." Built it carefully — but two findings killed the delete
   mechanism:
