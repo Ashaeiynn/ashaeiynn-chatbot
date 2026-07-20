@@ -61,57 +61,35 @@ function persist() {
 }
 
 // LATEST KNOWLEDGE WINS (owner, 2026-07-20). When a file is uploaded or a website
-// article is found that covers the SAME question as an older admin correction,
+// article is found that REPUBLISHES the teaching of an older admin correction,
 // the newer source is the authority — the correction is retired so the bot
-// answers from the latest teaching. Runs after every ingest (see teach.mjs).
+// answers from the latest source. Runs after every ingest (see teach.mjs).
 //
-// SAFETY: embedding similarity alone is far too blunt here — a big topical file
-// (a whole havan session) scores 0.85+ against every havan correction without
-// actually answering the specific question (measured 2026-07-20). Deleting on
-// that would silently wipe careful corrections. So cosine is only a cheap SCREEN;
-// the LLM then confirms the newer source genuinely answers THAT question before
-// anything is removed. `complete` is injected so this module needs no LLM import.
-const SUPERSEDE_SCREEN = Number(process.env.SUPERSEDE_SCREEN || 0.86);
-const SUPERSEDE_SYS =
-  "You prune an admin-corrected answer bank for a spiritual guide bot. Each item has: the QUESTION a seeker asks, the older APPROVED answer an admin wrote, and an EXCERPT from a NEWER teaching source added after that correction. Retire an id ONLY when the newer excerpt genuinely and specifically ANSWERS that exact question — the actual information is there (whether it agrees with or updates the old answer), so the bot can now rely on the newer source and the correction is no longer needed. Do NOT retire when the excerpt is merely on a related or broader topic, only mentions the words, or when you are unsure. When in doubt, keep it. Output ONLY a JSON array of the ids to retire (may be empty).";
+// ⚠️ HARD-LEARNED: this is NOT decided by an LLM. Asking a model "is this
+// correction now superseded?" gave wildly different verdicts on identical input
+// (measured 2026-07-20: 6, 7, and 16 retirements across three runs of the SAME
+// data, the 16 including clearly-wrong deletions like retiring a negativity
+// remedy because a havan file mentions negativity). For PERMANENT, no-undo
+// deletion that is unacceptable. So the rule is deterministic and conservative:
+// retire only when a NEWER source's content is NEAR-IDENTICAL to the correction's
+// own answer — i.e. the same teaching, republished. Merely covering the same
+// TOPIC (0.83–0.89) is never enough; that is exactly the case that must be kept.
+const SUPERSEDE_MIN = Number(process.env.SUPERSEDE_MIN || 0.9);
 
-export async function supersedeByNewer({ complete, bestNewerMatch, apply = true }) {
+export async function supersedeByNewer({ bestNewerMatch, apply = true }) {
   const all = await load();
-  if (!all.length || typeof bestNewerMatch !== "function") return { checked: all.length, candidates: 0, retired: [] };
-  const candidates = [];
+  if (!all.length || typeof bestNewerMatch !== "function") return { checked: all.length, retired: [] };
+  const retired = [];
   for (const c of all) {
     const afterMs = new Date(c.at).getTime();
     if (!afterMs) continue;
-    // screen on the ANSWER content (the precise signal) plus the question keys
+    // match on the ANSWER content — the precise "same teaching" signal, not the
+    // question (which only measures topic overlap)
     const av = await embedQuery(String(c.answer || "").slice(0, 1500));
-    const m = bestNewerMatch([av, ...(c.vecs || [])], afterMs);
-    if (m && m.score >= SUPERSEDE_SCREEN) candidates.push({ c, m });
-  }
-  if (!candidates.length) return { checked: all.length, candidates: 0, retired: [] };
-  const payload = candidates.map(({ c, m }) => ({
-    id: c.id,
-    question: c.q,
-    approved: String(c.answer || "").slice(0, 600),
-    excerpt: String(m.content || "").slice(0, 900),
-  }));
-  let retireIds = [];
-  try {
-    const raw = await complete({
-      system: SUPERSEDE_SYS,
-      messages: [{ role: "user", content: JSON.stringify(payload) }],
-      maxTokens: 400,
-      retry: false,
-      strong: true, // permanent deletion — use the capable model, not the fast lite one
-    });
-    const mm = raw.match(/\[[\s\S]*\]/);
-    if (mm) retireIds = JSON.parse(mm[0]).map(String);
-  } catch {
-    retireIds = []; // if the check fails, change nothing — never delete on error
-  }
-  const retired = [];
-  for (const { c, m } of candidates) {
-    if (!retireIds.includes(String(c.id))) continue;
-    retired.push({ id: c.id, q: c.q, by: m.title, score: Number(m.score.toFixed(3)), at: new Date().toISOString() });
+    const m = bestNewerMatch([av], afterMs);
+    if (m && m.score >= SUPERSEDE_MIN) {
+      retired.push({ id: c.id, q: c.q, by: m.title, score: Number(m.score.toFixed(3)), at: new Date().toISOString() });
+    }
   }
   if (apply && retired.length) {
     const gone = new Set(retired.map((r) => r.id));
