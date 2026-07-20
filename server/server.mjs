@@ -2220,6 +2220,15 @@ const server = createServer(async (req, res) => {
     return res.end(readFileSync(path.join(ROOT, "widget", "demo.html")));
   }
 
+  // Full-screen guide for the main app's WebView — the live bot, no demo chrome,
+  // opened straight away. The app points its "Guide" button here (optionally with
+  // ?uid=&name= so the same person is the same seeker). Framed by the app only:
+  // this page carries no X-Frame-Options, unlike the rest of the site.
+  if (req.method === "GET" && url.pathname === "/app") {
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" });
+    return res.end(readFileSync(path.join(ROOT, "widget", "app.html")));
+  }
+
   json(res, 404, { error: "Not found" });
 });
 

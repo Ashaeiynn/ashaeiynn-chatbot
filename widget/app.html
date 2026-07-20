@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+    <title>Ask Your Guide — Ashaeiynn</title>
+    <meta name="theme-color" content="#070b08" />
+    <link rel="apple-touch-icon" href="/icon-192.png?v=g3" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Ashaeiynn Guide" />
+    <!--
+      Full-screen guide for the main Ashaeiynn app's WebView.
+        Open:  https://guide.ashaeiynn.com/app
+        With identity (same user id as the app):
+               https://guide.ashaeiynn.com/app?uid=<APP_USER_ID>&name=<Name>
+      The guide fills the screen, opens straight away, and has no floating bubble —
+      the app's own "Guide" button already brought the seeker here (data-embed="app").
+      See APP-INTEGRATION.md for the WebView + microphone setup on the app side.
+    -->
+    <style>
+      html, body { margin: 0; height: 100%; background: #000; overscroll-behavior: none; }
+    </style>
+  </head>
+  <body>
+    <script src="/widget.js?v=2" data-embed="app" defer></script>
+  </body>
+</html>

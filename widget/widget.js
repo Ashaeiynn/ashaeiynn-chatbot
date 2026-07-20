@@ -34,6 +34,22 @@
   // a site that set its own data-splash keeps that exact text in both languages.
   const SPLASH_CUSTOM = !!script?.dataset.splash;
 
+  // ——— App-embed mode: the guide is opened INSIDE the main Ashaeiynn app's
+  // WebView (the app's "Guide" button brought the seeker here). Triggered by
+  // data-embed="app" on the loader — the /app page sets it — or ?embed=app.
+  // In this mode the guide fills the whole screen and drops its own floating
+  // launcher/nudge (the app already has its own button), and it TRUSTS the
+  // identity the app hands in so the same person is the same seeker in both.
+  // On any ordinary website (WordPress, etc.) EMBED is false and nothing changes.
+  const qs = new URLSearchParams(location.search);
+  const EMBED = script?.dataset.embed === "app" || qs.get("embed") === "app";
+  // Identity passed by the app (same user id across app + guide). uid makes them
+  // a known seeker (their journey and any member badge follow them); name only
+  // personalises the greeting. Both are optional — without them the guide still
+  // works, it just runs its own name/sign-up like it does on the website.
+  const appUid = (qs.get("uid") || "").trim().slice(0, 64);
+  const appName = (qs.get("name") || "").trim().slice(0, 40);
+
   const history = [];
 
   // ——— the seeker's diary — kept ONLY on this device (localStorage), never on
@@ -91,6 +107,13 @@
     } catch {
       /* private mode — the guide still answers, just without memory */
     }
+  }
+  // The app told us who this is — adopt it as the seeker's identity so sign-up is
+  // skipped and their journey/membership carry across the app and the guide.
+  if (appUid) {
+    journey.uid = appUid;
+    if (appName && !journey.name) journey.name = appName;
+    saveJourney();
   }
   function recordAsk(q) {
     journey.asked.push({ q: q.slice(0, 120), at: new Date().toISOString() });
@@ -157,6 +180,13 @@
       transform-origin:bottom right}
     .vcb-panel.open{display:flex;animation:vcbPanelIn .4s cubic-bezier(.18,.89,.32,1.15)}
     @keyframes vcbPanelIn{from{opacity:0;transform:scale(.86) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
+    /* App-embed: the guide fills the host WebView (any screen size) and the
+       floating launcher/nudge are gone — the app's own button opened us. */
+    .vcb-panel.vcb-embed{top:0;left:0;right:0;bottom:0;width:100%;height:100vh;height:100dvh;
+      border-radius:0;transform-origin:center bottom}
+    body.vcb-embedded .vcb-btn,body.vcb-embedded .vcb-nudge{display:none !important}
+    .vcb-embed .vcb-head{padding-top:calc(12px + env(safe-area-inset-top))}
+    .vcb-embed .vcb-form{padding-bottom:calc(12px + env(safe-area-inset-bottom))}
 
     /* (phone-specific rules live at the end of this stylesheet so they win) */
 
@@ -686,7 +716,8 @@
   nudge.setAttribute("role", "button");
 
   const panel = document.createElement("div");
-  panel.className = "vcb-panel";
+  panel.className = EMBED ? "vcb-panel vcb-embed" : "vcb-panel";
+  if (EMBED) document.body.classList.add("vcb-embedded"); // hides the launcher/nudge
   panel.innerHTML = `
     <div class="vcb-cosmos">
       <div class="vcb-galaxy">
@@ -2749,7 +2780,9 @@
     try { return new URL(script.src).origin === location.origin; } catch { return false; }
   })();
   const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
-  if (standalone || (ownPage && matchMedia("(max-width:640px)").matches)) toggle(true);
+  // App-embed always opens straight into the guide (the app's button is the tap);
+  // so do installed apps and the bot's own page on a phone.
+  if (EMBED || standalone || (ownPage && matchMedia("(max-width:640px)").matches)) toggle(true);
 
   form.addEventListener("submit", async (e) => {
     primeVoice(); // same gate applies when the seeker types instead

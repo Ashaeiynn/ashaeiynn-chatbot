@@ -13,6 +13,30 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
+- **App integration — Phase 1 shipped: the live guide embeds in the main app's WebView.**
+  Owner wants the guide inside the main app (built on the other Mac, same user id) as a button that
+  opens the bot; the bot stays on the VPS; every change/upload here must reach the app's bot too — AND
+  (bigger vision) the bot should learn the app's own content and be able to navigate the user to a
+  screen in the app. Key framing for the owner: there is ONE bot; the app is a door to it, so
+  "the app's bot gets the same updates" is automatic (nothing to sync). Built the embed foundation:
+  - `widget/app.html` + server route `GET /app` — a full-screen page (no demo chrome) that loads the
+    widget with `data-embed="app"`. `/app` is the WebView target.
+  - Widget app-embed mode (`EMBED`, from `data-embed="app"` or `?embed=app`): fills the WebView
+    (new `.vcb-embed` CSS, any screen size), auto-opens on load, hides the floating launcher/nudge
+    (`body.vcb-embedded`). Reads `?uid=&name=` and ADOPTS them as the seeker's identity
+    (`journey.uid/name`) so sign-up is skipped and journey/membership follow the same person across
+    app + guide. Ordinary website embeds (WordPress) are unaffected — EMBED defaults false.
+  - Verified in a 375×812 WebView: auto-opens full-screen (radius 0), launcher+nudge hidden, identity
+    adopted (app_user_777/Rohan), no sign-up wall, a real question answered end-to-end.
+  - `APP-INTEGRATION.md` written for the other Mac's Claude — the full contract: WebView + per-platform
+    MIC PERMISSION steps (the one real app-side task), the `/app?uid=&name=` URL, Phase 2 app-content
+    feed format `[{id,title,route,text,updatedAt}]` (teach it so the bot learns app screens), and
+    Phase 3 "take me there" navigation bridge (`window.AshaeiynnApp.navigate(route)` /
+    ReactNativeWebView / postMessage — app implements one). Phases 2-3 are specced, wired once the app
+    defines its screens/routes. Membership needs the app's uid in the guide registry (documented).
+  - Pending follow-ups: auto-register/mark app users in the guide registry by uid (small endpoint, on
+    request); wire the Phase-3 button on the guide side when the first app routes exist.
+
 - **Approved answer asked-in-Hindi came back in English — figure guard was reverting the translation.**
   Owner sent a screenshot: "Gupt navaratri ke sadhana ka niyam batao" (Hinglish) → the admin-approved
   answer delivered in full ENGLISH. Root cause in `server/server.mjs` figure-fidelity guard: it compares

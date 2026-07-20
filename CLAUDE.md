@@ -6,7 +6,9 @@ Owner (Parikshit) is non-technical: explain simply, do the work for him, verify 
 
 ## Read before big changes
 - `README.md` — commands, architecture, costs
-- `API-INTEGRATION.md` — API contract for the owner's separate app (built on another laptop)
+- `APP-INTEGRATION.md` — how the main app embeds the live guide (WebView at `GET /app`, `?uid=&name=`
+  identity, mic-permission steps, and the Phase 2 app-content-feed + Phase 3 navigation-bridge contract)
+- `API-INTEGRATION.md` — older API-only contract (POST /api/chat) for a native chat UI
 - `DEPLOY.md` — Render/Docker go-live steps · `LAPTOP-SETUP.md` — new-machine setup
 
 ## Work journal (cross-machine chat memory)
