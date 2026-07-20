@@ -104,7 +104,7 @@ export async function supersedeByNewer({ bestNewerMatch, apply = true }) {
     }
     for (const r of retired) console.log(`supersede: retired correction "${r.q.slice(0, 50)}" — newer source "${String(r.by).slice(0, 40)}" now covers it`);
   }
-  return { checked: all.length, candidates: candidates.length, retired };
+  return { checked: all.length, retired };
 }
 
 export async function listCorrections() {
