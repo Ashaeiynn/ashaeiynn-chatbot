@@ -1207,23 +1207,51 @@
         /* notice is best-effort */
       }
     }
-    const sentences = forDeviceVoice(clean)
+    // Speaking each SENTENCE as its own utterance made the guide pause far too
+    // long after every full stop (owner, 2026-07-20): a separate utterance costs
+    // the device's speech-engine restart latency PLUS our breath. Instead, GROUP
+    // sentences into ~160-char pieces so the engine flows through several
+    // sentences in one breath — its own natural pause at each "।" gives the
+    // gentle new-sentence feel, without the long gap. Still chunked, only so a
+    // single utterance never hits Chrome's ~15s cut.
+    const parts = forDeviceVoice(clean)
       .split(/(?<=[।॥.!?])\s+/)
-      .flatMap((s) => (s.length > 240 ? s.split(/(?<=,)\s+/) : [s]))
       .map((s) => s.trim())
       .filter(Boolean);
-    if (!sentences.length) return done();
+    const chunks = [];
+    let buf = "";
+    for (let s of parts) {
+      while (s.length > 200) {
+        // a lone over-long sentence (no full stop) — break it on a comma so it
+        // still can't trip the 15s cut
+        const cut = s.lastIndexOf(",", 200);
+        const at = cut > 60 ? cut + 1 : 200;
+        chunks.push((buf ? buf + " " : "") + s.slice(0, at).trim());
+        buf = "";
+        s = s.slice(at).trim();
+      }
+      if (buf && buf.length + s.length + 1 > 160) {
+        chunks.push(buf);
+        buf = s;
+      } else {
+        buf = buf ? buf + " " + s : s;
+      }
+    }
+    if (buf) chunks.push(buf);
+    if (!chunks.length) return done();
     let i = 0;
     let cancelled = false;
     const next = () => {
       if (cancelled) return;
-      if (i >= sentences.length) return done();
-      const u = new SpeechSynthesisUtterance(sentences[i++]);
+      if (i >= chunks.length) return done();
+      const u = new SpeechSynthesisUtterance(chunks[i++]);
       u.lang = lang;
       if (voice) u.voice = voice;
       u.rate = 0.97;
       u.pitch = 1.02;
-      u.onend = () => setTimeout(next, 150); // a small breath between sentences
+      // just enough to breathe, not to stall — the real sentence pauses happen
+      // inside the utterance, spoken by the engine itself
+      u.onend = () => setTimeout(next, 30);
       u.onerror = () => {
         cancelled = true;
         done();
