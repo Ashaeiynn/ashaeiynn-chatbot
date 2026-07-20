@@ -11,6 +11,26 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ---
 
+## 2026-07-21 (MacBook Pro session, with the owner)
+
+- **Full-UI language toggle — the language button now switches the WHOLE widget, not just some labels.**
+  Owner: "changing the language from hindi to english should change entire UI to english, thats not
+  happening currently." Root causes and fixes, all in `widget/widget.js`:
+  - The stage/voice-status prompt (idle/listening/thinking/speaking) was set once by `setVState()` and
+    never re-rendered on a language change, so it stayed stale in the old language after a toggle.
+    Fix: `applyLang()` now re-runs `setVState(panel.dataset.vstate)` (and `renderChats()` when the
+    Chats view is open) so live views re-render in the new language.
+  - The `जय सिया राम` blessing (the persistent bless strip AND the open-splash) was hard-Devanagari.
+    Added a `bless` key to the `T` dict and localised it to `Jai Siya Ram` in English mode; splash
+    flips symmetrically (Devanagari headline + Latin sub in Hindi ↔ Latin headline + Devanagari sub in
+    English). Guarded by `SPLASH_CUSTOM` — a site that sets its own `data-splash` keeps that exact
+    text in both languages.
+  - Verified live in-browser (returning English user): every element switches EN↔HI both directions —
+    lang button, placeholder, type-instead, send, Guide/Chats nav, chats header, blessing, and the
+    stage prompt; English mode now has ZERO stray Devanagari (was: only the blessing remained).
+
+---
+
 ## 2026-07-20 (MacBook Pro session, with the owner)
 
 - **"Latest knowledge wins" — shipped as a REVIEW (owner's final choice: flag for review).**
