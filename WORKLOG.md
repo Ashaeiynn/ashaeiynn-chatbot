@@ -13,6 +13,27 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-20 (MacBook Pro session, with the owner)
 
+- **"Latest knowledge wins" — attempted, and REVERTED after a decisive finding.** Owner wants a
+  newer file/article to supersede an older correction on the same topic; chose (via AskUserQuestion)
+  "newer wins, delete the old correction." Built it carefully — but two findings killed the delete
+  mechanism:
+  1. LLM can't decide it: asked to judge "is this correction superseded?", the SAME model on the
+     SAME input returned 6, 7, and 16 retirements across three runs, the 16 including clearly-wrong
+     ones (retiring a negativity remedy because a havan file mentions negativity). Unusable for
+     permanent deletion. Fell back to a deterministic near-identical rule (answer-content ≥0.90),
+     which consistently flagged exactly 1 genuine republish (Gupt Navratri guidelines).
+  2. ⚠️ THE DEEPER PROBLEM — deleting even that one made the answer WORSE. A correction exists
+     because the QUESTION doesn't retrieve the right content well; the correction is the retrieval
+     GUARANTEE. Matching the correction's ANSWER to a newer source (0.90) does NOT mean the QUESTION
+     finds that source — measured: after retiring Gupt Navratri, its own newer guidelines source was
+     not even in the top 8 for the question, so the bot gave a generic fallback.
+  DELETING A CORRECTION CANNOT SAFELY ACHIEVE "LATEST WINS." Restored the correction from git,
+  disabled the auto-delete wiring (teach.mjs), kept the supersede detector report-only. The RIGHT
+  fix is to UPDATE the correction's answer to the newer content (keeping the correction as the
+  retrieval anchor) — proposed to the owner, awaiting confirmation. New building blocks kept for it:
+  retrieve.bestNewerMatch + chunk sourceAt dates, corrections.supersedeByNewer (report-only),
+  llm.complete `strong` option.
+
 - **Complete knowledge-base audit** (owner asked to confirm all files + corrections are in).
   RESULT: fully prepared. Every uploaded file produces searchable chunks (0 missing), /health
   self-check green, all 33 approved corrections verified firing (tested a spread live). Note:
