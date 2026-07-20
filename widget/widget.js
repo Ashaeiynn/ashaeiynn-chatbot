@@ -510,6 +510,7 @@
       .vcb-btn::after,.vcb-bless span{animation:none}
       .vcb-spark,.vcb-shoot{display:none}
       .vcb-neb,.vcb-starfield,.vcb-twinkle,.vcb-galaxy,.vcb-orbit,.vcb-sun,.vcb-moon,.vcb-btn,.vcb-nudge.show{animation:none !important}
+      .mg-mandala,.mg-spark,.mg-tw,.mg-fig,.mg-halo,.mg-heart,.mg-glow,.mg-aura,.mg-lrip,.mg-orbit,.mg-trays,.mg-mouth{animation:none !important}
     }
 
     /* ——— phones: the panel becomes a full-screen app ———
@@ -706,6 +707,59 @@
     .vcb-fixbox textarea{width:100%;box-sizing:border-box;min-height:76px;resize:vertical;
       border:1px solid rgba(227,183,102,.3);border-radius:10px;background:rgba(0,0,0,.25);
       color:#f3ecd9;font-family:inherit;font-size:14px;padding:9px 11px;outline:none}
+
+    /* ——— the guide: a meditating figure replacing the mic orb, animated by
+       the voice state (idle=rest · listening · thinking=reflect · speaking) ——— */
+    .vcb-orbbig{background:transparent!important;box-shadow:none!important;
+      width:150px;height:146px;border-radius:0;overflow:visible}
+    .vcb-orbbig::after{display:none!important}
+    .vcb-panel[data-vstate="listening"] .vcb-orbbig,
+    .vcb-panel[data-vstate="thinking"] .vcb-orbbig,
+    .vcb-panel[data-vstate="speaking"] .vcb-orbbig{animation:none!important;box-shadow:none!important}
+    .vcb-panel[data-has-ans] .vcb-orbbig{width:92px!important;height:90px!important;margin:2px 0!important}
+    .mg-svg{width:100%;height:100%;display:block;overflow:visible;pointer-events:none}
+    .mg-a{transform-box:fill-box;transform-origin:center}
+    .mg-vb{transform-box:view-box}
+    .mg-aura{opacity:.16;transition:opacity .6s ease}
+    .mg-mandala{transform-box:view-box;transform-origin:130px 122px;opacity:.12;animation:mgSpin 34s linear infinite}
+    .mg-spark{opacity:0;animation:mgFloat 3.4s ease-in-out infinite}
+    .mg-tw{animation:mgTw 3s ease-in-out infinite}
+    .mg-teye{transform:scaleY(.05);transition:transform .5s cubic-bezier(.2,.9,.3,1.4)}
+    .mg-glow{opacity:0;transition:opacity .5s ease}
+    .mg-mouth{transform:scaleY(.32);transition:transform .3s ease}
+    .mg-halo,.mg-heart,.mg-lrip,.mg-orbit,.mg-trays{opacity:0}
+    .mg-orbit{transform-box:view-box;transform-origin:130px 92px;transition:opacity .5s}
+    .vcb-panel[data-vstate="idle"] .mg-fig,.vcb-panel[data-vstate="error"] .mg-fig{animation:mgBreathe 4.4s ease-in-out infinite}
+    .vcb-panel[data-vstate="idle"] .mg-halo,.vcb-panel[data-vstate="error"] .mg-halo{opacity:.5;animation:mgHalo 2.6s ease-in-out infinite}
+    .vcb-panel[data-vstate="idle"] .mg-heart,.vcb-panel[data-vstate="error"] .mg-heart{animation:mgHeart 4.4s ease-in-out infinite}
+    .vcb-panel[data-vstate="listening"] .mg-teye,.vcb-panel[data-vstate="thinking"] .mg-teye,.vcb-panel[data-vstate="speaking"] .mg-teye{transform:scaleY(1)}
+    .vcb-panel[data-vstate="listening"] .mg-glow{opacity:.8}
+    .vcb-panel[data-vstate="thinking"] .mg-glow{opacity:.6;animation:mgGlow 1.7s ease-in-out infinite}
+    .vcb-panel[data-vstate="speaking"] .mg-glow{opacity:.85;animation:mgGlow .7s ease-in-out infinite}
+    .vcb-panel[data-vstate="listening"] .mg-aura,.vcb-panel[data-vstate="thinking"] .mg-aura{opacity:.46}
+    .vcb-panel[data-vstate="speaking"] .mg-aura{opacity:.5;animation:mgAura .8s ease-in-out infinite}
+    .vcb-panel[data-vstate="listening"] .mg-mandala,.vcb-panel[data-vstate="thinking"] .mg-mandala,.vcb-panel[data-vstate="speaking"] .mg-mandala{opacity:.28}
+    .vcb-panel[data-vstate="listening"] .mg-lrip{animation:mgRip 2.1s ease-out infinite}
+    .vcb-panel[data-vstate="listening"] .mg-lrip.r2{animation-delay:1.05s}
+    .vcb-panel[data-vstate="thinking"] .mg-orbit{opacity:1;animation:mgSpin 3.6s linear infinite}
+    .vcb-panel[data-vstate="speaking"] .mg-trays{animation:mgRay .7s ease-in-out infinite}
+    .vcb-panel[data-vstate="speaking"] .mg-mouth{animation:mgTalk .34s ease-in-out infinite}
+    .vcb-panel[data-vstate="speaking"] .mg-fig{animation:mgBob .5s ease-in-out infinite}
+    .vcb-panel[data-vstate="listening"] .mg-spark,.vcb-panel[data-vstate="speaking"] .mg-spark{animation-duration:2.4s}
+    @keyframes mgBreathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+    @keyframes mgBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+    @keyframes mgAura{0%,100%{opacity:.4;transform:scale(1)}50%{opacity:.68;transform:scale(1.05)}}
+    @keyframes mgSpin{to{transform:rotate(360deg)}}
+    @keyframes mgHalo{0%,100%{opacity:.22;transform:scale(1)}50%{opacity:.55;transform:scale(1.05)}}
+    @keyframes mgHeart{0%,100%{opacity:.2}50%{opacity:.55}}
+    @keyframes mgGlow{0%,100%{opacity:.5}50%{opacity:.95}}
+    @keyframes mgTalk{0%,100%{transform:scaleY(.28)}50%{transform:scaleY(1.05)}}
+    @keyframes mgRip{0%{transform:scale(.5);opacity:.5}100%{transform:scale(1.35);opacity:0}}
+    @keyframes mgRay{0%,100%{opacity:.35;transform:scale(.9)}50%{opacity:.85;transform:scale(1.14)}}
+    @keyframes mgFloat{0%{opacity:0;transform:translateY(8px)}25%{opacity:.85}80%{opacity:.4}100%{opacity:0;transform:translateY(-30px)}}
+    @keyframes mgTw{0%,100%{opacity:.15}50%{opacity:.8}}
+    .vcb-panel.lite .mg-mandala,.vcb-panel.lite .mg-spark,.vcb-panel.lite .mg-tw,
+    .vcb-panel.lite .mg-orbit,.vcb-panel.lite .mg-lrip,.vcb-panel.lite .mg-trays{animation:none!important}
   `;
   document.head.appendChild(style);
 
@@ -781,14 +835,48 @@
     <div class="vcb-stage">
       <div class="vcb-cap"></div>
       <button class="vcb-orbbig" type="button" aria-label="Ask by voice">
-        <svg class="vcb-mic-big" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs><linearGradient id="vcbMicGold" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#b8f5dc"/><stop offset="55%" stop-color="#34d399"/><stop offset="100%" stop-color="#0e7a54"/>
-          </linearGradient></defs>
-          <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" stroke="url(#vcbMicGold)" stroke-width="1.8" fill="rgba(52,211,153,.12)"/>
-          <path d="M19 10v1a7 7 0 0 1-14 0v-1" stroke="url(#vcbMicGold)" stroke-width="1.8" stroke-linecap="round"/>
-          <line x1="12" y1="18" x2="12" y2="22" stroke="url(#vcbMicGold)" stroke-width="1.8" stroke-linecap="round"/>
-          <line x1="8.5" y1="22" x2="15.5" y2="22" stroke="url(#vcbMicGold)" stroke-width="1.8" stroke-linecap="round"/>
+        <svg class="mg-svg" viewBox="0 0 260 250" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <radialGradient id="e-aura" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#d9a94f" stop-opacity=".5"/><stop offset="100%" stop-color="#d9a94f" stop-opacity="0"/></radialGradient>
+            <radialGradient id="e-glow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#9dffdf" stop-opacity="1"/><stop offset="55%" stop-color="#34d399" stop-opacity=".55"/><stop offset="100%" stop-color="#34d399" stop-opacity="0"/></radialGradient>
+            <radialGradient id="e-heart" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#f3d795" stop-opacity=".8"/><stop offset="100%" stop-color="#f3d795" stop-opacity="0"/></radialGradient>
+          </defs>
+          <circle class="mg-tw" cx="206" cy="40" r="1.4" fill="#f3d795" style="animation-delay:.2s"/>
+          <circle class="mg-tw" cx="48" cy="58" r="1.1" fill="#b8f5dc" style="animation-delay:1.1s"/>
+          <circle class="mg-tw" cx="40" cy="176" r="1.2" fill="#f3d795" style="animation-delay:1.9s"/>
+          <circle class="mg-tw" cx="222" cy="168" r="1.1" fill="#b8f5dc" style="animation-delay:.7s"/>
+          <circle class="mg-mandala mg-vb" cx="130" cy="122" r="96" fill="none" stroke="#d9a94f" stroke-width="1" stroke-dasharray="2 9"/>
+          <circle class="mg-a mg-aura" cx="130" cy="122" r="88" fill="url(#e-aura)"/>
+          <circle class="mg-a mg-halo" cx="130" cy="122" r="76" fill="none" stroke="#d9a94f" stroke-opacity=".4"/>
+          <circle class="mg-a mg-lrip" cx="130" cy="122" r="60" fill="none" stroke="#34d399" stroke-opacity=".6"/>
+          <circle class="mg-a mg-lrip r2" cx="130" cy="122" r="60" fill="none" stroke="#7ce0be" stroke-opacity=".5"/>
+          <g class="mg-orbit mg-vb"><circle cx="130" cy="46" r="2.6" fill="#f3d795"/><circle cx="170" cy="114" r="2.6" fill="#34d399"/><circle cx="90" cy="114" r="2.6" fill="#b8f5dc"/></g>
+          <circle class="mg-a mg-heart" cx="130" cy="150" r="20" fill="url(#e-heart)"/>
+          <g class="mg-a mg-fig">
+            <ellipse cx="130" cy="182" rx="62" ry="17" fill="#151008" stroke="#d9a94f" stroke-opacity=".5"/>
+            <path d="M94,172 Q130,190 166,172" fill="none" stroke="#d9a94f" stroke-opacity=".45"/>
+            <path d="M97,174 Q130,114 163,174 Z" fill="#1b150b" stroke="#d9a94f" stroke-opacity=".55"/>
+            <circle cx="130" cy="92" r="25" fill="#1d160c" stroke="#d9a94f" stroke-opacity=".8"/>
+            <path d="M108,78 Q130,62 152,78" fill="none" stroke="#d9a94f" stroke-opacity=".6"/>
+            <circle cx="130" cy="66" r="5" fill="#241b0d" stroke="#d9a94f" stroke-opacity=".6"/>
+            <path d="M116,98 q6,5 12,0" fill="none" stroke="#f3d795" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M132,98 q6,5 12,0" fill="none" stroke="#f3d795" stroke-width="1.6" stroke-linecap="round"/>
+            <path class="mg-a mg-mouth" d="M123,108 q7,4 14,0" fill="none" stroke="#c98a4e" stroke-width="1.6" stroke-linecap="round"/>
+            <g class="mg-a mg-trays" stroke="#9dffdf" stroke-width="1.3" stroke-linecap="round" opacity=".7">
+              <line x1="130" y1="70" x2="130" y2="62"/><line x1="130" y1="86" x2="130" y2="94"/><line x1="122" y1="78" x2="114" y2="78"/><line x1="138" y1="78" x2="146" y2="78"/>
+              <line x1="124" y1="72" x2="118" y2="66"/><line x1="136" y1="72" x2="142" y2="66"/><line x1="124" y1="84" x2="118" y2="90"/><line x1="136" y1="84" x2="142" y2="90"/>
+            </g>
+            <circle class="mg-a mg-glow" cx="130" cy="78" r="16" fill="url(#e-glow)"/>
+            <g class="mg-a mg-teye">
+              <path d="M119,78 Q130,70 141,78 Q130,86 119,78 Z" fill="#0c1a14" stroke="#f3d795" stroke-width="1.4"/>
+              <circle cx="130" cy="78" r="3.4" fill="#34d399"/><circle cx="128.6" cy="76.6" r="1.1" fill="#eafff6"/>
+            </g>
+          </g>
+          <circle class="mg-a mg-spark" cx="92" cy="180" r="1.7" fill="#f3d795" style="animation-delay:0s"/>
+          <circle class="mg-a mg-spark" cx="168" cy="180" r="1.5" fill="#e8c877" style="animation-delay:1.2s"/>
+          <circle class="mg-a mg-spark" cx="104" cy="186" r="1.4" fill="#b8f5dc" style="animation-delay:2.1s"/>
+          <circle class="mg-a mg-spark" cx="156" cy="186" r="1.6" fill="#f3d795" style="animation-delay:.6s"/>
+          <circle class="mg-a mg-spark" cx="130" cy="190" r="1.5" fill="#e8c877" style="animation-delay:1.7s"/>
         </svg>
       </button>
       <div class="vcb-spacer"></div>
@@ -991,7 +1079,7 @@
       askMore: "🙏 आप यह भी पूछ सकते हैं",
       thoughtTitle: "🙏 आज का विचार",
       thoughtTap: "👆 tap करें — इस विचार पर guide से बात कीजिए",
-      idle: 'माइक को दबाइए और <b>बोलिए</b><br>Tap the mic and <b>speak</b> your question',
+      idle: 'गाइड को छूकर <b>बोलिए</b><br>Tap the guide and <b>speak</b> your question',
       listening: '🎙️ <b>सुन रहे हैं… बोलिए</b> · listening — tap to finish',
       speaking: '🔊 <b>उत्तर</b> · tap to stop',
       speakNow: "🎙️ बोलिए… रुकते ही भेज दिया जाएगा (auto-sends when you pause)",
@@ -1026,7 +1114,7 @@
       askMore: "🙏 You can also ask",
       thoughtTitle: "🙏 Thought of the day",
       thoughtTap: "👆 Tap to talk about this with the guide",
-      idle: 'Tap the mic and <b>speak</b> your question',
+      idle: 'Tap the guide and <b>speak</b> your question',
       listening: '🎙️ <b>Listening… speak</b> — tap to finish',
       speaking: '🔊 <b>Answer</b> · tap to stop',
       speakNow: "🎙️ Speak… it sends when you pause",

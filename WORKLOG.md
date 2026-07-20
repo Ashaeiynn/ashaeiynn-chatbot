@@ -13,6 +13,21 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
+- **The voice orb is now a meditating guide character (replaces the mic icon).**
+  Owner picked, from 3 animated concepts, the symbolic meditating figure with an opening third eye
+  (generic, NOT a likeness of Bhaiya — per the persona rule). Built as hand-drawn SVG + CSS in
+  `widget/widget.js`, wired to the EXISTING `data-vstate` (no setVState change): idle=rest (eyes
+  closed, breathing, halo + heart glow), listening=third eye opens & glows green + ripples,
+  thinking=planets orbit the head + shimmer, speaking=rays from the third eye + aura pulse + mouth +
+  bob. Ambient always: incense sparks rising, slow mandala ring, twinkling stars. Implementation
+  notes: swapped the `.vcb-mic-big` SVG for the `mg-*` figure inside the same `.vcb-orbbig` button
+  (tap-to-talk handler unchanged — verified it still fires the mic flow); appended all character CSS
+  at the END of the style string and used `!important` to neutralise the old orb circle/ring/pulse in
+  BOTH theme blocks rather than editing them (lower risk); `.mg-svg{pointer-events:none}` so taps
+  resolve to the button; reduced-motion + `.lite` (Apple) disable the heavy loops. Idle prompt copy
+  changed "mic"→"guide" (hi+en). Verified in-browser: all 4 states animate correctly (third eye
+  open on listen, rays on speak), tap fires the voice handler, no console errors.
+
 - **In-bot notice — admin notifications now show INSIDE the guide on open (for app users).**
   Owner: the main app has its own notification system, so the bot doesn't need its own push there —
   instead, an admin notification should appear as a card when the user next opens the bot; they "go
