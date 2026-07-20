@@ -67,6 +67,8 @@
   journey.asked = Array.isArray(journey.asked) ? journey.asked : [];
   journey.seen = Array.isArray(journey.seen) ? journey.seen : [];
   journey.convo = Array.isArray(journey.convo) ? journey.convo : [];
+  // ids of admin notices this device has already been shown (so each shows once)
+  journey.seenAnnounce = Array.isArray(journey.seenAnnounce) ? journey.seenAnnounce : [];
   // The seeker's own conversation, kept on THIS phone for 24 hours (owner,
   // 2026-07-20) — viewable in the Chats tab, and never sent anywhere or stored
   // on a server. Each entry: { r:'u'|'b' (user/bot), t:text, at:ms }.
@@ -185,6 +187,7 @@
     .vcb-panel.vcb-embed{top:0;left:0;right:0;bottom:0;width:100%;height:100vh;height:100dvh;
       border-radius:0;transform-origin:center bottom}
     body.vcb-embedded .vcb-btn,body.vcb-embedded .vcb-nudge{display:none !important}
+    body.vcb-embedded .vcb-bell{display:none !important} /* the app owns phone push */
     .vcb-embed .vcb-head{padding-top:calc(12px + env(safe-area-inset-top))}
     .vcb-embed .vcb-form{padding-bottom:calc(12px + env(safe-area-inset-bottom))}
 
@@ -690,6 +693,8 @@
     .vcb-bell.on{opacity:1;filter:drop-shadow(0 0 8px rgba(243,215,149,.7))}
     .vcb-bellask{display:flex;flex-direction:column;gap:10px}
     .vcb-bellask p{margin:0;font-size:14px}
+    /* the admin's in-bot notice — a card with a soft gold edge to set it apart */
+    .vcb-notice{box-shadow:inset 3px 0 0 0 #d9a94f,inset 0 0 0 1px rgba(227,183,102,.28)}
     .vcb-bellrow{display:flex;gap:10px}
     .vcb-bellrow button{border:none;border-radius:11px;padding:10px 16px;font-size:13.5px;cursor:pointer;
       font-family:inherit}
@@ -2478,6 +2483,7 @@
   // re-shows its prompt once denied — no app can force that).
   let bellOfferedThisOpen = false;
   function maybeOfferBell() {
+    if (EMBED) return; // inside the app, the app owns phone notifications
     if (!pushCapable() || bellOfferedThisOpen) return;
     if (!journey.uid) return; // sign-up comes first; the offer follows identity
     if (journey.push && Notification.permission === "granted") {
@@ -2547,6 +2553,8 @@
       bellOfferedThisOpen = false;
       maybeOfferBell();
       notifWelcome();
+      noticeShownThisOpen = false;
+      showAnnouncement();
       if (typeof journey.credits === "number") renderCredits(journey.credits); // instant from cache
       refreshCredits(); // then the live figure from the server
       if (panel.dataset.mode === "text") input.focus();
@@ -2597,11 +2605,11 @@
       return null;
     }
   })();
-  let notifOpened = false;
-  async function notifWelcome() {
-    if (!notifCtx || notifOpened) return;
-    notifOpened = true;
-    const msg = `${notifCtx.t}${notifCtx.b ? " — " + notifCtx.b : ""}`.slice(0, 300);
+  // Open a living conversation ABOUT a message (a tapped push, or an in-bot
+  // notice the seeker chose to "go for"). Same doorstep treatment either way.
+  async function converseAbout(msg) {
+    msg = String(msg || "").slice(0, 300);
+    if (!msg) return;
     if (panel.dataset.mode !== "text") setVState("thinking");
     try {
       const data = await askServer(msg, "notification");
@@ -2625,6 +2633,64 @@
       }
     } catch {
       if (panel.dataset.mode !== "text") setVState("idle");
+    }
+  }
+  let notifOpened = false;
+  async function notifWelcome() {
+    if (!notifCtx || notifOpened) return;
+    notifOpened = true;
+    await converseAbout(`${notifCtx.t}${notifCtx.b ? " — " + notifCtx.b : ""}`);
+  }
+
+  // ——— the in-bot notice: an admin message shown when the seeker opens the
+  // guide. They "go for it" (a conversation opens about it) or dismiss; shown
+  // once per device. This is how admin notices reach app users (no phone push).
+  let noticeShownThisOpen = false;
+  async function showAnnouncement() {
+    if (noticeShownThisOpen || notifCtx) return; // a tapped push already brought a message
+    noticeShownThisOpen = true;
+    let a = null;
+    try {
+      const r = await fetch(`${API}/api/announcement`);
+      a = (await r.json())?.announcement;
+    } catch {
+      return; // offline — nothing to show
+    }
+    if (!a || !a.id || journey.seenAnnounce.includes(a.id)) return;
+    const markSeen = () => {
+      if (!journey.seenAnnounce.includes(a.id)) journey.seenAnnounce.push(a.id);
+      if (journey.seenAnnounce.length > 40) journey.seenAnnounce.splice(0, journey.seenAnnounce.length - 40);
+      saveJourney();
+    };
+    const card = document.createElement("div");
+    card.className = "vcb-ans vcb-bellask vcb-notice";
+    const p = document.createElement("p");
+    p.textContent = `📣 ${a.title ? a.title + " — " : ""}${a.text}`;
+    const row = document.createElement("div");
+    row.className = "vcb-bellrow";
+    const go = document.createElement("button");
+    go.className = "vcb-bellyes";
+    go.textContent = uiLang === "en" ? "Open 🙏" : "देखिए 🙏";
+    const later = document.createElement("button");
+    later.className = "vcb-bellno";
+    later.textContent = uiLang === "en" ? "Not now" : "बाद में";
+    go.addEventListener("click", () => {
+      markSeen();
+      card.remove();
+      if (a.link) window.open(a.link, "_blank", "noopener");
+      converseAbout(`${a.title ? a.title + ". " : ""}${a.text}`);
+    });
+    later.addEventListener("click", () => {
+      markSeen();
+      card.remove();
+    });
+    row.append(go, later);
+    card.append(p, row);
+    if (panel.dataset.mode === "text") {
+      msgs.appendChild(card);
+      msgs.scrollTop = msgs.scrollHeight;
+    } else {
+      capAdd(card);
     }
   }
 

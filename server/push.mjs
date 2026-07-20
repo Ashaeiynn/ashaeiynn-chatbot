@@ -10,6 +10,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { ROOT } from "./env.mjs";
 import { markDeleted, listUsers } from "./users.mjs";
+import { setAnnouncement } from "./announce.mjs";
 
 const SUBS = path.join(ROOT, "data", "push-subs.json");
 const LOG = path.join(ROOT, "data", "push-log.json");
@@ -162,8 +163,11 @@ export async function processQueue() {
   const now = Date.now();
   const remain = [];
   for (const i of q) {
-    if (new Date(i.at).getTime() <= now) await sendToAll(i.title, i.body, i.url, "scheduled").catch(() => {});
-    else remain.push(i);
+    if (new Date(i.at).getTime() <= now) {
+      // a scheduled notice also becomes the in-bot notice, now that it is live
+      setAnnouncement({ title: i.title, text: i.body, link: i.url });
+      await sendToAll(i.title, i.body, i.url, "scheduled").catch(() => {});
+    } else remain.push(i);
   }
   if (remain.length !== q.length) save(QUEUE, remain);
 }

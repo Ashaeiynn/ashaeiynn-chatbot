@@ -29,6 +29,7 @@ try {
   console.error("push module disabled:", err?.message);
 }
 import { warmup } from "./embed.mjs";
+import { setAnnouncement, getAnnouncement, clearAnnouncement } from "./announce.mjs";
 import { buildSystemPrompt, buildContextBlock } from "./prompt.mjs";
 import { complete, PROVIDER, ACTIVE_MODEL, keyConfigured, BACKUP_CONFIGURED, failover, LlmAuthError, LlmRateLimitError } from "./llm.mjs";
 
@@ -1527,6 +1528,11 @@ const server = createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/push/key") {
     return json(res, 200, { ready: push.pushReady(), key: push.publicKey() });
   }
+  // The in-bot notice the widget shows on open (public — it is shown to seekers).
+  // null when there is nothing current or it has aged out.
+  if (req.method === "GET" && url.pathname === "/api/announcement") {
+    return json(res, 200, { announcement: getAnnouncement() });
+  }
   // the seeker's own right: delete their account (registry + notifications)
   if (req.method === "POST" && url.pathname === "/api/account/delete") {
     const ip = req.socket.remoteAddress ?? "unknown";
@@ -1835,6 +1841,7 @@ const server = createServer(async (req, res) => {
       subscribers: push.subCount(),
       log: push.pushLog(),
       queued: push.queuedNotifications(),
+      announcement: getAnnouncement(),
     });
   }
   if (req.method === "POST" && url.pathname === "/api/admin/push/cancel") {
@@ -1846,6 +1853,12 @@ const server = createServer(async (req, res) => {
     } catch {
       return json(res, 400, { error: "Invalid JSON." });
     }
+  }
+  // Take the current in-bot notice down early (before it ages out on its own).
+  if (req.method === "POST" && url.pathname === "/api/admin/announcement/clear") {
+    if (!adminOk()) return;
+    clearAnnouncement();
+    return json(res, 200, { cleared: true });
   }
   if (req.method === "POST" && url.pathname === "/api/admin/push/send") {
     if (!adminOk()) return;
@@ -1866,10 +1879,16 @@ const server = createServer(async (req, res) => {
         if (isNaN(at)) return json(res, 400, { error: "Invalid schedule time." });
         if (at.getTime() < Date.now() + 60_000)
           return json(res, 400, { error: "Scheduled time is in the past — pick a future time or leave it empty." });
+        // The in-bot notice is set when the schedule FIRES (push.processQueue),
+        // not now, so it doesn't greet seekers before its time.
         return json(res, 200, { scheduled: true, item: push.scheduleNotification(title, text, link, at.toISOString()) });
       }
+      // Every admin notification also becomes the in-bot notice shown on open —
+      // this is how it reaches app users (who have no phone push). Set here,
+      // independent of push readiness, so it works even where push is disabled.
+      setAnnouncement({ title, text, link });
       const result = await push.sendToAll(title, text, link, "admin");
-      return json(res, 200, result);
+      return json(res, 200, { ...result, inBot: true });
     } catch (err) {
       return json(res, 503, { error: String(err?.message || "send failed") });
     }

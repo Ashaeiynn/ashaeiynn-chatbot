@@ -22,6 +22,7 @@ data/push-subs.json
 data/push-log.json
 data/push-state.json
 data/push-queue.json
+data/announcement.json
 data/users.json
 data/suggestions.json
 data/uploads/

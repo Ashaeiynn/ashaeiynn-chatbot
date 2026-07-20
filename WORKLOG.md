@@ -13,6 +13,27 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
+- **In-bot notice — admin notifications now show INSIDE the guide on open (for app users).**
+  Owner: the main app has its own notification system, so the bot doesn't need its own push there —
+  instead, an admin notification should appear as a card when the user next opens the bot; they "go
+  for it" or dismiss, shown once. Owner's two choices: (1) keep the bot's own phone-push on the WEBSITE
+  only, hide it in the app; (2) tapping "go for it" starts a CONVERSATION about the notice. Built:
+  - `server/announce.mjs` — stores the single latest notice `{id,title,text,link,at}`, auto-retires
+    after ANNOUNCEMENT_DAYS (10). Works WITHOUT push (so it reaches app users where push is off).
+  - `GET /api/announcement` (public). Admin `/api/admin/push/send` now ALSO calls `setAnnouncement`
+    (immediate) — response gains `inBot:true`; scheduled sends set it when they fire (push.processQueue).
+    `POST /api/admin/announcement/clear` + the notice shown in `/api/admin/push` status.
+  - Widget: `showAnnouncement()` on open — fetches the notice, shows a gold-edged card (📣 + Open /
+    Not now) once per device (`journey.seenAnnounce`). "Open/देखिए" → `converseAbout()` (extracted from
+    notifWelcome — same doorstep conversation; opens the link too if set); "Not now/बाद में" dismisses.
+    Both mark it seen. In app-embed mode the 🔔 bell + its offer are hidden (`body.vcb-embedded .vcb-bell`,
+    `maybeOfferBell()` early-returns on EMBED); on the website they stay.
+  - Admin Notify tab: description says it shows in-bot + pings 🔔 phones; new "Showing inside the guide
+    now" card with a "Take it down" (clear) button.
+  - Verified end-to-end locally: send → `/api/announcement` set (inBot:true even with 0 push subs) →
+    /app open shows the card, bell hidden → "Open" starts a warm conversation + marks seen → reload does
+    NOT re-show → clear endpoint empties it.
+
 - **App integration — Phase 1 shipped: the live guide embeds in the main app's WebView.**
   Owner wants the guide inside the main app (built on the other Mac, same user id) as a button that
   opens the bot; the bot stays on the VPS; every change/upload here must reach the app's bot too — AND

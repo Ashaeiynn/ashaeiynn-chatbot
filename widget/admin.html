@@ -249,7 +249,7 @@
   <div id="nstats" class="statsgrid"></div>
   <div class="teach-card">
     <h3>📣 Send a notification</h3>
-    <p>Goes to every member who turned on 🔔, exactly as you type it — Hindi or English, your choice. Keep it rare and precious: the guide whispers, it never shouts.</p>
+    <p>Shows <b>inside the guide</b> the next time each person opens it — app users and website users alike (they read it, then open it or dismiss; shown once each). It <i>also</i> pings the phones of anyone on the website who turned on 🔔. Exactly as you type it — Hindi or English. Keep it rare and precious: the guide whispers, it never shouts.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
       <button class="mini ntpl" data-title="🪔 आज पूर्णिमा है" data-body="आज का दिन साधना के लिए उत्तम है — अपना जाप अवश्य कीजिए 🙏">🪔 Purnima</button>
       <button class="mini ntpl" data-title="🙏 नया ज्ञान आया है" data-body="Pathshala पर नया article आ गया है — पढ़िए और अपनी यात्रा आगे बढ़ाइए।" data-url="https://ashaeiynn.com/pathshala/">📖 New article</button>
@@ -262,6 +262,12 @@
     <input type="datetime-local" id="nwhen" style="width:100%;background:#0b0b10;border:1px solid var(--line);border-radius:10px;padding:10px 13px;color:var(--ink);font-size:14px;outline:none;margin-bottom:10px;font-family:inherit;color-scheme:dark">
     <button class="gold-btn" id="nsend" style="width:100%;padding:11px">📣 Send to all</button>
     <p id="nresult" style="min-height:18px;margin-top:8px;font-size:13px"></p>
+  </div>
+  <div class="teach-card" id="ncurrent-card" style="display:none">
+    <h3>📣 Showing inside the guide now</h3>
+    <p>This is the notice every seeker sees when they next open the guide. It comes down on its own after a few days — or take it down now.</p>
+    <div id="ncurrent"></div>
+    <button class="mini" id="nclear" style="margin-top:8px">✖️ Take it down</button>
   </div>
   <div class="teach-card" id="nqueue-card" style="display:none">
     <h3>⏰ Scheduled — waiting to be delivered</h3>
@@ -945,6 +951,13 @@
     });
     $("#nsend").disabled = !d.ready;
     if (!d.ready) $("#nresult").textContent = "⚠️ Push system not configured yet — ask Claude to finish the notifications setup";
+    // the notice currently showing inside the guide (works with or without push)
+    const a = d.announcement;
+    $("#ncurrent-card").style.display = a ? "block" : "none";
+    if (a) {
+      const since = new Date(a.at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+      $("#ncurrent").innerHTML = `<div class="job"><span>📣</span><div><div>${esc(a.title ? a.title + " — " : "")}${esc(a.text)}</div><div class="d">up since ${since} IST${a.link ? ` · link: ${esc(a.link)}` : ""}</div></div></div>`;
+    }
     const queued = d.queued || [];
     $("#nqueue-card").style.display = queued.length ? "block" : "none";
     $("#nqueue").innerHTML = "";
@@ -990,14 +1003,19 @@
     $("#nurl").value = b.dataset.url || "";
     $("#nbody").focus();
   }));
+  $("#nclear").addEventListener("click", async () => {
+    if (!confirm("Take the current notice down? Seekers who haven't opened the guide yet won't see it.")) return;
+    await fetch("/api/admin/announcement/clear", { method: "POST", headers: { "x-admin-key": key() } }).catch(() => {});
+    loadNotify();
+  });
   $("#nsend").addEventListener("click", async () => {
     const title = $("#ntitle").value.trim();
     const body = $("#nbody").value.trim();
     const when = $("#nwhen").value;
     if (!body) { $("#nresult").textContent = "⚠️ Write a message first"; return; }
     const confirmMsg = when
-      ? `Schedule this notification for ${when.replace("T", " at ")} IST?\n\n${title}\n${body}`
-      : `This notification will go to ALL 🔔 subscribed phones NOW:\n\n${title}\n${body}\n\nSend?`;
+      ? `Schedule this for ${when.replace("T", " at ")} IST? It will show inside the guide (and ping 🔔 phones) at that time.\n\n${title}\n${body}`
+      : `This will show inside the guide for everyone who opens it, and ping ALL 🔔 subscribed phones NOW:\n\n${title}\n${body}\n\nSend?`;
     if (!confirm(confirmMsg)) return;
     $("#nsend").disabled = true;
     $("#nresult").textContent = when ? "Scheduling…" : "Sending…";
