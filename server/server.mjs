@@ -560,13 +560,30 @@ async function handleChat(req, res) {
   // knows the real numbers, so it answers directly rather than searching.
   if (CREDITS_ON && QUOTA_ASK.test(message)) {
     const limit = users.DAILY_LIMIT ?? 25;
-    const left = seekerCredits;
     // the allowance turns over at midnight India time
     const nowIst = new Date(Date.now() + 5.5 * 3600e3);
     const hrs = Math.max(1, 24 - nowIst.getUTCHours());
-    const quotaMsg = wantsHindi
-      ? `${left === null ? `हर दिन ${limit} प्रश्न मिलते हैं` : `आज आपके पास ${left} प्रश्न बचे हैं`} — और हर रात 12 बजे (भारतीय समय) यह फिर से पूरे ${limit} हो जाते हैं, यानी लगभग ${hrs} घंटे में। कुछ भी बचा हुआ अगले दिन नहीं जुड़ता, हर सुबह गिनती नई शुरू होती है।`
-      : `${left === null ? `You get ${limit} questions a day` : `You have ${left} questions left today`} — they go back up to ${limit} at midnight India time, about ${hrs} hour${hrs > 1 ? "s" : ""} from now. Nothing carries over; each day starts fresh.`;
+    // The daily part resets; an admin-granted bonus carries forward until used —
+    // so the honest answer depends on whether this seeker holds a bonus.
+    let bal = null;
+    if (seekerUid && seekerCredits !== null) {
+      try {
+        bal = users.balance(seekerUid);
+      } catch {
+        /* fall back to the plain daily message */
+      }
+    }
+    const left = seekerCredits;
+    let quotaMsg;
+    if (bal && bal.bonus > 0) {
+      quotaMsg = wantsHindi
+        ? `अभी आपके पास कुल ${bal.left} प्रश्न हैं — ${bal.dailyLeft} आज के और ${bal.bonus} अतिरिक्त (Ashaeiynn team की ओर से)। रोज़ के ${limit} प्रश्न हर रात 12 बजे (भारतीय समय) फिर से पूरे हो जाते हैं, यानी लगभग ${hrs} घंटे में; आपके ${bal.bonus} अतिरिक्त प्रश्न तब तक बने रहेंगे जब तक आप उन्हें इस्तेमाल न कर लें।`
+        : `You have ${bal.left} questions right now — ${bal.dailyLeft} of today's and ${bal.bonus} extra from the Ashaeiynn team. The daily ${limit} refill at midnight India time (about ${hrs} hour${hrs > 1 ? "s" : ""} from now); your ${bal.bonus} extra stay with you until you use them.`;
+    } else {
+      quotaMsg = wantsHindi
+        ? `${left === null ? `हर दिन ${limit} प्रश्न मिलते हैं` : `आज आपके पास ${left} प्रश्न बचे हैं`} — और हर रात 12 बजे (भारतीय समय) यह फिर से पूरे ${limit} हो जाते हैं, यानी लगभग ${hrs} घंटे में। रोज़ की गिनती नई शुरू होती है।`
+        : `${left === null ? `You get ${limit} questions a day` : `You have ${left} questions left today`} — they go back up to ${limit} at midnight India time, about ${hrs} hour${hrs > 1 ? "s" : ""} from now. Each day starts fresh.`;
+    }
     writeLog({
       at: new Date().toISOString(),
       q: message,

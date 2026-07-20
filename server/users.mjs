@@ -88,6 +88,16 @@ export function credits(id) {
   return leftFor(byId(id));
 }
 
+// The split behind the total, so the guide can explain it accurately: the daily
+// part resets tomorrow, the bonus part carries forward until used.
+export function balance(id) {
+  const u = byId(id);
+  const usedToday = u && u.dayKey === istDay() ? Number(u.usedToday || 0) : 0;
+  const dailyLeft = Math.max(0, DAILY_LIMIT - usedToday);
+  const bonus = Math.max(0, Number(u?.bonus || 0));
+  return { dailyLeft, bonus, left: dailyLeft + bonus, limit: DAILY_LIMIT };
+}
+
 // admin grants EXTRA questions (Users tab) — on top of the daily allowance,
 // carried over day to day until used
 export function addCredits(id, amount) {
