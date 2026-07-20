@@ -13,6 +13,28 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-20 (MacBook Pro session, with the owner)
 
+- **Chats tab — the seeker's own 24h conversation, on their phone, with a new bottom menu**
+  (owner: "Save the chats of each user for 24 hours which will show to the user as Chats… a menu
+  option at the bottom… be creative"). KEY FINDING before building: two of the three things the
+  owner described ALREADY existed — the bot already gets conversation context (last 12 turns +
+  distilled summary + comm-style + recent topics), per-user learning already saves to the DEVICE
+  (`/api/distill` → journey.summary + journey.commStyle every 5 questions), and general learning
+  already saves to the VPS (chatbot-reflect.timer nightly → style-notes.json, both verified active).
+  So the genuinely new work was the VISIBLE history + the menu:
+  - `journey.chatlog` = [{r:'u'|'b', t, at}] on device, pruned to 24h, capped 300; `logChat()`
+    hooked at the exact turn-complete point (and the return-visit check-in). Never sent to a
+    server — honors the privacy design (journey lives only on the device).
+  - A bottom menu (Guide / Chats) added below the form — slim, gold-underline active tab, in the
+    app's dark/gold/green palette. `data-view` toggles the guide stage ↔ the Chats screen; the
+    voice stage and जय सिया राम strip are untouched.
+  - Chats screen: gold user bubbles / green bot bubbles, time headers grouped by >30-min gaps
+    ("आज · 1:19"), tap a past question to re-ask it, a "मिटाएँ" clear (confirm-gated), and an
+    empty state with a "पूछना शुरू करें" button. Verified live: renders, switches back to the
+    intact voice stage, empty state, zero console errors.
+  DID NOT feed the full 24h log to the bot — the recent turns + the distilled summary already
+  capture "what the conversation was going on"; sending 24h of raw turns would bloat every call.
+
+
 - **Removed the dead media/video-link code** (owner: "if these are not required, remove these").
   Since audio/video teaching was withdrawn 2026-07-18, three things were unreachable: the `media`
   and `"video-link"` job RUNNERS in teach.mjs (the latter called yt-dlp, absent on the VPS), the
