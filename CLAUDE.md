@@ -127,11 +127,17 @@ Failover (2026-07-17): ANTHROPIC_API_KEY (fresh "chatbot-backup" key) added to
 (llm.mjs); /health shows backup.lastUsed/answers. Balance ~$0.80 — owner may
 top up at console.anthropic.com. iMac .env lacks the backup key (fine — iMac
 is studio only).
-iOS ear (2026-07-17): the iOS home-screen app transcribes voice via /api/stt
-→ Groq whisper-large-v3-turbo ONLY (GROQ_API_KEY in .env, MacBook+VPS) — NEVER
-Gemini, by owner's cost rule; Groq failure returns the error, no fall-through.
-Other callers (rare non-iOS recorder fallbacks) keep the Gemini chain. Android
-transcribes on-device. /health shows iosEar. Verified live with real audio.
+The ear — Groq is now the SOLE speech-to-text for EVERY device (owner, 2026-07-22;
+was iOS-only since 2026-07-17). Every device that can record (widget `useRecorder()`
+= `canRecord`) records a short clip → POST /api/stt → Groq whisper-large-v3 → turbo
+(GROQ_API_KEY in .env, MacBook+VPS). This ended the "one phone hears well, another
+doesn't" split (iOS used Groq, Android/Safari used their weaker on-device recognizer).
+The Gemini STT fallback was REMOVED — NEVER Gemini for listening, by the owner's cost
+rule; on Groq failure the seeker gets "please try again", no fall-through. The phone's
+own recognizer (SR) is kept ONLY as a last resort for devices that can't record.
+Free Groq = ~2,000 transcriptions/day pooled across all seekers (plenty now); move
+Groq to paid before that caps at scale. /health shows iosEar. Verified live with real
+audio (a src='web' Hindi clip transcribed via whisper-large-v3).
 Admin Users tab (2026-07-17): second lock, same password as Library
 (x-library-key header on /api/admin/users + user-update; one unlock opens
 both tabs per session). Admin CSS: [hidden]{display:none!important}.

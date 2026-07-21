@@ -13,6 +13,26 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
+## 2026-07-22 (MacBook Pro session, with the owner)
+
+- **Groq Whisper is now the SOLE ear for EVERY device — iOS + Android, browser + app (owner).**
+  Fixes the "one phone hears well, another doesn't" inconsistency: iOS used Groq, but Android/Safari
+  used their own weaker on-device recognizer. Now everyone records a clip → /api/stt → Groq.
+  - widget: `useRecorder()` changed from the iOS-standalone/sttFallback/!SR condition to simply
+    `() => canRecord` — every recordable device uses the record→server path. The phone's built-in
+    recognizer (SR) is kept ONLY as a last resort for devices that genuinely can't record.
+  - server: `handleStt` now transcribes ALL requests via Groq (was gated on `src==='ios-app'`).
+    The entire Gemini STT fallback block was DELETED (never Gemini for listening — owner's cost rule).
+    On Groq failure/misconfig the seeker gets "please try again", never a Gemini transcription. Kept
+    the .env key-reload guard (the 2026-07-19 missing-key incident). `src` is now unused for routing.
+  - Verified locally AND live (guide.ashaeiynn.com): a `src='web'` Hindi clip (the Android/Safari/app
+    path) transcribed via `whisper-large-v3` — near-exact match. Deployed 0f7e317.
+  - Cost/limits reminder: free Groq = ~2,000 transcriptions/day POOLED across all seekers (plenty at
+    today's volume; ~465 voice Qs ever). Move Groq to PAID before ~2,000/day (≈130 heavy daily voice
+    users) or big simultaneous events (30/min, 720/hr limits) — else STT starts failing like the TTS
+    cap did. Paid Groq ~₹0.01/question. CLAUDE.md updated. Groq `prompt` already primes brand words
+    (जय सिया राम/साधना/जाप/ध्यान/गुरुदेव) + fixMishearings server-side.
+
 - **Removed the "install the app" nudge (owner's request).** The `.vcb-openin` banner (shown inside
   in-app browsers — WhatsApp/Instagram/etc. — telling seekers to open in Safari/Chrome to install)
   is gone: markup + CSS + the show-logic JS + the now-unused `IN_APP_BROWSER`/`isInAppBrowser`/
