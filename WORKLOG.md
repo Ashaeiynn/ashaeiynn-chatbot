@@ -13,6 +13,15 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
+- **Removed the "install the app" nudge (owner's request).** The `.vcb-openin` banner (shown inside
+  in-app browsers — WhatsApp/Instagram/etc. — telling seekers to open in Safari/Chrome to install)
+  is gone: markup + CSS + the show-logic JS + the now-unused `IN_APP_BROWSER`/`isInAppBrowser`/
+  `isInstalled` helpers. The guide no longer asks anyone to install anything. Deployed (3845e10),
+  verified live (vcb-openin:0). NOTE the voice link: the installed iOS app was the reliable-Groq
+  path; with the install nudge gone, plain-browser voice stays on the phone's own (weaker) ear until
+  we either unify voice on Groq server-side or ship the main app (whose WebView can't use the phone's
+  Web Speech API, so it falls to Groq automatically). Owner leaning on the app to standardise the ear.
+
 - **Voice playback bug fixed → natural voice DISABLED, device voice only (owner chose "stay free").**
   Owner reported: first sentence spoke fine, then a huge pause, then the next part started with its
   first 2-3 words missing. Root cause CONFIRMED from the live log: the free Gemini TTS key is
