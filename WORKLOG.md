@@ -13,8 +13,17 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
-- **Sarvam Bulbul is now the guide's natural voice (code wired + tested; goes live once the owner
-  picks a voice and the VPS key is set).** Owner supplied a Sarvam key to get an India-native,
+- **Sarvam Bulbul is now the guide's LIVE natural voice — voice `ratan` (owner picked it by ear).**
+  Went live on the VPS 2026-07-21: appended `SARVAM_API_KEY` + `SARVAM_VOICE=ratan` to
+  `/opt/chatbot/app/.env` (surgical append, not an overwrite — kept chatbot:chatbot 600), pulled
+  code d6c3093 via update.sh, service restarted. Verified: /health `naturalVoice: sarvam:ratan`;
+  live `/api/tts` returns valid 22.05kHz mono WAV both on localhost and through
+  guide.ashaeiynn.com (Caddy path real seekers use). The guide now speaks Hindi answers in ratan's
+  voice; ₹ billing on Sarvam starts from here. To change the voice later: edit SARVAM_VOICE in the
+  VPS .env (valid v3 male voices: shubh, aditya, rohan, dev, ratan, anand) and restart chatbot.
+  Owner chose from a 6-voice tap-to-hear Artifact. Build/test detail below.
+
+- **[superseded — now live above] Sarvam Bulbul wired as the guide's natural voice.** Owner supplied a Sarvam key to get an India-native,
   Hindi/Hinglish, ₹-billed voice (deep/calm male, cheaper than ElevenLabs, better Hindi than Gemini
   TTS). Built in `server/server.mjs`: `SARVAM_KEY`/`SARVAM_VOICE`(=shubh default)/`SARVAM_MODEL`
   (=bulbul:v3)/`SARVAM_PACE` env; `sarvamTts(text)` POSTs to `https://api.sarvam.ai/text-to-speech`
