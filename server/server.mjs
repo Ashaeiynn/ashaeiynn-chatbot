@@ -283,6 +283,13 @@ const GEMINI_TTS_MODELS = (
   .map((m) => m.trim())
   .filter(Boolean);
 const GEMINI_TTS_VOICE = process.env.GEMINI_TTS_VOICE || "Charon"; // deep, warm male
+// Sarvam Bulbul — India-native Hindi/Hinglish voice (billed in ₹). When its key is
+// present it is the guide's natural voice, ahead of Gemini. Swap the voice with
+// SARVAM_VOICE (male options: shubh, aditya, rohan, dev, ratan, anand, karun…).
+const SARVAM_KEY = process.env.SARVAM_API_KEY || "";
+const SARVAM_VOICE = process.env.SARVAM_VOICE || "shubh";
+const SARVAM_MODEL = process.env.SARVAM_MODEL || "bulbul:v3";
+const SARVAM_PACE = Number(process.env.SARVAM_PACE || 1.0);
 
 // Gemini TTS returns headerless PCM; browsers need a WAV (RIFF) header in front.
 function pcmToWav(pcm, rate) {
