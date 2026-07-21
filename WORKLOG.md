@@ -13,6 +13,20 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
+- **The guide now greets on EVERY open and opens the conversation (not just once, not just the blessing).**
+  Owner: "every time a user opens the bot, the bot greets and starts the conversation." Changes in
+  `greetNamaste()` (widget.js): (1) fires on every panel open (was once-per-page-load) — the
+  `greetedThisLoad` flag became an 8s cooldown `lastGreetAt` that only guards a stutter; (2) BUG caught
+  in testing — the cooldown suppressed the FIRST greeting too (lastGreetAt=0 vs performance.now()≈1s
+  read as "just greeted"); fixed with `if (lastGreetAt && …)`; (3) the blessing now leads into a warm
+  conversation-opener — रotated set (4 per language) so a frequent opener doesn't hear the same line,
+  and "welcome back" for returning (cameBack) seekers; (4) app-resume: a visibilitychange handler
+  re-greets when the app returns to the foreground after >45s hidden (installed/WebView apps that
+  suspend rather than reload). Namaste-hold now scales to the (longer) line length. Verified in-browser:
+  Rohan→"जय सिया राम, भाई! कहिए, आज क्या जानना चाहते हैं?"; Priya(EN)→"Jai Siya Ram, behen! I'm right
+  here — ask whatever is on your mind."; close+reopen → greetCount 2 with a rotated opener; gender
+  learned+stored; still free device voice, still respects 🔇 and notification-tap.
+
 - **The guide now greets on open: hands fold in namaste and he SAYS "जय सिया राम भाई/बहन".**
   Owner's ask. Built: (1) 3D arms reworked to POSEABLE unit-cylinder segments re-aimed per frame
   (`poseArms(k)` lerps elbow/hand joints from lap ध्यान pose to hands-at-heart namaste + 0.15rad bow;

@@ -2072,10 +2072,31 @@
   // भाई/बहन (device voice — free) when the seeker arrives. Once per visit.
   // भाई vs बहन comes from a one-time server read of the first name, remembered
   // on the device forever; while unknown (or unclear) he says जी — never a guess.
-  let greetedThisLoad = false;
+  // Warm openers that turn the blessing into a conversation. Rotated so a seeker
+  // who opens the bot often doesn't hear the exact same line every time.
+  const GREET_OPENERS = {
+    hi: [
+      "कहिए, आज क्या जानना चाहते हैं?",
+      "बताइए, मैं यहीं हूँ — जो मन में हो, पूछिए।",
+      "आज मन में क्या चल रहा है? बेझिझक पूछिए।",
+      "बोलिए, आपकी क्या जिज्ञासा है?",
+    ],
+    en: [
+      "Tell me, what would you like to know today?",
+      "I'm right here — ask whatever is on your mind.",
+      "What's on your heart today? Please, ask.",
+      "Go ahead — what would you like to understand?",
+    ],
+  };
+  const GREET_BACK = { hi: "वापसी पर स्वागत है! कहिए, कैसे हैं आप?", en: "Welcome back! How are you today?" };
+  let lastGreetAt = 0;
+  // The guide welcomes the seeker on EVERY open (owner): hands fold in namaste, he
+  // says जय सिया राम भाई/बहन and opens the conversation with a warm invitation.
+  // A short cooldown only guards against a stutter when two open-events coincide.
   function greetNamaste() {
-    if (greetedThisLoad) return;
-    greetedThisLoad = true;
+    if (lastGreetAt && performance.now() - lastGreetAt < 8000) return; // cooldown (not the first call)
+    const firstThisLoad = lastGreetAt === 0;
+    lastGreetAt = performance.now();
     if (journey.name && !journey.gender) {
       fetch(`${API}/api/gender?name=${encodeURIComponent(journey.name.split(" ")[0])}`)
         .then((r) => r.json())
@@ -2088,15 +2109,24 @@
         .catch(() => {});
     }
     setTimeout(() => {
-      g3greetUntil = performance.now() + 2600;
-      panel.classList.add("vcb-greet"); // the SVG fallback bows via CSS
-      setTimeout(() => panel.classList.remove("vcb-greet"), 2600);
-      if (!voiceReplies || notifCtx) return; // muted, or a tapped notification is about to speak
+      const hold = (ms) => {
+        g3greetUntil = performance.now() + ms; // 3D: hands stay folded through it
+        panel.classList.add("vcb-greet"); // SVG fallback bows via CSS
+        setTimeout(() => panel.classList.remove("vcb-greet"), ms);
+      };
+      if (!voiceReplies || notifCtx) { hold(2600); return; } // muted / a notification is about to speak
       const kin =
         journey.gender === "m" ? (uiLang === "hi" ? "भाई" : "bhai")
         : journey.gender === "f" ? (uiLang === "hi" ? "बहन" : "behen")
         : (uiLang === "hi" ? "जी" : "ji");
-      const line = uiLang === "hi" ? `जय सिया राम, ${kin}!` : `Jai Siya Ram, ${kin}!`;
+      const lang = uiLang === "hi" ? "hi" : "en";
+      const bless = lang === "hi" ? `जय सिया राम, ${kin}!` : `Jai Siya Ram, ${kin}!`;
+      const opener = cameBack
+        ? GREET_BACK[lang]
+        : GREET_OPENERS[lang][Math.floor(Math.random() * GREET_OPENERS[lang].length)];
+      const line = `${bless} ${opener}`;
+      const holdMs = Math.min(7500, 2800 + line.length * 75);
+      hold(holdMs);
       try {
         browserSpeak(line, () => {});
         // Auto-opened with no tap yet (app WebView / home-screen app): the browser
@@ -2113,7 +2143,7 @@
             clearInterval(probe);
             if (!sawSpeaking) {
               document.addEventListener("pointerdown", () => {
-                g3greetUntil = performance.now() + 2600;
+                hold(holdMs);
                 try { browserSpeak(line, () => {}); } catch { /* best effort */ }
               }, { once: true });
             }
@@ -2122,8 +2152,18 @@
       } catch {
         /* the welcome is best-effort — the namaste still plays */
       }
-    }, 1900); // let the जय सिया राम splash bloom first
+    }, firstThisLoad ? 1900 : 500); // wait for the जय सिया राम splash only the first time
   }
+  // Bring the app back from the background after a real absence → greet again, so
+  // "every time you open the bot" holds even when the page was only suspended,
+  // not reloaded (installed app / WebView). The cooldown still guards rapid flips.
+  let hiddenSince = 0;
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) { hiddenSince = performance.now(); return; }
+    if (panel.classList.contains("open") && hiddenSince && performance.now() - hiddenSince > 45000) {
+      greetNamaste();
+    }
+  });
   {
     orb.addEventListener("click", () => {
       // NO primeVoice() here. Speaking — even a silent utterance — flips iOS's
