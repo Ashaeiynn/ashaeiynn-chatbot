@@ -269,7 +269,11 @@ function json(res, status, body) {
 const TTS_KEY = process.env.ELEVENLABS_API_KEY || "";
 const TTS_VOICE = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM"; // multilingual premade voice
 const TTS_MODEL = process.env.ELEVENLABS_MODEL || "eleven_multilingual_v2";
-const GEMINI_TTS_KEY = process.env.GEMINI_API_KEY || "";
+// The voice (TTS) can ride on its OWN Gemini key so it can be BILLED for
+// unlimited use while the ANSWERS stay on the free-tier GEMINI_API_KEY. Set
+// GEMINI_TTS_KEY in .env to a billing-enabled key; leave it unset and TTS shares
+// the free chat key exactly as before (owner, 2026-07-21).
+const GEMINI_TTS_KEY = process.env.GEMINI_TTS_KEY || process.env.GEMINI_API_KEY || "";
 // Each TTS model has its own tiny free-tier daily quota (10/day) — chain two so
 // the natural voice lasts twice as long before the browser voice takes over.
 const GEMINI_TTS_MODELS = (
