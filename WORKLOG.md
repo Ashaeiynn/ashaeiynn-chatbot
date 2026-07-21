@@ -13,7 +13,19 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
-- **Voice changed `ratan` → `sunny` (owner, same day) — live.** Verified sunny is bulbul:v3-compatible,
+- **REVERTED to Gemini voice (owner, same day).** After a full cost comparison, owner learned paid
+  Gemini 2.5 Flash TTS (the exact `gemini-2.5-flash-preview-tts` we ran free) is ~40% cheaper than
+  Sarvam and chose to go back to the pre-Sarvam setup. Did NOT rip out the code — just commented out
+  `SARVAM_API_KEY`/`SARVAM_VOICE` in both .env files (key preserved, one uncomment to re-enable) and
+  restarted. Verified /health `naturalVoice: gemini`; live /api/tts through guide.ashaeiynn.com
+  returns a valid WAV again. So voice is once more `gemini-2.5-flash-preview-tts` (Charon) on the FREE
+  tier — meaning the ~15-20/day free cap is back (past it, /api/tts 502s → widget falls back to the
+  device's browser voice, so the guide still speaks). Sarvam code paths remain inert-but-ready.
+  Open decision parked: if the free cap ever bites at scale, either pay for Gemini 2.5 TTS (cheapest,
+  same voice, no cap) or re-enable Sarvam (better Hindi voice, ~₹0.80/answer more). Audio caching is
+  the bigger lever regardless — still unbuilt.
+
+- **[reverted above] Voice changed `ratan` → `sunny` (owner, same day) — was live briefly.** Verified sunny is bulbul:v3-compatible,
   set SARVAM_VOICE=sunny in both .env files, restarted chatbot; /health `sarvam:sunny`, live /api/tts
   through guide.ashaeiynn.com returns valid WAV. (Ratan was the first pick from the Artifact; owner
   switched to sunny after hearing.)
