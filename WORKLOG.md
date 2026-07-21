@@ -13,6 +13,15 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
+- **APP-INTEGRATION.md: documented how the user gets back from the guide to the app** (owner chose a
+  native back bar). Added a "Getting back to the app" section: the app places a thin back bar (←/✕)
+  above the guide; per-framework steps (iOS UINavigationController or custom header → dismiss/pop;
+  Android own Activity + Toolbar/system-Back, and DON'T webView.goBack() since the guide is one page
+  with no web history; Flutter AppBar+Navigator.pop; RN header + navigation.goBack). Noted the guide's
+  Guide/Chats tabs are internal toggles (back = leave the guide, not switch tab), and that an optional
+  in-guide back button posting `{type:"close"}` over the Phase-3 bridge is available if they later want
+  full immersion. Doc-only, no deploy.
+
 - **APP-INTEGRATION.md: documented the exact iOS/Android WebView settings so the app never hits the
   iOS issues we just fixed.** Replaced the mic-only note with "three settings the native container must
   get right": (A) full-screen — iOS pin WKWebView to edges (not safe area) + `contentInsetAdjustment

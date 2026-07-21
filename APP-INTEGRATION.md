@@ -97,6 +97,32 @@ If the mic can't be granted, the guide still works — the user taps **"⌨️ t
 ② `mediaTypesRequiringUserActionForPlayback = []` + `allowsInlineMediaPlayback = true` ·
 ③ `NSMicrophoneUsageDescription` + grant the iOS-15 media-capture permission.
 
+### Getting back to the app
+
+The guide fills the screen with no browser bar, so **the app provides the way back** — and because
+the guide is a single screen, this is simple. **Chosen approach: a native back bar** — a thin strip
+the app places **above** the guide with a **← / ✕** button; tapping it returns the user to wherever
+they were. The bar sits on top and the guide fills the area below it (keep the *bottom* edge-to-edge,
+per setting A above).
+
+- **iOS:** host the WKWebView inside a `UINavigationController` (its nav bar gives the back button and
+  the edge-swipe-back gesture), **or** put a small custom header with a Close button above the web view
+  and call `dismiss` / `popViewController` on tap.
+- **Android:** host the WebView in its own Activity/Fragment with a `Toolbar` back arrow; the **system
+  Back** gesture should also exit. The guide is one page with **no internal web history**
+  (`webView.canGoBack()` is `false`), so on Back just finish the screen — do **not** call
+  `webView.goBack()`.
+- **Flutter:** a `Scaffold` + `AppBar` (leading back) around the `InAppWebView`; `Navigator.pop`.
+- **React Native:** a header (e.g. React Navigation) with a back button around `react-native-webview`;
+  `navigation.goBack()`.
+
+The guide's own **Guide / Chats** tabs are internal toggles, not separate pages — so "back" always
+means "leave the guide," never "switch its tab." Nothing is needed on the guide side for this
+approach; the app simply dismisses its own screen. *(If you'd rather keep the guide fully immersive
+with the back control INSIDE it — no top bar — we can add a `←` in the guide's corner that posts a
+`{ source: "ashaeiynn-guide", type: "close" }` message over the Phase-3 bridge for the app to handle.
+Just ask.)*
+
 ### Web / PWA app instead of native?
 
 Two choices: open `/app` in an `<iframe>` (mic works via the browser; the guide sends no
