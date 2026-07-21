@@ -1757,13 +1757,14 @@
   }
 
   // ——— recorder fallback: record a short clip → /api/stt transcribes it ———
-  // iOS home-screen apps can't use SpeechRecognition (it starts but hears
-  // nothing — a WebKit limitation), so there we record audio and the server
-  // listens. Also kicks in anywhere recognition keeps coming back empty.
+  // ONE ear for EVERY device: record a short clip and let the server transcribe
+  // it with Groq Whisper (owner, 2026-07-22). This ends the "some phones great,
+  // some poor" split — where iOS used Groq but Android/Safari used their own
+  // weaker on-device recognizer. The phone's built-in recognizer (SR) is kept
+  // only as a last resort for the rare device that genuinely cannot record.
   const canRecord = !!(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
   const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const useRecorder = () =>
-    canRecord && ((IOS && navigator.standalone === true) || journey.sttFallback === true || !SR);
+  const useRecorder = () => canRecord;
 
   let mediaRec = null, recChunks = [], recStream = null, recTimer = null;
   let recAudioCtx = null, recLevelInt = null;

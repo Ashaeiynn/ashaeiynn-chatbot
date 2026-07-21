@@ -1262,10 +1262,11 @@ async function handleChat(req, res) {
   }
 }
 
-// ——— voice fallback: transcribe a short recorded question ———
-// iOS home-screen apps can't use the browser's speech recognition (it starts
-// but hears nothing) — the widget records a few seconds of audio instead and
-// sends it here. Gemini transcribes it on the same free key.
+// ——— the ear: transcribe a short recorded question via Groq Whisper ———
+// EVERY device records a few seconds of audio and POSTs it here; Groq's Whisper
+// (large-v3 → turbo) transcribes it. This is the SOLE speech-to-text path now —
+// no on-device recognizer, no Gemini — so every seeker hears through the same
+// accurate Hindi/Hinglish ear (owner, 2026-07-22).
 async function handleStt(req, res) {
   const ip = req.socket.remoteAddress ?? "unknown";
   if (rateLimited(ip, "stt", 40)) return json(res, 429, { error: "Too many requests." });
@@ -1289,17 +1290,14 @@ async function handleStt(req, res) {
   const OK_MIME = new Set(["audio/mp4", "audio/aac", "audio/mpeg", "audio/mp3", "audio/wav", "audio/ogg", "audio/webm", "audio/aiff", "audio/flac", "audio/x-m4a", "audio/m4a"]);
   if (!OK_MIME.has(mime)) mime = "audio/mp4";
   if (mime === "audio/x-m4a" || mime === "audio/m4a") mime = "audio/mp4";
-  // iOS records a "fragmented" MP4 that Gemini sometimes rejects under one
-  // label but accepts under another — try both before giving up, and if both
-  // fail, surface Gemini's real reason so the phone screen shows it.
-  const tryMimes = mime === "audio/mp4" ? ["audio/mp4", "audio/aac"] : [mime, "audio/mp4"];
   let lastDetail = "";
-  // The iOS home-screen app hears ONLY through Groq's Whisper (dedicated
-  // speech model, its own roomy free quota) — NEVER through Gemini, by the
-  // owner's rule: Gemini listening burns the shared free tier today and would
-  // cost real money on a paid plan. If Groq fails, iOS gets the error, not a
-  // silent fall-through. Everyone else keeps the Gemini ear untouched below.
-  if (src === "ios-app") {
+  // EVERY seeker hears through Groq's Whisper — the SOLE ear across all browsers
+  // and the app (owner, 2026-07-22). Groq is a dedicated speech model with its
+  // own roomy free quota; we NEVER fall through to Gemini, by the owner's cost
+  // rule (Gemini listening burns the shared free tier / costs on a paid plan).
+  // If Groq fails or is unconfigured, the seeker gets "please try again" — never
+  // a Gemini transcription. (Bare block below: it returns on every path.)
+  {
     if (!process.env.GROQ_API_KEY) {
       // This reached a seeker's phone once (2026-07-19) with the key present and
       // correct in .env, and left NO trace in the log — so it could not be
@@ -1369,48 +1367,6 @@ async function handleStt(req, res) {
     console.error("stt error:", lastDetail, `· ${(bytes.length / 1024).toFixed(0)}KB ${mime}`);
     return json(res, 503, { error: "Couldn't hear that — please try again.", detail: lastDetail });
   }
-  // two models = two separate quota pools; when one is exhausted (429) the
-  // other often still has room — try both before giving up
-  const models = [...new Set([process.env.GEMINI_LIGHT_MODEL, process.env.GEMINI_MODEL, "gemini-2.0-flash-lite"].filter(Boolean))];
-  for (const model of models)
-  for (const m of tryMimes) {
-    try {
-      const r = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_TTS_KEY },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { text: "Transcribe this short voice question exactly as spoken — Hindi speech in Devanagari, English speech in English. Output ONLY the transcription, nothing else." },
-                  { inlineData: { mimeType: m, data: audio } },
-                ],
-              },
-            ],
-          }),
-        },
-      );
-      if (!r.ok) {
-        let msg = "";
-        try {
-          msg = JSON.parse(await r.text())?.error?.message || "";
-        } catch {
-          /* raw body unhelpful */
-        }
-        lastDetail = `gemini ${r.status}${msg ? ": " + msg.slice(0, 60) : ""}`;
-        continue;
-      }
-      const data = await r.json();
-      const text = (data.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("") || "").trim();
-      return json(res, 200, { text: fixMishearings(text.slice(0, 2000)) });
-    } catch (err) {
-      lastDetail = String(err?.message || err).slice(0, 140);
-    }
-  }
-  console.error("stt error:", lastDetail);
-  return json(res, 503, { error: "Couldn't hear that — please try again.", detail: lastDetail });
 }
 
 // ——— आज का विचार: one thought per day from the teachings, same for everyone ———
