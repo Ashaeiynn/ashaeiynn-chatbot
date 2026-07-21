@@ -352,8 +352,32 @@ async function geminiTtsModel(model, text) {
   return pcmToWav(Buffer.from(inline.data, "base64"), rate);
 }
 
+// Sarvam Bulbul — returns a complete WAV as base64 in `audios[0]`. The guide's
+// answer is Devanagari for Hindi/Hinglish and Latin for English, so the target
+// language is read off the script (hi-IN handles code-mixed Hinglish too).
+async function sarvamTts(text) {
+  const lang = /[ऀ-ॿ]/.test(text) ? "hi-IN" : "en-IN";
+  const r = await fetch("https://api.sarvam.ai/text-to-speech", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "api-subscription-key": SARVAM_KEY },
+    body: JSON.stringify({
+      text,
+      target_language_code: lang,
+      speaker: SARVAM_VOICE,
+      model: SARVAM_MODEL,
+      pace: SARVAM_PACE,
+      enable_preprocessing: true,
+    }),
+  });
+  if (!r.ok) throw new Error(`sarvam tts ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  const d = await r.json();
+  const b64 = d.audios?.[0];
+  if (!b64) throw new Error("sarvam tts: no audio in response");
+  return Buffer.from(b64, "base64"); // already a RIFF/WAV, browser-playable as-is
+}
+
 async function handleTts(req, res) {
-  if (!TTS_KEY && !GEMINI_TTS_KEY) return json(res, 501, { error: "tts-not-configured" });
+  if (!TTS_KEY && !GEMINI_TTS_KEY && !SARVAM_KEY) return json(res, 501, { error: "tts-not-configured" });
   const ip = req.socket.remoteAddress ?? "unknown";
   if (rateLimited(ip, "tts", 80)) return json(res, 429, { error: "Too many requests." });
 
@@ -369,6 +393,24 @@ async function handleTts(req, res) {
     return json(res, 400, { error: "Invalid JSON." });
   }
   if (!text) return json(res, 400, { error: "Empty text." });
+
+  // Sarvam is the owner's chosen voice (India-native, Hindi/Hinglish, ₹-billed).
+  // On any Sarvam hiccup we fall through to Gemini so the guide still speaks.
+  if (SARVAM_KEY) {
+    try {
+      const wav = await sarvamTts(text);
+      res.writeHead(200, {
+        "Content-Type": "audio/wav",
+        "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+        "Cache-Control": "no-store",
+      });
+      return res.end(wav);
+    } catch (err) {
+      console.error("sarvam tts error:", err?.message);
+      if (!GEMINI_TTS_KEY && !TTS_KEY) return json(res, 502, { error: "tts-failed" });
+      // else: fall through to the Gemini / ElevenLabs paths below
+    }
+  }
 
   // No ElevenLabs key → Gemini's natural voice (same free key as the answers).
   if (!TTS_KEY) {
@@ -1781,7 +1823,13 @@ const server = createServer(async (req, res) => {
       teachMedia: existsSync(`${process.env.HOME}/Library/Python/3.9/bin/mlx_whisper`),
       apiKeyConfigured,
       backup: BACKUP_CONFIGURED ? { ready: true, lastUsed: failover.at, answers: failover.count } : false,
-      naturalVoice: TTS_KEY ? "elevenlabs" : GEMINI_TTS_KEY ? "gemini" : false,
+      naturalVoice: SARVAM_KEY
+        ? `sarvam:${SARVAM_VOICE}`
+        : TTS_KEY
+          ? "elevenlabs"
+          : GEMINI_TTS_KEY
+            ? "gemini"
+            : false,
       // the iOS home-screen app's ONLY ear (Whisper via Groq — never Gemini)
       iosEar: process.env.GROQ_API_KEY ? "groq-whisper" : "not-configured",
       knowledgeBase: existsSync(path.join(ROOT, "data", "knowledge.db")) ? "built" : "missing",

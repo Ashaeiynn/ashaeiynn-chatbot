@@ -13,6 +13,24 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
+- **Sarvam Bulbul is now the guide's natural voice (code wired + tested; goes live once the owner
+  picks a voice and the VPS key is set).** Owner supplied a Sarvam key to get an India-native,
+  Hindi/Hinglish, ₹-billed voice (deep/calm male, cheaper than ElevenLabs, better Hindi than Gemini
+  TTS). Built in `server/server.mjs`: `SARVAM_KEY`/`SARVAM_VOICE`(=shubh default)/`SARVAM_MODEL`
+  (=bulbul:v3)/`SARVAM_PACE` env; `sarvamTts(text)` POSTs to `https://api.sarvam.ai/text-to-speech`
+  (header `api-subscription-key`, body `{text,target_language_code,speaker,model,pace,
+  enable_preprocessing}`) and returns the base64 WAV from `audios[0]` (already RIFF/WAV, served as
+  audio/wav). Target language is read off the script — Devanagari→hi-IN, else en-IN (hi-IN also
+  covers Hinglish). In `/api/tts` Sarvam is now the FIRST provider when its key is set, falling
+  through to Gemini→ElevenLabs on any error so the guide always speaks; `/health` naturalVoice shows
+  `sarvam:<voice>`. Key lives ONLY in `.env` (gitignored) on the MacBook — NOT committed, NOT on the
+  VPS yet. Verified locally end-to-end: /api/tts → 200 audio/wav, valid 22.05kHz mono 16-bit WAV,
+  Hindi (6.5s) and English (4.0s via en-IN) both play. Valid bulbul:v3 male voices confirmed:
+  shubh, aditya, rohan, dev, ratan, anand. Made a tap-to-hear comparison page (Artifact) of all six
+  so the owner can choose by ear before going live. NEXT (once owner picks): set SARVAM_API_KEY +
+  SARVAM_VOICE in the VPS `.env`, restart chatbot.service, verify /health + a live /api/tts. No
+  widget change needed (it already plays audio/wav from /api/tts, same as Gemini).
+
 - **Typed questions are answered SILENTLY; only SPOKEN questions get a voiced reply (owner — cuts the
   TTS bill).** The form-submit handler always called `speak(data.answer)`; now it speaks only when the
   submission came from a mic. Added `submittedByVoice` flag set true right before the two mic→form
