@@ -19,13 +19,6 @@
     navigator.serviceWorker.register("/sw.js").catch(() => {});
   }
 
-  // An in-app browser (a link tapped inside WhatsApp, Instagram, Facebook)
-  // CANNOT install anything — its "add to home screen", where it exists at all,
-  // makes a bookmark. Most seekers arrive exactly that way, so say so plainly.
-  const IN_APP_BROWSER = /FBAN|FBAV|FB_IAB|FB4A|Instagram|WhatsApp|Line\/|Twitter|MicroMessenger|Snapchat|; wv\)/i;
-  const isInAppBrowser = IN_APP_BROWSER.test(navigator.userAgent);
-  const isInstalled = () =>
-    window.matchMedia?.("(display-mode: standalone)").matches || navigator.standalone === true;
   const TITLE = script?.dataset.title || "Ask Your Guide";
   const COLOR = script?.dataset.color || "#0b0b0f";
   const SPLASH = script?.dataset.splash || "जय सिया राम";
@@ -302,15 +295,6 @@
       0%{transform:scale(.25);opacity:.9;border-width:2.5px}
       100%{transform:scale(3);opacity:0;border-width:.5px}}
     @media (prefers-reduced-motion:reduce){.vcb-tapglow{animation-duration:.01s}}
-    .vcb-openin{display:flex;align-items:center;gap:8px;justify-content:center;
-      padding:7px 12px;margin:0 10px 4px;border-radius:9px;
-      background:rgba(217,169,79,.10);border:1px solid rgba(217,169,79,.30);
-      color:#f0dbb0;font-size:12px;line-height:1.35;
-      font-family:-apple-system,'Segoe UI',Roboto,sans-serif}
-    .vcb-openin[hidden]{display:none}
-    .vcb-openin button{background:none;border:0;color:#e8cf9a;cursor:pointer;
-      font-size:13px;line-height:1;padding:2px 4px;opacity:.7}
-    .vcb-openin button:hover{opacity:1}
     /* the docked blessing strip */
     .vcb-bless{position:relative;z-index:2;text-align:center;padding:6px 0 7px;
       font-family:Georgia,'Noto Serif Devanagari',serif;font-size:15px;font-weight:700;
@@ -851,7 +835,6 @@
       </div>
     </div>
     <div class="vcb-bless"><span>${SPLASH}</span></div>
-    <div class="vcb-openin" hidden><span></span><button type="button" aria-label="Dismiss">✕</button></div>
     <div class="vcb-stage">
       <div class="vcb-cap"></div>
       <button class="vcb-orbbig" type="button" aria-label="Ask by voice">
@@ -1021,33 +1004,8 @@
   const send = panel.querySelector(".vcb-send");
   const bless = panel.querySelector(".vcb-bless");
 
-  // Show the "open in Chrome" line only where it actually helps: inside an
-  // in-app browser, not already installed, and not already waved away.
-  const openIn = panel.querySelector(".vcb-openin");
-  if (openIn) {
-    const DISMISS_KEY = "ashaiOpenInDismissed";
-    let waved = false;
-    try {
-      waved = localStorage.getItem(DISMISS_KEY) === "1";
-    } catch {
-      /* private mode — just show it */
-    }
-    if (isInAppBrowser && !isInstalled() && !waved) {
-      const onApple = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-      openIn.querySelector("span").textContent = onApple
-        ? "Open this in Safari to install the app on your phone."
-        : "Open this in Chrome to install the app on your phone.";
-      openIn.hidden = false;
-      openIn.querySelector("button").addEventListener("click", () => {
-        openIn.hidden = true;
-        try {
-          localStorage.setItem(DISMISS_KEY, "1");
-        } catch {
-          /* nothing to remember it with — fine */
-        }
-      });
-    }
-  }
+  // (The "open in Safari/Chrome to install the app" nudge was removed 2026-07-21
+  // at the owner's request — the guide never asks a seeker to install anything.)
   const micBtn = panel.querySelector(".vcb-mic");
   const voiceBtn = panel.querySelector(".vcb-voice");
 
