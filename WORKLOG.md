@@ -13,6 +13,24 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
+- **Voice playback bug fixed → natural voice DISABLED, device voice only (owner chose "stay free").**
+  Owner reported: first sentence spoke fine, then a huge pause, then the next part started with its
+  first 2-3 words missing. Root cause CONFIRMED from the live log: the free Gemini TTS key is
+  quota-exhausted (repeating `gemini tts 429 "exceeded your quota"`). Reproduced by firing the 4
+  parallel chunk requests one answer makes → 2 of 4 returned 502 (quota), the 2 successes took 4-6s.
+  So the widget's progressive-chunk pipeline (1,2,4… sentences, all fetched in parallel) was half-
+  failing: sentence 1 = the one chunk that got through (natural voice) → gap waiting on slow/failing
+  next chunks → `browserSpeak()` fallback kicks in and speechSynthesis swallows its opening words.
+  Fix (ee2bf3e): (1) server `NATURAL_TTS` switch — set `NATURAL_TTS=off` in both .env → /health
+  `naturalVoice:false` + /api/tts returns 501 `tts-disabled`, so the widget uses the DEVICE voice
+  cleanly in one pass (no 429 storm, no mid-answer switch). (2) widget `browserSpeak()` now speaks a
+  silent zero-width warm-up utterance before the first real one, so Chrome/Android stop clipping the
+  opening word(s). Verified live: naturalVoice:false, /api/tts 501, 0 new 429s, new widget.js served
+  (no-cache). Reversible: to bring the natural voice back, set NATURAL_TTS=on AND either pay for
+  Gemini TTS or re-enable Sarvam (key still commented in .env). Caveat of free mode: phones without a
+  Hindi TTS voice installed stay silent for Hindi (widget shows the "install a Hindi voice" notice).
+  Owner to test on their own phone. See [[greeting-audio-cache]] memory for the paid-voice trigger.
+
 - **REVERTED to Gemini voice (owner, same day).** After a full cost comparison, owner learned paid
   Gemini 2.5 Flash TTS (the exact `gemini-2.5-flash-preview-tts` we ran free) is ~40% cheaper than
   Sarvam and chose to go back to the pre-Sarvam setup. Did NOT rip out the code — just commented out
