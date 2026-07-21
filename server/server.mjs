@@ -2227,6 +2227,17 @@ const server = createServer(async (req, res) => {
     return res.end(readFileSync(path.join(ROOT, "widget", url.pathname.slice(1))));
   }
 
+  // The 3D engine for the guide figure — vendored (no CDN; the widget stays
+  // self-contained). Immutable: r128 never changes, so phones cache it once.
+  if (req.method === "GET" && url.pathname === "/three.min.js") {
+    res.writeHead(200, {
+      "Content-Type": "application/javascript; charset=utf-8",
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "public, max-age=31536000, immutable",
+    });
+    return res.end(readFileSync(path.join(ROOT, "widget", "three.min.js")));
+  }
+
   if (req.method === "GET" && url.pathname === "/widget.js") {
     res.writeHead(200, {
       "Content-Type": "application/javascript; charset=utf-8",

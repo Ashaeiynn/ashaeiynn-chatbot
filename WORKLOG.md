@@ -13,6 +13,27 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
+- **The guide is now TRUE 3D — a sculpted WebGL figure (owner: "make it real").**
+  Owner wanted real depth, full body, not the flat SVG that tilts. Process: built an interactive
+  three.js preview first (owner feedback "looks fat" → reshaped slim/young: broad shoulders, narrow
+  waist, upright), verified it with a 3-agent workflow (three.js r128 API check came back clean; the
+  logic verifier's mobile findings — touch-action pan-y, pointerId tracking, click-vs-drag, dt-based
+  particles, ResizeObserver, teardown — all applied), then owner approved. Integration:
+  - `widget/three.min.js` — three.js r128 VENDORED (no CDN; self-contained per architecture rule),
+    served at `GET /three.min.js` with `Cache-Control: immutable` (server.mjs) — phones fetch it once.
+  - Widget: `g3init()` (called on first panel open) lazily loads the engine and builds the scene
+    inside the SAME `.vcb-orbbig` tap-to-speak button (`.mg3-wrap` fades in over the SVG;
+    `.vcb-panel.mg3-live .mg-3d{display:none}`). The SVG guide REMAINS the instant view and the
+    fallback: prefers-reduced-motion, script-load failure, no WebGL, and `webglcontextlost` (listener
+    removes the wrap → SVG returns seamlessly).
+  - The 3D tick POLLS `panel.dataset.vstate` (no setVState coupling): idle/error=rest (breathing,
+    halo pulse), listening=third eye opens + base ripples, thinking=3 planets orbit the head,
+    speaking=8 rays from the third eye + mouth + aura pulse + bob. Incense-spark particles always.
+  - Drag rotates him in space (clamped, eases back to a slow sway); a drag > 14px of movement
+    SWALLOWS the click in capture phase so rotating can never start the mic. Verified in-browser:
+    drag → vstate stays idle; clean tap → real microphone request fired; speaking shows rays in 3D;
+    zero console errors. Pauses rendering when the panel is hidden (offsetParent check); DPR capped 2.
+
 - **The seeker's name is now an occasional touch, not every reply (owner: felt robotic).**
   The per-question context block used to instruct "address them ONCE using their name" whenever the
   name/भाई/बहन hadn't appeared in the last 2 turns — so the name showed up almost every answer. New

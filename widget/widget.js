@@ -767,6 +767,13 @@
     @keyframes mgTw{0%,100%{opacity:.15}50%{opacity:.8}}
     .vcb-panel.lite .mg-mandala,.vcb-panel.lite .mg-spark,.vcb-panel.lite .mg-tw,
     .vcb-panel.lite .mg-orbit,.vcb-panel.lite .mg-lrip,.vcb-panel.lite .mg-trays{animation:none!important}
+    /* ——— the TRUE-3D guide (WebGL). Fades in over the SVG once the engine is
+       ready; the SVG stays as the instant view and the fallback whenever 3D
+       cannot run (reduced motion, no WebGL, context lost). ——— */
+    .mg3-wrap{position:absolute;inset:0;opacity:0;transition:opacity .9s ease;pointer-events:none}
+    .mg3-wrap.on{opacity:1}
+    .mg3-wrap canvas{display:block;width:100%!important;height:100%!important}
+    .vcb-panel.mg3-live .mg-3d{display:none}
   `;
   document.head.appendChild(style);
 
@@ -2056,6 +2063,7 @@
   }
 
   // the big eye: idle→listen · listening→finish · speaking→stop
+  let g3init = () => {}; // replaced just below with the real 3D loader; toggle() calls it on open
   {
     orb.addEventListener("click", () => {
       // NO primeVoice() here. Speaking — even a silent utterance — flips iOS's
@@ -2095,6 +2103,254 @@
       orb.addEventListener("pointerleave", level);
       orb.addEventListener("pointercancel", level);
       orb.addEventListener("pointerup", level);
+    }
+
+    // ——— the TRUE-3D guide: a sculpted WebGL figure inside the same tap-to-speak
+    // button, driven by panel.dataset.vstate (idle=rest · listening · thinking=
+    // reflect · speaking). The engine (three.js r128) is vendored on OUR server
+    // and loaded lazily on first open; until it's ready — and whenever it can't
+    // run (reduced motion, no WebGL, context lost) — the SVG guide stays.
+    // Dragging rotates him in space; a drag is never mistaken for the mic tap
+    // (movement beyond a knuckle's width swallows the click).
+    let g3started = false;
+    g3init = function () {
+      if (g3started) return;
+      g3started = true;
+      if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      const s = document.createElement("script");
+      s.src = `${API}/three.min.js`;
+      s.onload = () => {
+        try {
+          g3build();
+        } catch {
+          /* any failure: the SVG guide simply remains */
+        }
+      };
+      s.onerror = () => {};
+      document.head.appendChild(s);
+    };
+    function g3build() {
+      const T = window.THREE;
+      if (!T) return;
+      const wrap = document.createElement("div");
+      wrap.className = "mg3-wrap";
+      const W0 = orb.clientWidth || 214, H0 = orb.clientHeight || 208;
+      const renderer = new T.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setSize(W0, H0);
+      wrap.appendChild(renderer.domElement);
+      orb.appendChild(wrap);
+      const scene = new T.Scene();
+      const camera = new T.PerspectiveCamera(35, W0 / H0, 0.1, 100);
+      camera.position.set(0, 1.75, 7.8);
+      camera.lookAt(0, 1.5, 0);
+      scene.add(new T.AmbientLight(0x4a4234, 0.9));
+      const key = new T.DirectionalLight(0xffd9a0, 1.0); key.position.set(3, 5, 4); scene.add(key);
+      const rim = new T.PointLight(0x34d399, 0.8, 25); rim.position.set(-3, 2.5, -3); scene.add(rim);
+      const eyeLight = new T.PointLight(0x6fffd0, 0, 7); eyeLight.position.set(0, 2.86, 1.1); scene.add(eyeLight);
+      const robeMat = new T.MeshStandardMaterial({ color: 0x2b2214, roughness: 0.72, metalness: 0.18, emissive: 0x120d05 });
+      const skinMat = new T.MeshStandardMaterial({ color: 0xd0a173, roughness: 0.6, metalness: 0.05 });
+      const hairMat = new T.MeshStandardMaterial({ color: 0x241b0d, roughness: 0.5, metalness: 0.2 });
+      const goldMat = new T.MeshStandardMaterial({ color: 0xd9a94f, roughness: 0.35, metalness: 0.7, emissive: 0x6a4a12, emissiveIntensity: 0.5 });
+      const darkMat = new T.MeshStandardMaterial({ color: 0x1a1208, roughness: 0.8 });
+      const root = new T.Group(); scene.add(root);
+      const fig = new T.Group(); root.add(fig);
+      const lotus = new T.Mesh(new T.CylinderGeometry(1.42, 1.55, 0.16, 40), new T.MeshStandardMaterial({ color: 0x171008, roughness: 0.8, metalness: 0.2 }));
+      lotus.position.y = 0.08; fig.add(lotus);
+      const lotusRim = new T.Mesh(new T.TorusGeometry(1.48, 0.035, 10, 60), goldMat);
+      lotusRim.geometry.rotateX(Math.PI / 2); lotusRim.position.y = 0.16; fig.add(lotusRim);
+      const petalMat = new T.MeshStandardMaterial({ color: 0x8a6a2a, roughness: 0.5, metalness: 0.4, emissive: 0x2c1f08 });
+      for (let p = 0; p < 10; p++) {
+        const ang = (p / 10) * Math.PI * 2;
+        const petal = new T.Mesh(new T.SphereGeometry(0.32, 12, 10), petalMat);
+        petal.scale.set(1, 0.26, 1.85);
+        petal.position.set(Math.cos(ang) * 1.36, 0.1, Math.sin(ang) * 1.36);
+        petal.rotation.y = -ang + Math.PI / 2;
+        fig.add(petal);
+      }
+      const legs = new T.Mesh(new T.SphereGeometry(1, 24, 18), robeMat);
+      legs.scale.set(1.02, 0.4, 0.8); legs.position.y = 0.5; fig.add(legs);
+      const kneeL = new T.Mesh(new T.SphereGeometry(0.33, 16, 12), robeMat);
+      kneeL.scale.set(1, 0.72, 0.92); kneeL.position.set(-0.74, 0.5, 0.22); fig.add(kneeL);
+      const kneeR = kneeL.clone(); kneeR.position.x = 0.74; fig.add(kneeR);
+      const shinL = new T.Mesh(new T.SphereGeometry(0.3, 14, 10), robeMat);
+      shinL.scale.set(1.5, 0.5, 0.7); shinL.position.set(-0.32, 0.42, 0.5); shinL.rotation.y = 0.35; fig.add(shinL);
+      const shinR = shinL.clone(); shinR.position.x = 0.32; shinR.rotation.y = -0.35; fig.add(shinR);
+      const torso = new T.Mesh(new T.CylinderGeometry(0.36, 0.56, 1.55, 28), robeMat);
+      torso.position.y = 1.35; fig.add(torso);
+      const chest = new T.Mesh(new T.SphereGeometry(0.42, 20, 16), robeMat);
+      chest.scale.set(1.16, 0.78, 0.82); chest.position.y = 1.96; fig.add(chest);
+      const shoulders = new T.Mesh(new T.SphereGeometry(0.44, 20, 16), robeMat);
+      shoulders.scale.set(1.34, 0.58, 0.78); shoulders.position.y = 2.06; fig.add(shoulders);
+      const collar = new T.Mesh(new T.TorusGeometry(0.27, 0.035, 10, 40), goldMat);
+      collar.geometry.rotateX(Math.PI / 2); collar.position.y = 2.22; fig.add(collar);
+      const sash = new T.Mesh(new T.TorusGeometry(0.52, 0.045, 10, 48), goldMat);
+      sash.geometry.rotateX(Math.PI / 2); sash.position.y = 1.0; sash.scale.set(1.05, 1, 0.85); fig.add(sash);
+      const limb = (ax, ay, az, bx, by, bz, r) => {
+        const a = new T.Vector3(ax, ay, az), b = new T.Vector3(bx, by, bz);
+        const d = new T.Vector3().subVectors(b, a), len = d.length();
+        const m = new T.Mesh(new T.CylinderGeometry(r, r, len, 12), robeMat);
+        m.position.copy(a).add(b).multiplyScalar(0.5);
+        m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), d.normalize());
+        return m;
+      };
+      fig.add(limb(-0.5, 2.02, 0.06, -0.66, 1.38, 0.28, 0.095));
+      fig.add(limb(0.5, 2.02, 0.06, 0.66, 1.38, 0.28, 0.095));
+      fig.add(limb(-0.66, 1.38, 0.28, -0.13, 1.06, 0.5, 0.082));
+      fig.add(limb(0.66, 1.38, 0.28, 0.13, 1.06, 0.5, 0.082));
+      const shj = new T.Mesh(new T.SphereGeometry(0.105, 12, 10), robeMat); shj.position.set(-0.5, 2.02, 0.06); fig.add(shj);
+      const shj2 = shj.clone(); shj2.position.x = 0.5; fig.add(shj2);
+      const elb = new T.Mesh(new T.SphereGeometry(0.095, 12, 10), robeMat); elb.position.set(-0.66, 1.38, 0.28); fig.add(elb);
+      const elb2 = elb.clone(); elb2.position.x = 0.66; fig.add(elb2);
+      const hand = new T.Mesh(new T.SphereGeometry(0.13, 14, 12), skinMat); hand.position.set(-0.11, 1.04, 0.5); fig.add(hand);
+      const hand2 = hand.clone(); hand2.position.x = 0.11; fig.add(hand2);
+      const neck = new T.Mesh(new T.CylinderGeometry(0.15, 0.17, 0.28, 16), skinMat);
+      neck.position.y = 2.36; fig.add(neck);
+      const head = new T.Mesh(new T.SphereGeometry(0.47, 28, 22), skinMat);
+      head.scale.set(0.94, 1, 0.94); head.position.y = 2.72; fig.add(head);
+      const ear = new T.Mesh(new T.SphereGeometry(0.09, 10, 8), skinMat); ear.position.set(-0.43, 2.7, 0); fig.add(ear);
+      const ear2 = ear.clone(); ear2.position.x = 0.43; fig.add(ear2);
+      const hair = new T.Mesh(new T.SphereGeometry(0.48, 24, 18), hairMat);
+      hair.scale.set(1, 0.72, 1); hair.position.set(0, 2.92, -0.07); fig.add(hair);
+      const bun = new T.Mesh(new T.SphereGeometry(0.15, 14, 12), hairMat); bun.position.set(0, 3.27, -0.04); fig.add(bun);
+      const bunRing = new T.Mesh(new T.TorusGeometry(0.11, 0.024, 8, 24), goldMat);
+      bunRing.geometry.rotateX(Math.PI / 2); bunRing.position.set(0, 3.18, -0.04); fig.add(bunRing);
+      const eyeGeo = new T.TorusGeometry(0.08, 0.015, 8, 16, Math.PI);
+      const eyeL = new T.Mesh(eyeGeo, darkMat); eyeL.position.set(-0.17, 2.7, 0.4); eyeL.rotation.z = Math.PI; eyeL.rotation.x = -0.25; fig.add(eyeL);
+      const eyeR = eyeL.clone(); eyeR.position.x = 0.17; fig.add(eyeR);
+      const smile = new T.Mesh(new T.TorusGeometry(0.09, 0.013, 8, 16, Math.PI * 0.85), darkMat);
+      smile.position.set(0, 2.53, 0.42); smile.rotation.z = Math.PI + Math.PI * 0.075; smile.rotation.x = -0.3; fig.add(smile);
+      const mouth = new T.Mesh(new T.SphereGeometry(0.065, 10, 8), new T.MeshStandardMaterial({ color: 0x3a1f10, roughness: 0.7 }));
+      mouth.position.set(0, 2.52, 0.43); mouth.scale.set(1.3, 0.15, 0.5); mouth.visible = false; fig.add(mouth);
+      const teyeMat = new T.MeshStandardMaterial({ color: 0x0c1a14, emissive: 0x34d399, emissiveIntensity: 0.15, roughness: 0.3 });
+      const teye = new T.Mesh(new T.SphereGeometry(0.1, 16, 12), teyeMat);
+      teye.position.set(0, 2.86, 0.4); teye.rotation.x = -0.4; teye.scale.set(1.5, 0.06, 0.65); fig.add(teye);
+      const haloMat = new T.MeshBasicMaterial({ color: 0xf3d795, transparent: true, opacity: 0.55, blending: T.AdditiveBlending, depthWrite: false });
+      const halo = new T.Mesh(new T.TorusGeometry(0.74, 0.02, 10, 60), haloMat);
+      halo.position.set(0, 2.8, -0.52); fig.add(halo);
+      const auraMat = new T.MeshBasicMaterial({ color: 0xd9a94f, transparent: true, opacity: 0.06, blending: T.AdditiveBlending, depthWrite: false, side: T.BackSide });
+      const aura = new T.Mesh(new T.SphereGeometry(2.4, 32, 24), auraMat);
+      aura.position.y = 1.55; root.add(aura);
+      const ripMat1 = new T.MeshBasicMaterial({ color: 0x34d399, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide });
+      const ripMat2 = ripMat1.clone();
+      const ripGeo = new T.RingGeometry(0.92, 0.98, 48); ripGeo.rotateX(-Math.PI / 2);
+      const rip1 = new T.Mesh(ripGeo, ripMat1); rip1.position.y = 0.2; root.add(rip1);
+      const rip2 = new T.Mesh(ripGeo, ripMat2); rip2.position.y = 0.2; root.add(rip2);
+      const planets = new T.Group(); planets.position.y = 2.78; planets.rotation.x = 0.16; planets.visible = false; root.add(planets);
+      [0xf3d795, 0x34d399, 0xb8f5dc].forEach((c, q) => {
+        const pl = new T.Mesh(new T.SphereGeometry(0.08, 12, 10), new T.MeshBasicMaterial({ color: c }));
+        const pa = (q / 3) * Math.PI * 2;
+        pl.position.set(Math.cos(pa) * 1.08, 0, Math.sin(pa) * 1.08);
+        planets.add(pl);
+      });
+      const rays = new T.Group(); rays.position.set(0, 2.86, 0.44); rays.visible = false; fig.add(rays);
+      const rayMat = new T.MeshBasicMaterial({ color: 0x9dffdf, transparent: true, opacity: 0.7, blending: T.AdditiveBlending, depthWrite: false });
+      for (let rr = 0; rr < 8; rr++) {
+        const ra = (rr / 8) * Math.PI * 2;
+        const dirx = Math.cos(ra), diry = Math.sin(ra);
+        const ray = new T.Mesh(new T.CylinderGeometry(0.013, 0.013, 0.5, 6), rayMat);
+        ray.position.set(dirx * 0.5, diry * 0.5, 0);
+        ray.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), new T.Vector3(dirx, diry, 0));
+        rays.add(ray);
+      }
+      const pn = 60, parr = new Float32Array(pn * 3), pspd = new Float32Array(pn);
+      for (let i = 0; i < pn; i++) {
+        parr[i * 3] = (Math.random() - 0.5) * 3.6;
+        parr[i * 3 + 1] = Math.random() * 3.6;
+        parr[i * 3 + 2] = (Math.random() - 0.5) * 3.6;
+        pspd[i] = 0.15 + Math.random() * 0.4;
+      }
+      const pgeo = new T.BufferGeometry();
+      pgeo.setAttribute("position", new T.BufferAttribute(parr, 3));
+      root.add(new T.Points(pgeo, new T.PointsMaterial({ color: 0xf3d795, size: 0.045, transparent: true, opacity: 0.75, depthWrite: false, blending: T.AdditiveBlending })));
+      // drag = look around him; never the mic. Movement past a threshold swallows
+      // the click (capture phase) so a rotate can't start a recording.
+      let drag = false, dragId = null, lx = 0, ly = 0, moved = 0, tRY = 0, tRX = 0, rY = 0, rX = 0;
+      orb.addEventListener("pointerdown", (e) => {
+        if (drag || e.button) return;
+        drag = true; dragId = e.pointerId; lx = e.clientX; ly = e.clientY; moved = 0;
+        try { orb.setPointerCapture(e.pointerId); } catch { /* fine without capture */ }
+      });
+      orb.addEventListener("pointermove", (e) => {
+        if (!drag || e.pointerId !== dragId) return;
+        const dx = e.clientX - lx, dy = e.clientY - ly;
+        moved += Math.abs(dx) + Math.abs(dy);
+        tRY = Math.max(-1.1, Math.min(1.1, tRY + dx * 0.008));
+        tRX = Math.max(-0.32, Math.min(0.32, tRX + dy * 0.005));
+        lx = e.clientX; ly = e.clientY;
+      });
+      const endDrag = (e) => { if (e && e.pointerId !== undefined && e.pointerId !== dragId) return; drag = false; dragId = null; };
+      orb.addEventListener("pointerup", endDrag);
+      orb.addEventListener("pointercancel", endDrag);
+      orb.addEventListener("lostpointercapture", endDrag);
+      orb.addEventListener("click", (e) => {
+        if (moved > 14) { e.stopImmediatePropagation(); e.preventDefault(); }
+        moved = 0;
+      }, true);
+      const fit = () => {
+        const w = orb.clientWidth, h = orb.clientHeight;
+        if (!w || !h) return;
+        camera.aspect = w / h; camera.updateProjectionMatrix(); renderer.setSize(w, h);
+      };
+      if (typeof ResizeObserver !== "undefined") new ResizeObserver(fit).observe(orb);
+      renderer.domElement.addEventListener("webglcontextlost", () => {
+        panel.classList.remove("mg3-live");
+        wrap.remove(); // the SVG guide takes back over, seamlessly
+      });
+      const t0 = performance.now();
+      let lastT = 0, eyeT = 0, auraTo = 0.06;
+      function tick() {
+        if (!wrap.isConnected) { try { renderer.dispose(); } catch { /* done */ } return; }
+        requestAnimationFrame(tick);
+        if (!orb.offsetParent) return; // panel closed / hidden: skip the work
+        const t = (performance.now() - t0) / 1000;
+        const dt = Math.min(0.05, t - lastT); lastT = t;
+        const vs = panel.dataset.vstate;
+        const st = vs === "listening" ? "listen" : vs === "thinking" ? "reflect" : vs === "speaking" ? "speak" : "rest";
+        planets.visible = st === "reflect";
+        rays.visible = st === "speak";
+        mouth.visible = st === "speak";
+        smile.visible = st !== "speak";
+        auraTo = st === "rest" ? 0.06 : st === "speak" ? 0.16 : 0.12;
+        eyeT += ((st === "rest" ? 0 : 1) - eyeT) * 0.08;
+        teye.scale.set(1.5, 0.06 + eyeT * 1.0, 0.65);
+        teyeMat.emissiveIntensity = 0.15 + eyeT * (st === "speak" ? 2.2 + Math.sin(t * 9) * 0.8 : st === "reflect" ? 1.6 + Math.sin(t * 3) * 0.7 : 2.0);
+        eyeLight.intensity = eyeT * (st === "speak" ? 1.6 + Math.sin(t * 9) * 0.5 : 1.1);
+        auraMat.opacity += (auraTo + (st === "speak" ? Math.sin(t * 7) * 0.04 : 0) - auraMat.opacity) * 0.06;
+        haloMat.opacity = 0.4 + 0.25 * Math.sin(t * 1.6);
+        halo.rotation.z = t * 0.35;
+        fig.position.y = Math.sin(t * 1.35) * 0.045 + (st === "speak" ? Math.sin(t * 7) * 0.03 : 0);
+        if (st === "speak") mouth.scale.set(1.3, 0.35 + 0.3 * Math.abs(Math.sin(t * 8)), 0.5);
+        if (st === "listen") {
+          const s1 = (t * 0.55) % 1, s2 = (t * 0.55 + 0.5) % 1;
+          rip1.scale.set(1 + s1 * 1.7, 1, 1 + s1 * 1.7); ripMat1.opacity = 0.45 * (1 - s1);
+          rip2.scale.set(1 + s2 * 1.7, 1, 1 + s2 * 1.7); ripMat2.opacity = 0.4 * (1 - s2);
+        } else {
+          ripMat1.opacity += -ripMat1.opacity * 0.1;
+          ripMat2.opacity += -ripMat2.opacity * 0.1;
+        }
+        planets.rotation.y = t * 1.8;
+        if (rays.visible) {
+          rays.scale.setScalar(0.9 + 0.22 * Math.sin(t * 9));
+          rayMat.opacity = 0.45 + 0.35 * Math.sin(t * 9);
+        }
+        const pos = pgeo.attributes.position.array;
+        for (let k = 0; k < pn; k++) {
+          pos[k * 3 + 1] += pspd[k] * dt;
+          if (pos[k * 3 + 1] > 3.8) pos[k * 3 + 1] = 0;
+        }
+        pgeo.attributes.position.needsUpdate = true;
+        if (!drag) {
+          tRY += (Math.sin(t * 0.4) * 0.14 - tRY) * 0.02;
+          tRX += -tRX * 0.03;
+        }
+        rY += (tRY - rY) * 0.12; rX += (tRX - rX) * 0.12;
+        root.rotation.y = rY; root.rotation.x = rX;
+        renderer.render(scene, camera);
+      }
+      tick();
+      panel.classList.add("mg3-live");
+      wrap.classList.add("on");
     }
 
     // language switch: Hindi ↔ English recognition
@@ -2667,6 +2923,7 @@
     if (open) {
       hideNudge();
       playSplash();
+      g3init(); // wake the true-3D guide (lazy; SVG stays until it's ready)
       maybeAskName();
       thoughtShownThisOpen = false;
       fetchThought();

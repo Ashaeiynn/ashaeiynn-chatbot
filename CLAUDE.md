@@ -49,6 +49,10 @@ YOUR part as Claude, on any machine:
   only from excerpts; translated fallback; Source line (stripped from speech).
 - `widget/widget.js` — voice-first UI: third-eye orb launcher + golden "Ask Your Guide"
   nudge; जय सिया राम splash → docks to blessing strip; animated solar system background;
+  the tap-to-speak button holds a TRUE-3D meditating guide (three.js r128 vendored at
+  widget/three.min.js, served /three.min.js immutable; lazy-loaded on open; SVG figure
+  is the instant view + fallback for reduced-motion/no-WebGL/context-lost; 3D reads
+  panel.dataset.vstate each frame; drag rotates him, >14px drag swallows the mic click);
   tap-to-speak stage (SpeechRecognition hi-IN/en-IN toggle), answers spoken (server TTS →
   browser fallback); "⌨️ type instead" fallback. Served no-cache. Personal guide:
   the seeker's journey lives ONLY in their device's localStorage ("ashaiJourney" —
