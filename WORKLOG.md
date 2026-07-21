@@ -13,6 +13,16 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
+- **Typed questions are answered SILENTLY; only SPOKEN questions get a voiced reply (owner — cuts the
+  TTS bill).** The form-submit handler always called `speak(data.answer)`; now it speaks only when the
+  submission came from a mic. Added `submittedByVoice` flag set true right before the two mic→form
+  paths (the text-bar mic's record path and its SpeechRecognition path); the form submit captures it
+  (`wasVoice`) and only then speaks. Typed text and TAPPED chips stay silent. The voice stage
+  (guide/`voiceAsk`) and the notification/greeting `converseAbout` already spoke only in voice mode —
+  unchanged. Typed answers still render the 🔊 सुनिए button, so a reader can hear on demand. Verified
+  in-browser: a typed question → 0 device-voice calls, 0 /api/tts calls, answer shown, सुनिए present.
+  Cost impact: every typed question now costs ₹0 voice (only the ~₹0.35 thinking).
+
 - **In the app the guide asks NOTHING but a nickname; the app supplies identity + members automatically.**
   Owner: app auto-captures name/email/phone; guide asks only "what to call you"; every app user is a
   member. Built:

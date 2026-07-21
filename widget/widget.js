@@ -1055,6 +1055,10 @@
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let recLang = script?.dataset.voiceLang || "hi-IN";
   let voiceReplies = true; // voice-first: answers are spoken by default
+  // Read an answer aloud ONLY when the question was SPOKEN. A typed question (or a
+  // tapped chip) is answered silently on screen — the seeker can still tap 🔊 सुनिए
+  // to hear it. Set true just before a mic-driven form submit (owner, 2026-07-21).
+  let submittedByVoice = false;
   let listening = false;
   let rec = null;
 
@@ -1893,7 +1897,7 @@
         } else {
           input.value = text;
           input.placeholder = "Type your question…";
-          if (text) form.requestSubmit();
+          if (text) { submittedByVoice = true; form.requestSubmit(); } // spoken → read the answer back
         }
       } catch (err) {
         if (liveEl) { liveEl.remove(); liveEl = null; }
@@ -2046,6 +2050,7 @@
           }
         }
       } else if (input.value.trim()) {
+        submittedByVoice = true; // spoken (recognised) → read the answer back
         form.requestSubmit();
       }
     };
@@ -3405,6 +3410,8 @@
   form.addEventListener("submit", async (e) => {
     primeVoice(); // same gate applies when the seeker types instead
     e.preventDefault();
+    const wasVoice = submittedByVoice; // did this question come from a mic, or the keyboard?
+    submittedByVoice = false;
     if (needSignup()) return;
     const text = input.value.trim();
     if (!text || send.disabled) return;
@@ -3427,7 +3434,7 @@
         msgs.scrollTop = msgs.scrollHeight;
       }
       maybeOfferBell();
-      speak(data.answer);
+      if (wasVoice) speak(data.answer); // typed answers stay silent; tap 🔊 सुनिए to hear
     } catch (err) {
       typing.remove();
       addMessage("bot", err.message);
