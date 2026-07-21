@@ -290,6 +290,12 @@ const SARVAM_KEY = process.env.SARVAM_API_KEY || "";
 const SARVAM_VOICE = process.env.SARVAM_VOICE || "shubh";
 const SARVAM_MODEL = process.env.SARVAM_MODEL || "bulbul:v3";
 const SARVAM_PACE = Number(process.env.SARVAM_PACE || 1.0);
+// Master switch for the paid/natural voice. Set NATURAL_TTS=off to serve NO
+// server voice at all — /health reports naturalVoice:false so the widget speaks
+// with the seeker's own device voice everywhere. Used while the free Gemini TTS
+// quota is exhausted: it stops the 429 storm and the broken half-spoken answers
+// (first sentence natural, then a gap, then the device voice clipping its start).
+const NATURAL_TTS = (process.env.NATURAL_TTS || "on").toLowerCase() !== "off";
 
 // Gemini TTS returns headerless PCM; browsers need a WAV (RIFF) header in front.
 function pcmToWav(pcm, rate) {
@@ -377,6 +383,7 @@ async function sarvamTts(text) {
 }
 
 async function handleTts(req, res) {
+  if (!NATURAL_TTS) return json(res, 501, { error: "tts-disabled" }); // device voice only
   if (!TTS_KEY && !GEMINI_TTS_KEY && !SARVAM_KEY) return json(res, 501, { error: "tts-not-configured" });
   const ip = req.socket.remoteAddress ?? "unknown";
   if (rateLimited(ip, "tts", 80)) return json(res, 429, { error: "Too many requests." });
@@ -1823,13 +1830,15 @@ const server = createServer(async (req, res) => {
       teachMedia: existsSync(`${process.env.HOME}/Library/Python/3.9/bin/mlx_whisper`),
       apiKeyConfigured,
       backup: BACKUP_CONFIGURED ? { ready: true, lastUsed: failover.at, answers: failover.count } : false,
-      naturalVoice: SARVAM_KEY
-        ? `sarvam:${SARVAM_VOICE}`
-        : TTS_KEY
-          ? "elevenlabs"
-          : GEMINI_TTS_KEY
-            ? "gemini"
-            : false,
+      naturalVoice: !NATURAL_TTS
+        ? false
+        : SARVAM_KEY
+          ? `sarvam:${SARVAM_VOICE}`
+          : TTS_KEY
+            ? "elevenlabs"
+            : GEMINI_TTS_KEY
+              ? "gemini"
+              : false,
       // the iOS home-screen app's ONLY ear (Whisper via Groq — never Gemini)
       iosEar: process.env.GROQ_API_KEY ? "groq-whisper" : "not-configured",
       knowledgeBase: existsSync(path.join(ROOT, "data", "knowledge.db")) ? "built" : "missing",

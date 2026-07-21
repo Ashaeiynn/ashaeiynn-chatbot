@@ -1527,7 +1527,29 @@
       };
       speechSynthesis.speak(u);
     };
-    next();
+    // Chrome & Android routinely clip the first word(s) of the FIRST utterance
+    // spoken right after a cancel() (the engine starts cold). Speak a silent
+    // warm-up first so it absorbs that clip and the real answer begins whole.
+    // A timer guards against engines that never fire onend for the warm-up.
+    let started = false;
+    const start = () => {
+      if (!started && !cancelled) {
+        started = true;
+        next();
+      }
+    };
+    try {
+      const warm = new SpeechSynthesisUtterance("​"); // zero-width, silent
+      warm.volume = 0;
+      warm.lang = lang;
+      if (voice) warm.voice = voice;
+      warm.onend = start;
+      warm.onerror = start;
+      speechSynthesis.speak(warm);
+      setTimeout(start, 250);
+    } catch {
+      start();
+    }
   }
 
   async function speak(text, onDone) {
