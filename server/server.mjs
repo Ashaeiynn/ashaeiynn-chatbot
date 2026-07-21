@@ -107,6 +107,8 @@ const publicUrl = (u) => (u && /youtube\.com|youtu\.be|ashaeiynn\.com/i.test(Str
 // Cross-language search leans on translating the question, so the same question
 // asked twice should not pay for it twice (see the translation block below).
 const translationCache = new Map();
+// first-name → m/f/u for the guide's spoken welcome (see GET /api/gender)
+const genderCache = new Map();
 
 const GREETING_ONLY =
   /^\s*(jai?\s*(shree\s*|shri\s*)?(siya\s*|sita\s*)?ram(\s*ji)?|जय\s*(श्री\s*)?(सिया\s*|सीता\s*)?राम(\s*जी)?|जय\s*सियाराम|जय\s*गुरुदेव|राधे\s*राधे|नमस्ते|नमस्कार|प्रणाम|राम\s*राम|हेलो|हाय|namaste|hello|hi|hey|good\s*(morning|afternoon|evening|night))\s*[!.,\s🙏]*$/i;
@@ -1535,6 +1537,35 @@ const server = createServer(async (req, res) => {
   // null when there is nothing current or it has aged out.
   if (req.method === "GET" && url.pathname === "/api/announcement") {
     return json(res, 200, { announcement: getAnnouncement() });
+  }
+  // One-letter gender read of a first name so the guide's spoken welcome can say
+  // भाई/बहन without ever misgendering (unsure stays जी — same rule as answers).
+  // ONE light-model call per unique name for the process life; the device then
+  // stores the letter forever, so per seeker this costs one tiny call ever.
+  if (req.method === "GET" && url.pathname === "/api/gender") {
+    const name = String(url.searchParams.get("name") || "").trim().slice(0, 40);
+    if (!name || !apiKeyConfigured) return json(res, 200, { g: "u" });
+    const gk = name.toLowerCase();
+    if (genderCache.has(gk)) return json(res, 200, { g: genderCache.get(gk) });
+    const ip = req.socket.remoteAddress ?? "unknown";
+    if (rateLimited(ip, "light", 30)) return json(res, 429, { error: "Too many requests." });
+    let g = "u";
+    try {
+      const out = await complete({
+        system:
+          "You classify Indian first names by the gender they most commonly indicate. Reply with exactly one letter: m (clearly male), f (clearly female), or u (unisex, unclear, or not a name). Nothing else.",
+        messages: [{ role: "user", content: name }],
+        maxTokens: 3,
+        light: true,
+        retry: false,
+      });
+      const c = String(out || "").trim().toLowerCase()[0];
+      if (c === "m" || c === "f") g = c;
+    } catch {
+      /* unsure is always the safe answer */
+    }
+    genderCache.set(gk, g);
+    return json(res, 200, { g });
   }
   // the seeker's own right: delete their account (registry + notifications)
   if (req.method === "POST" && url.pathname === "/api/account/delete") {

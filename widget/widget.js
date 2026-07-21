@@ -774,6 +774,9 @@
     .mg3-wrap.on{opacity:1}
     .mg3-wrap canvas{display:block;width:100%!important;height:100%!important}
     .vcb-panel.mg3-live .mg-3d{display:none}
+    /* the welcome bow for the SVG fallback (the 3D guide folds his hands instead) */
+    .vcb-greet .mg-fig{animation:mgBow 2.6s ease-in-out both}
+    @keyframes mgBow{0%,100%{transform:translateY(0)}35%,65%{transform:translateY(4px)}}
   `;
   document.head.appendChild(style);
 
@@ -2064,6 +2067,63 @@
 
   // the big eye: idle→listen · listening→finish · speaking→stop
   let g3init = () => {}; // replaced just below with the real 3D loader; toggle() calls it on open
+  let g3greetUntil = 0; // while now < this, the 3D guide folds his hands in namaste
+  // ——— the guide's own welcome: hands fold in namaste and he says जय सिया राम
+  // भाई/बहन (device voice — free) when the seeker arrives. Once per visit.
+  // भाई vs बहन comes from a one-time server read of the first name, remembered
+  // on the device forever; while unknown (or unclear) he says जी — never a guess.
+  let greetedThisLoad = false;
+  function greetNamaste() {
+    if (greetedThisLoad) return;
+    greetedThisLoad = true;
+    if (journey.name && !journey.gender) {
+      fetch(`${API}/api/gender?name=${encodeURIComponent(journey.name.split(" ")[0])}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d && (d.g === "m" || d.g === "f" || d.g === "u")) {
+            journey.gender = d.g;
+            saveJourney();
+          }
+        })
+        .catch(() => {});
+    }
+    setTimeout(() => {
+      g3greetUntil = performance.now() + 2600;
+      panel.classList.add("vcb-greet"); // the SVG fallback bows via CSS
+      setTimeout(() => panel.classList.remove("vcb-greet"), 2600);
+      if (!voiceReplies || notifCtx) return; // muted, or a tapped notification is about to speak
+      const kin =
+        journey.gender === "m" ? (uiLang === "hi" ? "भाई" : "bhai")
+        : journey.gender === "f" ? (uiLang === "hi" ? "बहन" : "behen")
+        : (uiLang === "hi" ? "जी" : "ji");
+      const line = uiLang === "hi" ? `जय सिया राम, ${kin}!` : `Jai Siya Ram, ${kin}!`;
+      try {
+        browserSpeak(line, () => {});
+        // Auto-opened with no tap yet (app WebView / home-screen app): the browser
+        // may block speech. If nothing started, greet on the seeker's first touch.
+        if ("speechSynthesis" in window) {
+          let sawSpeaking = false;
+          const probe = setInterval(() => {
+            if (speechSynthesis.speaking) {
+              sawSpeaking = true;
+              clearInterval(probe);
+            }
+          }, 250);
+          setTimeout(() => {
+            clearInterval(probe);
+            if (!sawSpeaking) {
+              document.addEventListener("pointerdown", () => {
+                g3greetUntil = performance.now() + 2600;
+                try { browserSpeak(line, () => {}); } catch { /* best effort */ }
+              }, { once: true });
+            }
+          }, 1300);
+        }
+      } catch {
+        /* the welcome is best-effort — the namaste still plays */
+      }
+    }, 1900); // let the जय सिया राम splash bloom first
+  }
   {
     orb.addEventListener("click", () => {
       // NO primeVoice() here. Speaking — even a silent utterance — flips iOS's
@@ -2186,24 +2246,36 @@
       collar.geometry.rotateX(Math.PI / 2); collar.position.y = 2.22; fig.add(collar);
       const sash = new T.Mesh(new T.TorusGeometry(0.52, 0.045, 10, 48), goldMat);
       sash.geometry.rotateX(Math.PI / 2); sash.position.y = 1.0; sash.scale.set(1.05, 1, 0.85); fig.add(sash);
-      const limb = (ax, ay, az, bx, by, bz, r) => {
-        const a = new T.Vector3(ax, ay, az), b = new T.Vector3(bx, by, bz);
-        const d = new T.Vector3().subVectors(b, a), len = d.length();
-        const m = new T.Mesh(new T.CylinderGeometry(r, r, len, 12), robeMat);
-        m.position.copy(a).add(b).multiplyScalar(0.5);
-        m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), d.normalize());
-        return m;
+      // Poseable arms: unit-length segments re-aimed every frame, so the hands
+      // can travel smoothly from the lap (ध्यान) up to the heart (नमस्ते).
+      const UPV = new T.Vector3(0, 1, 0);
+      const mkSeg = (r) => { const m = new T.Mesh(new T.CylinderGeometry(r, r, 1, 12), robeMat); fig.add(m); return m; };
+      const upL = mkSeg(0.095), upR = mkSeg(0.095), foL = mkSeg(0.082), foR = mkSeg(0.082);
+      const jSph = (r, mat) => { const m = new T.Mesh(new T.SphereGeometry(r, 12, 10), mat); fig.add(m); return m; };
+      const shj = jSph(0.105, robeMat); shj.position.set(-0.5, 2.02, 0.06);
+      const shj2 = jSph(0.105, robeMat); shj2.position.set(0.5, 2.02, 0.06);
+      const elbL = jSph(0.095, robeMat), elbR = jSph(0.095, robeMat);
+      const handL = jSph(0.13, skinMat), handR = jSph(0.13, skinMat);
+      const setSeg = (m, a, b) => {
+        const d = new T.Vector3(b.x - a.x, b.y - a.y, b.z - a.z);
+        const len = d.length() || 0.001;
+        m.position.set((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+        m.scale.set(1, len, 1);
+        m.quaternion.setFromUnitVectors(UPV, d.clone().normalize());
       };
-      fig.add(limb(-0.5, 2.02, 0.06, -0.66, 1.38, 0.28, 0.095));
-      fig.add(limb(0.5, 2.02, 0.06, 0.66, 1.38, 0.28, 0.095));
-      fig.add(limb(-0.66, 1.38, 0.28, -0.13, 1.06, 0.5, 0.082));
-      fig.add(limb(0.66, 1.38, 0.28, 0.13, 1.06, 0.5, 0.082));
-      const shj = new T.Mesh(new T.SphereGeometry(0.105, 12, 10), robeMat); shj.position.set(-0.5, 2.02, 0.06); fig.add(shj);
-      const shj2 = shj.clone(); shj2.position.x = 0.5; fig.add(shj2);
-      const elb = new T.Mesh(new T.SphereGeometry(0.095, 12, 10), robeMat); elb.position.set(-0.66, 1.38, 0.28); fig.add(elb);
-      const elb2 = elb.clone(); elb2.position.x = 0.66; fig.add(elb2);
-      const hand = new T.Mesh(new T.SphereGeometry(0.13, 14, 12), skinMat); hand.position.set(-0.11, 1.04, 0.5); fig.add(hand);
-      const hand2 = hand.clone(); hand2.position.x = 0.11; fig.add(hand2);
+      const SH = { x: 0.5, y: 2.02, z: 0.06 };
+      const EL_REST = { x: 0.66, y: 1.38, z: 0.28 }, HA_REST = { x: 0.115, y: 1.05, z: 0.5 };
+      const EL_NAM = { x: 0.56, y: 1.64, z: 0.36 }, HA_NAM = { x: 0.055, y: 1.85, z: 0.52 };
+      const mixJ = (A, B, k, sgn) => ({ x: sgn * (A.x + (B.x - A.x) * k), y: A.y + (B.y - A.y) * k, z: A.z + (B.z - A.z) * k });
+      const poseArms = (k) => {
+        const eL = mixJ(EL_REST, EL_NAM, k, -1), hL = mixJ(HA_REST, HA_NAM, k, -1);
+        const eR = mixJ(EL_REST, EL_NAM, k, 1), hR = mixJ(HA_REST, HA_NAM, k, 1);
+        setSeg(upL, { x: -SH.x, y: SH.y, z: SH.z }, eL); setSeg(foL, eL, hL);
+        setSeg(upR, { x: SH.x, y: SH.y, z: SH.z }, eR); setSeg(foR, eR, hR);
+        elbL.position.set(eL.x, eL.y, eL.z); elbR.position.set(eR.x, eR.y, eR.z);
+        handL.position.set(hL.x, hL.y, hL.z); handR.position.set(hR.x, hR.y, hR.z);
+      };
+      poseArms(0);
       const neck = new T.Mesh(new T.CylinderGeometry(0.15, 0.17, 0.28, 16), skinMat);
       neck.position.y = 2.36; fig.add(neck);
       const head = new T.Mesh(new T.SphereGeometry(0.47, 28, 22), skinMat);
@@ -2298,7 +2370,7 @@
         wrap.remove(); // the SVG guide takes back over, seamlessly
       });
       const t0 = performance.now();
-      let lastT = 0, eyeT = 0, auraTo = 0.06;
+      let lastT = 0, eyeT = 0, auraTo = 0.06, namT = 0;
       function tick() {
         if (!wrap.isConnected) { try { renderer.dispose(); } catch { /* done */ } return; }
         requestAnimationFrame(tick);
@@ -2307,10 +2379,16 @@
         const dt = Math.min(0.05, t - lastT); lastT = t;
         const vs = panel.dataset.vstate;
         const st = vs === "listening" ? "listen" : vs === "thinking" ? "reflect" : vs === "speaking" ? "speak" : "rest";
+        // the welcome: hands fold to the heart, a soft bow, then ease back
+        namT += ((performance.now() < g3greetUntil ? 1 : 0) - namT) * 0.07;
+        const e3 = namT * namT * (3 - 2 * namT);
+        poseArms(e3);
+        fig.rotation.x = 0.15 * e3;
+        const greetTalk = e3 > 0.5 && voiceReplies;
         planets.visible = st === "reflect";
         rays.visible = st === "speak";
-        mouth.visible = st === "speak";
-        smile.visible = st !== "speak";
+        mouth.visible = st === "speak" || greetTalk;
+        smile.visible = !mouth.visible;
         auraTo = st === "rest" ? 0.06 : st === "speak" ? 0.16 : 0.12;
         eyeT += ((st === "rest" ? 0 : 1) - eyeT) * 0.08;
         teye.scale.set(1.5, 0.06 + eyeT * 1.0, 0.65);
@@ -2320,7 +2398,7 @@
         haloMat.opacity = 0.4 + 0.25 * Math.sin(t * 1.6);
         halo.rotation.z = t * 0.35;
         fig.position.y = Math.sin(t * 1.35) * 0.045 + (st === "speak" ? Math.sin(t * 7) * 0.03 : 0);
-        if (st === "speak") mouth.scale.set(1.3, 0.35 + 0.3 * Math.abs(Math.sin(t * 8)), 0.5);
+        if (mouth.visible) mouth.scale.set(1.3, 0.35 + 0.3 * Math.abs(Math.sin(t * 8)), 0.5);
         if (st === "listen") {
           const s1 = (t * 0.55) % 1, s2 = (t * 0.55 + 0.5) % 1;
           rip1.scale.set(1 + s1 * 1.7, 1, 1 + s1 * 1.7); ripMat1.opacity = 0.45 * (1 - s1);
@@ -2924,6 +3002,7 @@
       hideNudge();
       playSplash();
       g3init(); // wake the true-3D guide (lazy; SVG stays until it's ready)
+      greetNamaste(); // he folds his hands and says जय सिया राम (once per visit)
       maybeAskName();
       thoughtShownThisOpen = false;
       fetchThought();

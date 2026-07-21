@@ -13,6 +13,21 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
+- **The guide now greets on open: hands fold in namaste and he SAYS "जय सिया राम भाई/बहन".**
+  Owner's ask. Built: (1) 3D arms reworked to POSEABLE unit-cylinder segments re-aimed per frame
+  (`poseArms(k)` lerps elbow/hand joints from lap ध्यान pose to hands-at-heart namaste + 0.15rad bow;
+  smoothstepped `namT`, mouth flutters while he speaks); triggered while `now < g3greetUntil`.
+  (2) `greetNamaste()` in widget: once per page load, 1.9s after open (post-splash) — adds
+  `.vcb-greet` (SVG fallback bows via CSS keyframe) and speaks the line with the FREE device voice
+  (browserSpeak — zero TTS quota per open, owner's cost rule; respects the 🔇 toggle; skipped when a
+  tapped notification is about to speak). If autoplay is blocked (auto-opened app WebView, no gesture
+  yet) a one-shot pointerdown listener replays greeting+namaste on first touch.
+  (3) भाई vs बहन NEVER guessed: new `GET /api/gender?name=` — ONE light-model call per unique name
+  (in-memory cache, rate-limited, "u" on any doubt/error) returns m/f/u; the device stores it in
+  journey.gender forever. Verified: Rohan→m, Priya→f, Kiran(unisex)→u; unknown/unclear speaks "जी".
+  Verified in-browser: namaste plays on open and on the blocked-autoplay retry (screenshots: hands
+  rising, folded at heart, bowed head), gender learned+stored on device, zero console errors.
+
 - **The guide is now TRUE 3D — a sculpted WebGL figure (owner: "make it real").**
   Owner wanted real depth, full body, not the flat SVG that tilts. Process: built an interactive
   three.js preview first (owner feedback "looks fat" → reshaped slim/young: broad shoulders, narrow
