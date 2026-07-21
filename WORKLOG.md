@@ -13,6 +13,16 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
+- **APP-INTEGRATION.md: documented the exact iOS/Android WebView settings so the app never hits the
+  iOS issues we just fixed.** Replaced the mic-only note with "three settings the native container must
+  get right": (A) full-screen — iOS pin WKWebView to edges (not safe area) + `contentInsetAdjustment
+  Behavior = .never`; Android edge-to-edge + MATCH_PARENT; (B) sound-on-open — iOS `mediaTypesRequiring
+  UserActionForPlayback = []` + `allowsInlineMediaPlayback = true` (with the honest caveat that the
+  device-voice welcome may still gate → first-touch fallback already built, or native AVSpeechSynthesizer
+  via the bridge); (C) mic — iOS `NSMicrophoneUsageDescription` + the iOS-15 media-capture delegate
+  `decisionHandler(.grant)`, noting the guide records+server-transcribes on iOS (no reliance on WKWebView-
+  absent SpeechRecognition). Plus Flutter/RN equivalents and an iOS quick-checklist. Doc-only, no deploy.
+
 - **iOS fixes: full-screen fill + the spoken welcome now reaches iPhone.**
   (1) BOTTOM UNUSED: the embed/mobile panel set `top/bottom:0` AND `height:100dvh` — over-constrained,
   so `height` wins and `bottom` is ignored; iOS home-screen apps under-report dvh, leaving the bottom

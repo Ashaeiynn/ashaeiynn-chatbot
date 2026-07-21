@@ -44,22 +44,58 @@ https://guide.ashaeiynn.com/app?uid=<APP_USER_ID>&name=<Display Name>
 - `name` — the user's first name, for a warm greeting. Optional.
 - URL-encode both. Send nothing else — no phone/email in the URL.
 
-### The one thing to get right: microphone permission
+### Native container settings — get these THREE right (this is the whole app-side job)
 
-The guide is voice-first, so the WebView must be allowed to use the mic. This is the only real work
-on the app side.
+The guide is full-screen and voice-first. The three things below are exactly the iOS quirks we hit
+while testing in Safari / the home-screen shortcut — **a native app fixes all three, but only if the
+WebView is configured as follows.** Get them right once and it "just works" on day one.
 
-- **Android (native WebView):** set `webView.settings.javaScriptEnabled = true` and
-  `mediaPlaybackRequiresUserGesture = false`; handle `WebChromeClient.onPermissionRequest` →
-  `request.grant(request.resources)`; declare `RECORD_AUDIO` in the manifest and request it at runtime.
-- **iOS (WKWebView):** add `NSMicrophoneUsageDescription` to Info.plist; on iOS 15+
-  `configuration.allowsInlineMediaPlayback = true` and (iOS 15) grant via the media-capture delegate.
-- **Flutter:** `flutter_inappwebview` — `onPermissionRequest` → `PermissionResponse(action: GRANT)`,
-  plus the platform mic permissions above.
-- **React Native:** `react-native-webview` with `mediaCapturePermissionGrantType="grant"` (iOS) and the
-  Android `onPermissionRequest` handling above.
+**A · Fill the whole screen (no empty strip at the bottom).**
+In Safari/home-screen the browser sizes the page and iPhone mis-measures the height, leaving a gap. In
+your app, YOU size the WebView — pin it edge-to-edge and the gap is gone. The guide's `/app` page
+already declares `viewport-fit=cover` and pads its own controls clear of the home indicator, so
+edge-to-edge is the correct, safe choice.
+- **iOS (WKWebView):** pin the web view to the view controller's **edges**, not the safe area (so it
+  extends under the status bar and home indicator); set
+  `webView.scrollView.contentInsetAdjustmentBehavior = .never`.
+- **Android (WebView):** draw edge-to-edge (`WindowCompat.setDecorFitsSystemWindows(window, false)`)
+  and give the WebView `MATCH_PARENT` width/height.
+- **Flutter / React Native:** give the web view the full screen (full-bleed container; don't wrap it in
+  padding or a `SafeArea` that reserves a bottom strip — the page handles insets itself).
+
+**B · Let it make sound on open (the spoken "Jai Siya Ram" welcome).**
+Apple blocks all audio until the user first touches the screen — and the app auto-opens with no touch.
+A website can't lift that rule; **your app can**, with one WebView setting:
+- **iOS (WKWebView):** on the `WKWebViewConfiguration`, set
+  `mediaTypesRequiringUserActionForPlayback = []` **and** `allowsInlineMediaPlayback = true`.
+- **Android (WebView):** `webView.settings.mediaPlaybackRequiresUserGesture = false`.
+- **Flutter (`flutter_inappwebview`):** `mediaPlaybackRequiresUserGesture: false`,
+  `allowsInlineMediaPlayback: true`. **React Native (`react-native-webview`):**
+  `mediaPlaybackRequiresUserAction={false}`, `allowsInlineMediaPlayback`.
+- **Test the welcome on a real iPhone.** That flag reliably autoplays the guide's `<audio>` (its natural
+  answer voice); the short *welcome* uses the phone's built-in voice, which Apple sometimes still gates.
+  If it won't autoplay, nothing breaks — the guide already greets on the seeker's **first touch** as a
+  fallback. (If you want it guaranteed on open, the app can speak the welcome with native
+  `AVSpeechSynthesizer` — ask and we'll expose the exact line/gender/language over the Phase-3 bridge.)
+
+**C · Microphone (tap-to-speak).**
+- **iOS (WKWebView):** add **`NSMicrophoneUsageDescription`** to Info.plist (a user-facing reason);
+  implement the iOS-15+ capture delegate
+  `webView(_:requestMediaCapturePermissionFor:initiatedByFrame:type:decisionHandler:)` →
+  `decisionHandler(.grant)`; keep `allowsInlineMediaPlayback = true`. (Microphone in WKWebView works on
+  iOS 14.3+. Note: the guide records audio and transcribes it on our server on iOS — it does **not**
+  rely on Safari's `SpeechRecognition`, which WKWebView doesn't have — so nothing extra is needed there.)
+- **Android (WebView):** declare `RECORD_AUDIO` in the manifest and request it at runtime; handle
+  `WebChromeClient.onPermissionRequest` → `request.grant(request.resources)`.
+- **Flutter:** `onPermissionRequest` → `PermissionResponse(action: GRANT)` plus the platform mic
+  permission. **React Native:** `mediaCapturePermissionGrantType="grant"` (iOS) + the Android
+  `onPermissionRequest` handling above.
 
 If the mic can't be granted, the guide still works — the user taps **"⌨️ type instead"**.
+
+**iOS quick checklist:** ① WebView pinned to edges + `contentInsetAdjustmentBehavior = .never` ·
+② `mediaTypesRequiringUserActionForPlayback = []` + `allowsInlineMediaPlayback = true` ·
+③ `NSMicrophoneUsageDescription` + grant the iOS-15 media-capture permission.
 
 ### Web / PWA app instead of native?
 
