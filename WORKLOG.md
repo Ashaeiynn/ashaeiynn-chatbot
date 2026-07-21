@@ -13,6 +13,11 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
+- **Voice changed `ratan` → `sunny` (owner, same day) — live.** Verified sunny is bulbul:v3-compatible,
+  set SARVAM_VOICE=sunny in both .env files, restarted chatbot; /health `sarvam:sunny`, live /api/tts
+  through guide.ashaeiynn.com returns valid WAV. (Ratan was the first pick from the Artifact; owner
+  switched to sunny after hearing.)
+
 - **Sarvam Bulbul is now the guide's LIVE natural voice — voice `ratan` (owner picked it by ear).**
   Went live on the VPS 2026-07-21: appended `SARVAM_API_KEY` + `SARVAM_VOICE=ratan` to
   `/opt/chatbot/app/.env` (surgical append, not an overwrite — kept chatbot:chatbot 600), pulled
