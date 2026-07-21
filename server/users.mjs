@@ -75,6 +75,33 @@ export function register({ name, nick, whatsapp, email }) {
   return u;
 }
 
+// Create or update a registry entry by a CALLER-PROVIDED id — used by the main
+// app to enrol its users into the guide (the app owns the id and the identity).
+// Everyone the app sends is a member of Ashaeiynn (member defaults to true here).
+// Only the fields provided are touched, so re-calls are safe.
+export function upsertById(id, fields = {}) {
+  id = norm(id, 64).trim();
+  if (!id) return null;
+  const all = load();
+  let u = all.find((x) => x.id === id);
+  const now = new Date().toISOString();
+  if (!u) {
+    u = { id, member: true, deleted: false, usedToday: 0, dayKey: istDay(), bonus: 0, at: now, lastSeen: now };
+    all.push(u);
+  }
+  if (fields.name != null) u.name = norm(fields.name);
+  if (fields.nick != null) u.nick = norm(fields.nick, 40);
+  if (fields.whatsapp != null) u.whatsapp = norm(fields.whatsapp, 20).replace(/[^\d+]/g, "");
+  if (fields.email != null) u.email = norm(fields.email, 120).toLowerCase();
+  if ("member" in fields) u.member = !!fields.member;
+  if (!u.nick && u.name) u.nick = u.name.split(" ")[0];
+  u.deleted = false;
+  delete u.deletedReason;
+  u.lastSeen = now;
+  save(all);
+  return u;
+}
+
 // ——— the daily allowance ———
 // How many questions this seeker has left right now: today's remainder plus any
 // admin-granted bonus. Reading it never writes — the reset happens on spend.

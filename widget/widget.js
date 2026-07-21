@@ -2118,6 +2118,7 @@
   // says जय सिया राम भाई/बहन and opens the conversation with a warm invitation.
   // A short cooldown only guards against a stutter when two open-events coincide.
   function greetNamaste() {
+    if (panel.querySelector(".vcb-namecard")) return; // wait until the intro (nick / sign-up) is answered
     if (lastGreetAt && performance.now() - lastGreetAt < 8000) return; // cooldown (not the first call)
     const firstThisLoad = lastGreetAt === 0;
     lastGreetAt = performance.now();
@@ -2659,7 +2660,7 @@
 
   // sign-up comes before the first question — the gate every ask passes through
   function needSignup() {
-    if (journey.uid) return false;
+    if (EMBED || journey.uid) return false; // in the app, identity is the app's job
     maybeAskName();
     return true;
   }
@@ -3060,8 +3061,9 @@
       hideNudge();
       playSplash();
       g3init(); // wake the true-3D guide (lazy; SVG stays until it's ready)
-      greetNamaste(); // he folds his hands and says जय सिया राम (once per visit)
-      maybeAskName();
+      askNickApp(); // in the app: ask ONLY what to call them (identity comes from the app)
+      maybeAskName(); // on the website: the full one-time sign-up
+      greetNamaste(); // welcomes AFTER any intro card is answered (it waits for it)
       thoughtShownThisOpen = false;
       fetchThought();
       bellOfferedThisOpen = false;
@@ -3210,8 +3212,43 @@
 
   // Sign-up before first use (owner's rule): the registry lets Ashaeiynn know
   // members from visitors. The guide addresses the seeker by their nickname.
+  // Inside the app, the app already knows the person (name, email, phone come from
+  // it, and the same uid makes them a member) — so the guide asks ONE warm thing:
+  // what they'd like to be called. Once per device; the app's first name is the
+  // default. Shown only in app-embed mode.
+  function askNickApp() {
+    if (!EMBED || journey.nickAsked || panel.querySelector(".vcb-namecard")) return;
+    journey.nickAsked = true;
+    saveJourney();
+    const hi = uiLang === "hi";
+    const card = document.createElement("div");
+    card.className = "vcb-namecard";
+    const h = document.createElement("h4");
+    h.textContent = hi ? "🙏 जय सिया राम!" : "🙏 Jai Siya Ram!";
+    const p = document.createElement("p");
+    p.textContent = hi ? "मैं आपको किस नाम से बुलाऊँ?" : "What would you like me to call you?";
+    const nick = document.createElement("input");
+    nick.placeholder = hi ? "आपका नाम" : "Your name";
+    nick.maxLength = 40;
+    nick.value = (journey.name || "").split(" ")[0];
+    const go = document.createElement("button");
+    go.className = "vcb-namego";
+    go.textContent = hi ? "ठीक है 🙏" : "Done 🙏";
+    const finish = () => {
+      const v = nick.value.trim().slice(0, 40);
+      if (v) journey.name = v;
+      saveJourney();
+      card.remove();
+      greetNamaste(); // welcome them by the name they chose
+    };
+    go.addEventListener("click", finish);
+    nick.addEventListener("keydown", (e) => { if (e.key === "Enter") finish(); });
+    card.append(h, p, nick, go);
+    panel.appendChild(card);
+    setTimeout(() => { try { nick.focus(); } catch { /* focus is best-effort */ } }, 120);
+  }
   function maybeAskName() {
-    if (journey.uid || panel.querySelector(".vcb-namecard")) return;
+    if (EMBED || journey.uid || panel.querySelector(".vcb-namecard")) return; // the app has its own (see askNickApp)
     const card = document.createElement("div");
     card.className = "vcb-namecard";
     const h = document.createElement("h4");
@@ -3256,6 +3293,7 @@
         saveJourney();
         if (typeof d.credits === "number") renderCredits(d.credits); // welcome balance
         card.remove();
+        greetNamaste(); // welcome them now that the intro is done
         // now that they have an identity, offer the doorbell straight away —
         // no waiting for a reopen (it then returns every open until allowed)
         maybeOfferBell();

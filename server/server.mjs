@@ -212,6 +212,7 @@ function matchLinks(message) {
 
 const ADMIN_KEY = process.env.ADMIN_KEY || "";
 const LIBRARY_KEY = process.env.LIBRARY_KEY || ""; // second lock: the Library tab
+const APP_KEY = process.env.APP_KEY || ""; // shared secret: the main app enrols its users
 
 // One JSON line per question (question, answer, retrieval) — reviewed in the
 // admin portal at /admin. Written under LOG_DIR rather than the repo's own
@@ -1174,6 +1175,7 @@ async function handleChat(req, res) {
     json(res, 200, {
       answer: shown,
       sources,
+      ...(seekerMember ? { member: true } : {}), // the app/UI can know they're a member
       ...(suggest && profile ? { suggest } : {}),
       ...(followups.length ? { followups } : {}),
       ...(checkin ? { checkin } : {}),
@@ -1585,6 +1587,36 @@ const server = createServer(async (req, res) => {
       return json(res, 200, { ok: true });
     } catch {
       return json(res, 400, { error: "Invalid JSON." });
+    }
+  }
+
+  // ——— the main app enrols one of ITS users into the guide ———
+  // The app already knows the person (name, email, phone), so the guide never
+  // asks — the app POSTs them here on first open, keyed by the app's own uid, and
+  // they are marked a MEMBER of Ashaeiynn. Authenticated with the shared APP_KEY;
+  // details travel in the BODY, never a URL. Idempotent — safe to call every open.
+  if (req.method === "POST" && url.pathname === "/api/app/register") {
+    if (!APP_KEY) return json(res, 501, { error: "app-enrolment not configured (set APP_KEY)" });
+    if (req.headers["x-app-key"] !== APP_KEY) return json(res, 401, { error: "unauthorized" });
+    let body = "";
+    for await (const part of req) {
+      body += part;
+      if (body.length > 5_000) return json(res, 413, { error: "Too long." });
+    }
+    try {
+      const p = JSON.parse(body);
+      const uid = String(p.uid || "").trim().slice(0, 64);
+      if (!uid) return json(res, 400, { error: "uid is required." });
+      const u = users.upsertById(uid, {
+        name: p.name,
+        nick: p.nick,
+        whatsapp: p.whatsapp ?? p.phone,
+        email: p.email,
+        member: p.member === false ? false : true, // app users are members by default
+      });
+      return json(res, 200, { ok: true, uid: u.id, member: !!u.member });
+    } catch (err) {
+      return json(res, 400, { error: String(err?.message || "Could not enrol.") });
     }
   }
 

@@ -13,6 +13,26 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
+- **In the app the guide asks NOTHING but a nickname; the app supplies identity + members automatically.**
+  Owner: app auto-captures name/email/phone; guide asks only "what to call you"; every app user is a
+  member. Built:
+  - Server: `users.upsertById(id, fields)` (create/update a registry entry by a CALLER-provided id,
+    member defaults true) + `POST /api/app/register` (auth `x-app-key: APP_KEY`; body {uid,name,email,
+    phone,nick?}; marks member; idempotent; details in BODY never URL; 501 until APP_KEY set). Added
+    `APP_KEY` to env. Main chat reply now also carries `member:true` when the seeker is a member.
+  - Widget: in EMBED (app) mode `needSignup()`/`maybeAskName()` never show the full sign-up; new
+    `askNickApp()` shows ONE field ("What would you like me to call you?", pre-filled with the app's
+    first name, once per device via journey.nickAsked) → sets journey.name → then `greetNamaste()`.
+    greetNamaste now waits while any intro card is up (guard) and is fired after the nick/website
+    sign-up submit. Membership stays server-authoritative (from the registry via the app enrolment).
+  - Verified locally (test APP_KEY): 401 without key; enrol Rohan Kumar → registry member:true with
+    name/whatsapp/email + nick "Rohan"; /app shows the single nick field (not the 4-field form),
+    prefilled from the app name; enrolled uid → chat `member:true`, non-enrolled uid → not a member.
+    Test APP_KEY + test users removed from local .env/registry afterwards.
+  - Documented the whole flow in APP-INTEGRATION.md (enrol step, member-by-default, nick-only ask, no
+    PII in URL). NOTE: APP_KEY is NOT set on the VPS yet — owner/dev sets it when the app is wired
+    (endpoint 501 until then; the nick-only + skip-signup widget behaviour works without it).
+
 - **APP-INTEGRATION.md: documented how the user gets back from the guide to the app** (owner chose a
   native back bar). Added a "Getting back to the app" section: the app places a thin back bar (←/✕)
   above the guide; per-framework steps (iOS UINavigationController or custom header → dismiss/pop;

@@ -30,19 +30,47 @@ https://guide.ashaeiynn.com/app
 It fills the screen, opens straight into the guide (no floating bubble, no demo text), and works in
 Hindi + English with voice. **The app side is just: a "Guide" button that opens this URL in a WebView.**
 
-### Pass the signed-in user in (recommended)
+### Identity: the app supplies it, the guide never asks for it
 
-So the same person is the same seeker in the app and the guide (their journey + any member badge
-follow them, and the guide skips its own name/sign-up):
+Everyone using the guide **from the app is a member of Ashaeiynn**, and the app already knows their
+name, email and phone — so the guide must NOT ask for any of that. Two steps:
+
+**Step 1 — enrol the user once (on their first guide open).** The app POSTs their details to the guide,
+which stores them keyed by the app's own user id and marks them a **member**. Idempotent — safe to call
+on every open.
 
 ```
-https://guide.ashaeiynn.com/app?uid=<APP_USER_ID>&name=<Display Name>
+POST https://guide.ashaeiynn.com/api/app/register
+Header:  x-app-key: <APP_KEY>          ← shared secret (see below)
+Body:    { "uid": "<APP_USER_ID>", "name": "Full Name",
+           "email": "person@example.com", "phone": "+9198…" }
+→ 200 { "ok": true, "uid": "…", "member": true }
 ```
 
-- `uid` — the app's own user id. Use the **same id the app already uses** for that user. Optional but
-  strongly recommended.
-- `name` — the user's first name, for a warm greeting. Optional.
-- URL-encode both. Send nothing else — no phone/email in the URL.
+- `uid` — the app's own user id (**the same id the app already uses**). This is how the guide knows the
+  same person across sessions and marks their membership.
+- `name`, `email`, `phone` — captured silently for the owner's records (the admin Users tab). The guide
+  never shows them to the seeker or asks for them.
+- **These details go in the BODY, never a URL** (URLs get logged/cached — never put email/phone there).
+- `APP_KEY` is a shared secret set in the guide's `.env` on the VPS. Ideally the app's **backend** makes
+  this call (so the secret isn't shipped in the app binary); if the app has no backend it can call it
+  directly. Until `APP_KEY` is set the endpoint replies `501` — tell us and we'll set it when you wire
+  this up. (Marking someone a member only means they're never pitched to "join", so the risk if the
+  secret leaked is low.)
+
+**Step 2 — open the guide with the user's id.**
+
+```
+https://guide.ashaeiynn.com/app?uid=<APP_USER_ID>&name=<First name>
+```
+
+- `uid` — same id as above; makes them the same seeker **and** a recognised member.
+- `name` — first name only, used to pre-fill the one thing the guide DOES ask (below). Still **no email
+  or phone in the URL**.
+
+**What the guide asks:** exactly one warm question — *"What would you like me to call you?"* — pre-filled
+with the first name, once per device. Nothing else. (Name/email/phone already came from Step 1; the user
+is already a member; sign-up is skipped entirely in the app.)
 
 ### Native container settings — get these THREE right (this is the whole app-side job)
 
@@ -197,11 +225,10 @@ we wire it.
 
 ## Membership & the daily question limit
 
-- Members (⭐ in the guide's admin) are never pitched screening/joining and get members-only answers.
-  For the app's users to be recognised as members, they must exist in the guide's user registry with
-  the **same `uid`** the app passes. Simplest path: the owner marks them in the guide admin; if the app
-  should register/mark users automatically, we can add a tiny authenticated endpoint that takes the
-  app's `uid` — ask and we build it.
+- **App users are members automatically** — the `POST /api/app/register` call above marks them a member
+  (⭐ in the guide's admin), so they're never pitched screening/joining and get members-only answers.
+  (Each chat reply also carries `"member": true` if the app ever wants to know.) Non-app visitors are
+  not members unless the owner marks them.
 - The guide gives each seeker **25 questions/day** (resets daily; admin-granted extras carry forward).
   This keys off `uid`, so passing the app's `uid` keeps one honest count per person.
 
