@@ -184,7 +184,10 @@
     @keyframes vcbPanelIn{from{opacity:0;transform:scale(.86) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
     /* App-embed: the guide fills the host WebView (any screen size) and the
        floating launcher/nudge are gone — the app's own button opened us. */
-    .vcb-panel.vcb-embed{top:0;left:0;right:0;bottom:0;width:100%;height:100vh;height:100dvh;
+    /* fill by pinning all four edges (height:auto), NOT 100vh/dvh — iOS home-screen
+       apps under-report dvh and, with top+bottom+height all set, height wins and the
+       bottom of the screen is left unused. inset:0 with auto height fills exactly. */
+    .vcb-panel.vcb-embed{top:0;left:0;right:0;bottom:0;width:auto;height:auto;
       border-radius:0;transform-origin:center bottom}
     body.vcb-embedded .vcb-btn,body.vcb-embedded .vcb-nudge{display:none !important}
     body.vcb-embedded .vcb-bell{display:none !important} /* the app owns phone push */
@@ -516,7 +519,7 @@
     /* ——— phones: the panel becomes a full-screen app ———
        (kept last so these win over the base rules above) */
     @media (max-width:640px){
-      .vcb-panel{top:0;left:0;right:0;bottom:0;width:100%;height:100vh;height:100dvh;
+      .vcb-panel{top:0;left:0;right:0;bottom:0;width:auto;height:auto;
         border-radius:0;transform-origin:center bottom}
       .vcb-head{padding-top:calc(12px + env(safe-area-inset-top))}
       .vcb-form{padding-bottom:calc(12px + env(safe-area-inset-bottom))}
@@ -2090,6 +2093,27 @@
   };
   const GREET_BACK = { hi: "वापसी पर स्वागत है! कहिए, कैसे हैं आप?", en: "Welcome back! How are you today?" };
   let lastGreetAt = 0;
+  // iOS forbids sound until the seeker touches the screen, and the app auto-opens
+  // with no touch — so on iOS the spoken welcome is armed here and plays on the
+  // FIRST tap. That tap must not ALSO start the mic (speaking + recording at once
+  // is what silenced the mic on iPhone), so `greetSpeaking` holds the mic off for
+  // exactly as long as the welcome is playing, then hands back to normal tapping.
+  let greetPending = null; // { line, holdMs } when a welcome is waiting for a touch
+  let greetSpeaking = false; // true ONLY while a first-touch welcome is playing (iOS)
+  const namasteHold = (ms) => {
+    g3greetUntil = performance.now() + ms; // 3D: hands stay folded through it
+    panel.classList.add("vcb-greet"); // SVG fallback bows via CSS
+    setTimeout(() => panel.classList.remove("vcb-greet"), ms);
+  };
+  // The welcome plays on the seeker's first touch (iOS), and the mic is held off
+  // for exactly as long as it speaks — so that tap greets, the next tap speaks.
+  const speakGreetingOnTap = (line, holdMs) => {
+    namasteHold(holdMs);
+    greetSpeaking = true;
+    const clear = () => { greetSpeaking = false; };
+    const safety = setTimeout(clear, holdMs + 1500); // never leave the mic held off
+    try { browserSpeak(line, () => { clearTimeout(safety); clear(); }); } catch { clearTimeout(safety); clear(); }
+  };
   // The guide welcomes the seeker on EVERY open (owner): hands fold in namaste, he
   // says जय सिया राम भाई/बहन and opens the conversation with a warm invitation.
   // A short cooldown only guards against a stutter when two open-events coincide.
@@ -2109,12 +2133,7 @@
         .catch(() => {});
     }
     setTimeout(() => {
-      const hold = (ms) => {
-        g3greetUntil = performance.now() + ms; // 3D: hands stay folded through it
-        panel.classList.add("vcb-greet"); // SVG fallback bows via CSS
-        setTimeout(() => panel.classList.remove("vcb-greet"), ms);
-      };
-      if (!voiceReplies || notifCtx) { hold(2600); return; } // muted / a notification is about to speak
+      if (!voiceReplies || notifCtx) { namasteHold(2600); return; } // muted / a notification is about to speak
       const kin =
         journey.gender === "m" ? (uiLang === "hi" ? "भाई" : "bhai")
         : journey.gender === "f" ? (uiLang === "hi" ? "बहन" : "behen")
@@ -2126,34 +2145,28 @@
         : GREET_OPENERS[lang][Math.floor(Math.random() * GREET_OPENERS[lang].length)];
       const line = `${bless} ${opener}`;
       const holdMs = Math.min(7500, 2800 + line.length * 75);
-      hold(holdMs);
-      try {
-        browserSpeak(line, () => {});
-        // Auto-opened with no tap yet (app WebView / home-screen app): the browser
-        // may block speech. If nothing started, greet on the seeker's first touch.
-        if ("speechSynthesis" in window) {
-          let sawSpeaking = false;
-          const probe = setInterval(() => {
-            if (speechSynthesis.speaking) {
-              sawSpeaking = true;
-              clearInterval(probe);
-            }
-          }, 250);
-          setTimeout(() => {
-            clearInterval(probe);
-            if (!sawSpeaking) {
-              document.addEventListener("pointerdown", () => {
-                hold(holdMs);
-                try { browserSpeak(line, () => {}); } catch { /* best effort */ }
-              }, { once: true });
-            }
-          }, 1300);
-        }
-      } catch {
-        /* the welcome is best-effort — the namaste still plays */
+      // Try to speak it right now (Android / already-interacted browsers allow it).
+      // greetSpeaking is NOT set here — Android may overlap greeting and mic freely.
+      namasteHold(holdMs);
+      try { browserSpeak(line, () => {}); } catch { /* the namaste still played */ }
+      // If nothing started (iOS blocks sound before the first touch), arm it to
+      // play on that touch instead — the namaste already played on screen.
+      if ("speechSynthesis" in window) {
+        setTimeout(() => {
+          if (!speechSynthesis.speaking && !speechSynthesis.pending) greetPending = { line, holdMs };
+        }, 1300);
       }
     }, firstThisLoad ? 1900 : 500); // wait for the जय सिया राम splash only the first time
   }
+  // The seeker's first touch anywhere plays a welcome that iOS blocked on open.
+  // Capture phase so it runs before the guide's own tap handler; greetSpeaking then
+  // makes that same tap greet (not record). Only ever true on this iOS path.
+  document.addEventListener("pointerdown", () => {
+    if (!greetPending) return;
+    const g = greetPending;
+    greetPending = null;
+    speakGreetingOnTap(g.line, g.holdMs);
+  }, true);
   // Bring the app back from the background after a real absence → greet again, so
   // "every time you open the bot" holds even when the page was only suspended,
   // not reloaded (installed app / WebView). The cooldown still guards rapid flips.
@@ -2166,6 +2179,11 @@
   });
   {
     orb.addEventListener("click", () => {
+      // This tap is playing the guide's spoken welcome (iOS gave sound its first
+      // chance here). Don't start the mic in the same breath — recording while he
+      // speaks is exactly what silenced the iPhone mic. He greets now; the seeker's
+      // next tap speaks. The welcome itself invites it ("…what would you like to know?").
+      if (greetSpeaking) return;
       // NO primeVoice() here. Speaking — even a silent utterance — flips iOS's
       // audio session to playback, and the very next thing this handler does is
       // start the microphone. That broke voice input on iPhone (owner,

@@ -13,6 +13,24 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
+- **iOS fixes: full-screen fill + the spoken welcome now reaches iPhone.**
+  (1) BOTTOM UNUSED: the embed/mobile panel set `top/bottom:0` AND `height:100dvh` — over-constrained,
+  so `height` wins and `bottom` is ignored; iOS home-screen apps under-report dvh, leaving the bottom
+  blank. Fixed by dropping the vh/dvh height and letting `inset:0` (top+bottom+left+right:0, height:auto)
+  pin to the real viewport edges. app.html body got `min-height:-webkit-fill-available`. Verified: panel
+  offsetHeight === innerHeight (812), fills top:0→bottom, nav pinned to the very bottom. (If it ever
+  persists it's the NATIVE WKWebView frame, not the web layer.)
+  (2) GREETING VOICE SILENT ON iOS: iOS blocks speechSynthesis until the first touch, and the app
+  auto-opens with none — and the mic tap deliberately can't prime speech (priming+recording together is
+  what silenced the iPhone mic). New flow (`greetNamaste`): still tries to speak on open (Android/
+  already-interacted play it); if a 1.3s probe finds nothing spoke, it ARMS `greetPending`. A
+  capture-phase document `pointerdown` then plays the welcome on the seeker's FIRST touch and sets
+  `greetSpeaking`; the guide's tap handler early-returns while `greetSpeaking` — so that first tap
+  greets and the NEXT tap speaks (the welcome literally invites it: "…what would you like to know?").
+  `greetSpeaking` is set ONLY on this first-touch path, so Android taps during the auto-greeting still
+  record normally. Verified: full-screen fill; Android-style path (greeting auto-plays, first tap →
+  mic requested, not suppressed); iOS first-touch/suppression logic reviewed sound; no console errors.
+
 - **The guide now greets on EVERY open and opens the conversation (not just once, not just the blessing).**
   Owner: "every time a user opens the bot, the bot greets and starts the conversation." Changes in
   `greetNamaste()` (widget.js): (1) fires on every panel open (was once-per-page-load) — the
