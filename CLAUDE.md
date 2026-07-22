@@ -109,7 +109,11 @@ Knowledge: 577 sources / 8,112 chunks in data/knowledge.db (91 original Vimeo/Yo
 videos ~64h + articles + site pages + everything taught via the admin portal through
 2026-07-16). 3 Vimeo videos remain password-locked (skipped).
 Suite 22/22. Anthropic key funded (~$5, hard cap). ElevenLabs key NOT yet added.
-Done: GitHub repo (Ashaeiynn/ashaeiynn-chatbot, private) + both Macs cloned & auto-syncing.
+Done: GitHub repo (private) — transferred 2026-07-22 from `Ashaeiynn` to the owner's new
+account `ashaeiynnadmin-design/ashaeiynn-chatbot` (now sole owner; old `Ashaeiynn` account
+removed & locked out). MacBook auto-syncs via SSH (`~/.ssh/id_ed25519`); iMac still auths as
+old Ashaeiynn so its sync is BROKEN until reconnected via SSH (see WORKLOG 2026-07-22). VPS
+deploy key `hostinger-vps-chatbot-rw` survived the transfer → live site keeps auto-deploying.
 Live: https://guide.ashaeiynn.com — owner's Hostinger VPS (root@200.97.172.186,
 Ubuntu 24.04, shared with the OMS: chatbot in /opt/chatbot, own Node 24, own
 chatbot.service, Caddy site /etc/caddy/sites/chatbot.caddy; OMS untouched).
