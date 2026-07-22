@@ -2091,14 +2091,25 @@
     panel.classList.add("vcb-greet"); // SVG fallback bows via CSS
     setTimeout(() => panel.classList.remove("vcb-greet"), ms);
   };
+  // Speak the blessing in Devanagari FIRST — so "जय सिया राम" is pronounced
+  // correctly even in English mode (the device's English voice mangles the
+  // romanised "Jai Siya Ram") — then the opener in the UI language, as two
+  // separate utterances so each is voiced in the right language.
+  const speakGreet = (blessDeva, opener, done) => {
+    let did = false;
+    const fin = () => { if (!did) { did = true; done && done(); } };
+    try {
+      browserSpeak(blessDeva, () => { if (opener) browserSpeak(opener, fin); else fin(); });
+    } catch { fin(); }
+  };
   // The welcome plays on the seeker's first touch (iOS), and the mic is held off
   // for exactly as long as it speaks — so that tap greets, the next tap speaks.
-  const speakGreetingOnTap = (line, holdMs) => {
+  const speakGreetingOnTap = (blessDeva, opener, holdMs) => {
     namasteHold(holdMs);
     greetSpeaking = true;
     const clear = () => { greetSpeaking = false; };
     const safety = setTimeout(clear, holdMs + 1500); // never leave the mic held off
-    try { browserSpeak(line, () => { clearTimeout(safety); clear(); }); } catch { clearTimeout(safety); clear(); }
+    try { speakGreet(blessDeva, opener, () => { clearTimeout(safety); clear(); }); } catch { clearTimeout(safety); clear(); }
   };
   // The guide welcomes the seeker on EVERY open (owner): hands fold in namaste, he
   // says जय सिया राम भाई/बहन and opens the conversation with a warm invitation.
@@ -2121,26 +2132,28 @@
     }
     setTimeout(() => {
       if (!voiceReplies || notifCtx) { namasteHold(2600); return; } // muted / a notification is about to speak
-      const kin =
-        journey.gender === "m" ? (uiLang === "hi" ? "भाई" : "bhai")
-        : journey.gender === "f" ? (uiLang === "hi" ? "बहन" : "behen")
-        : (uiLang === "hi" ? "जी" : "ji");
+      // The blessing is ALWAYS spoken in Devanagari (भाई/बहन/जी included) so
+      // "जय सिया राम" is pronounced correctly even in English mode; the opener
+      // follows in the UI language. speakGreet() voices the two parts separately.
+      const kinDeva =
+        journey.gender === "m" ? "भाई"
+        : journey.gender === "f" ? "बहन"
+        : "जी";
       const lang = uiLang === "hi" ? "hi" : "en";
-      const bless = lang === "hi" ? `जय सिया राम, ${kin}!` : `Jai Siya Ram, ${kin}!`;
+      const blessDeva = `जय सिया राम, ${kinDeva}!`;
       const opener = cameBack
         ? GREET_BACK[lang]
         : GREET_OPENERS[lang][Math.floor(Math.random() * GREET_OPENERS[lang].length)];
-      const line = `${bless} ${opener}`;
-      const holdMs = Math.min(7500, 2800 + line.length * 75);
+      const holdMs = Math.min(7500, 2800 + (blessDeva.length + opener.length + 1) * 75);
       // Try to speak it right now (Android / already-interacted browsers allow it).
       // greetSpeaking is NOT set here — Android may overlap greeting and mic freely.
       namasteHold(holdMs);
-      try { browserSpeak(line, () => {}); } catch { /* the namaste still played */ }
+      try { speakGreet(blessDeva, opener, () => {}); } catch { /* the namaste still played */ }
       // If nothing started (iOS blocks sound before the first touch), arm it to
       // play on that touch instead — the namaste already played on screen.
       if ("speechSynthesis" in window) {
         setTimeout(() => {
-          if (!speechSynthesis.speaking && !speechSynthesis.pending) greetPending = { line, holdMs };
+          if (!speechSynthesis.speaking && !speechSynthesis.pending) greetPending = { blessDeva, opener, holdMs };
         }, 1300);
       }
     }, firstThisLoad ? 1900 : 500); // wait for the जय सिया राम splash only the first time
@@ -2152,7 +2165,7 @@
     if (!greetPending) return;
     const g = greetPending;
     greetPending = null;
-    speakGreetingOnTap(g.line, g.holdMs);
+    speakGreetingOnTap(g.blessDeva, g.opener, g.holdMs);
   }, true);
   // Bring the app back from the background after a real absence → greet again, so
   // "every time you open the bot" holds even when the page was only suspended,
@@ -3062,14 +3075,10 @@
       if (panel.dataset.mode === "text") input.focus();
       else {
         setVState("idle");
-        // the guide honors the seeker's own practice — a quiet day-count strip
-        if (journey.sadhana?.since && !panel.querySelector(".vcb-streak")) {
-          const days = Math.max(1, Math.floor((Date.now() - new Date(journey.sadhana.since).getTime()) / 864e5) + 1);
-          const st = document.createElement("div");
-          st.className = "vcb-streak";
-          st.textContent = `📿 आपकी साधना — दिन ${days}`;
-          capAdd(st);
-        }
+        // (The "आपकी साधना — दिन N" day-count strip was removed 2026-07-22 — it
+        // confused seekers by showing "दिन 1" on every open, owner's call. The
+        // seeker's declared practice is still remembered and used to personalise
+        // answers server-side; only the on-screen day-count chip is gone.)
         if (cameBack && !welcomedBack) {
           welcomedBack = true;
           const w = document.createElement("div");
