@@ -1204,9 +1204,9 @@
     renderChats();
   });
 
-  // Credit system paused (owner's call — will implement later). While off the
-  // 🪙 coin never shows and no balance is fetched. Flip to true to re-enable.
-  const CREDITS_ON = true;
+  // Credit system OFF (owner, 2026-07-22 — "remove for now, will ask when needed").
+  // While off the 🪙 coin never shows and no balance is fetched. Flip to true to restore.
+  const CREDITS_ON = false;
   // the 🪙 coin: show the seeker's questions-left, gold normally, amber when low
   function renderCredits(n) {
     if (!creditEl) return;

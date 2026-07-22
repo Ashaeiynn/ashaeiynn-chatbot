@@ -63,7 +63,10 @@ const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 // Credit system paused (owner's call — will implement later). While off: no
 // charging, no out-of-credits block, no balance in responses. All the credit
 // code stays intact; flip this to true to re-enable instantly.
-const CREDITS_ON = true; // daily question allowance (users.mjs DAILY_LIMIT)
+// Daily question allowance (users.mjs DAILY_LIMIT). OFF since 2026-07-22 (owner —
+// "remove for now, will ask when needed"): seekers ask freely, nobody is gated,
+// counted, or charged; the 🪙 balance never shows. Flip to true to restore it.
+const CREDITS_ON = false;
 const MAX_HISTORY_TURNS = 6;
 
 const apiKeyConfigured = keyConfigured;
