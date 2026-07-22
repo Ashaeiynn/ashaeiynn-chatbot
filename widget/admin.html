@@ -703,9 +703,9 @@
   $("#search").addEventListener("input", (e) => { query = e.target.value; render(); });
   $("#qdate").addEventListener("input", render);
 
-  // Credit system paused (owner's call — will implement later). While off, all
-  // credit UI (stat, column, Add-credits button) is hidden. Flip to re-enable.
-  const CREDITS_ON = true;
+  // Credit system OFF (owner, 2026-07-22 — "remove for now, will ask when needed").
+  // While off, all credit UI (stat, column, Add-credits button) is hidden. Flip to restore.
+  const CREDITS_ON = false;
   // ——— Teach the bot ———
   const key = () => localStorage.getItem("adminKey") || "";
   document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
