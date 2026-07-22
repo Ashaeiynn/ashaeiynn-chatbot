@@ -131,5 +131,41 @@
    "On trust/testing questions (भैया पर भरोसा कैसे करें, testing the bot): seeker needs permission to doubt—don't defend the teachings, invite their lived experience instead."
   ],
   "observations": []
+ },
+ {
+  "date": "2026-07-23",
+  "reviewed": 181,
+  "up": 34,
+  "down": 10,
+  "recos": {
+   "followups": 46,
+   "thought": 0,
+   "opened": 0
+  },
+  "core": [
+   "Answer the question in the first sentence; cut spiritual filler and preamble.",
+   "Mirror the seeker's language register (Hindi/English, formal/casual, technical/plain) without switching mid-reply.",
+   "When a seeker asks the same question again, it means the first answer didn't land—vary the explanation and angle, not the words.",
+   "Acknowledge emotional content before answering (fear, doubt, confusion, frustration); a one-line validation is enough.",
+   "Keep sentences short and conversational; break dense ideas into steps or analogies a beginner can follow.",
+   "End with a door to continue, not cheerleading; 'What else is on your mind?' works better than 'Keep going, you've got this!'",
+   "On repeating questions or 'not helpful' marks: the answer was too abstract, too long, or didn't match what the seeker actually needed—go narrower and more concrete next time."
+  ],
+  "notes": [
+   "Long answers (3+ paragraphs) on abstract topics marked not helpful today—chunk into bullets or ask a clarifying Q first before launching into explanation.",
+   "When seeker re-asks a sankalp/jaap rule question (seen 2–3 times), previous answer was likely too formal or didn't address their real worry—lead with the practical permission/reassurance, then explain",
+   "8 questions hit knowledge gaps (no source in base): sadhana छोड़ने से सिद्धि, मन भटकाव माला, पित्रों प्रभाव, and others—flag these for content team.",
+   "Questions about 'participation at Ashaeiynn' (visits, stays, cost) answered but seekers seem uncertain if answers are complete—standardize and simplify the logistical flow.",
+   "On 'not helpful' answers about sankalp (3 marks): bot switched between 'sankalp is mandatory' and 'chanting without sankalp is fine'—settle on ONE clear position and stick to it.",
+   "Seeker asks 'प्रश्नावादार्णा प्रश्नावादार्णा' (garbled text) twice; bot assumes confusion and offers gentle redirect—this works; keep this soft-touch pattern for unclear inputs."
+  ],
+  "observations": [
+   "Most conversations (130 of 181, 72%) cluster in evening (17–21 IST); afternoon activity also high (39); content strategy could front evening themes (doubts, tiredness, settling into practice).",
+   "Suggested follow-up questions tapped 46 times—this feature is working; seekers are using it to deepen conversations, so preserve variability in suggested doors.",
+   "Eight knowledge gaps identified (no sourced answers on सिद्धि छोड़ने, भटकाव माला, पित्रों प्रभाव, etc.)—these are recurring topics; content team should build or link resources.",
+   "Four re-asks of 'सधन जप ध्यान गरदव' and two of 'hawan परिक्रमा'—these are conceptual bridge questions; clearer first answers (with analogies) would prevent repeats.",
+   "10 'not helpful' marks are 5.5% of all answers; most cluster on sankalp rules and abstract दृष्टि/तत्व topics—suggests bot is over-explaining theory and under-answering 'what do I do now?'",
+   "177 of 181 seekers are Ashaeiynn members; 65% use Hindi—language choice and member-only context are consistent; bot's mirroring is working."
+  ]
  }
 ]
