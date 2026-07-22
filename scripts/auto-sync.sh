@@ -40,7 +40,7 @@ fi
 # Both machines changed the same lines — hand the problem to Claude
 git rebase --abort 2>/dev/null
 
-RESOLVE_MSG="AUTO-SYNC CONFLICT in this repo: local commits and GitHub commits touch the same lines (both computers edited the same files). Resolve it now: run git pull --rebase, fix each conflicted file keeping BOTH sides of the work, git rebase --continue, then git push. For generated files (package-lock.json, data/knowledge.db) keep the newer side or regenerate."
+RESOLVE_MSG="AUTO-SYNC CONFLICT in this repo: local commits and GitHub commits touch the same lines (both computers edited the same files). Resolve it now: run git pull --rebase, fix each conflicted file keeping BOTH sides of the work, git rebase --continue, then git push. For package-lock.json keep the newer side or regenerate. NOTE: data/knowledge.db is no longer synced over git — it is rebuilt on each machine from data/transcripts (run 'npm run ingest'); if it is ever missing or stale, rebuild it rather than restoring an old copy."
 
 if [ "$MODE" = "start" ]; then
   printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}\n' "$RESOLVE_MSG"

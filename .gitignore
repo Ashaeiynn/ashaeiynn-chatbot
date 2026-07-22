@@ -13,9 +13,15 @@ node_modules/
 data/audio/
 data/run-all.log
 
-# NOTE: data/knowledge.db and data/transcripts/ ARE committed on purpose —
-# the deploy needs the knowledge base, and the transcripts are the precious
-# output of ~64h of transcription (the repo doubles as their backup).
+# data/transcripts/ ARE committed on purpose — the precious source text (~64h of
+# transcription); the repo doubles as their backup, and every machine rebuilds
+# its OWN knowledge.db from them.
+# data/knowledge.db is NOT committed (2026-07-22): it is a rebuildable artifact
+# built from the transcripts. Syncing the big binary DB over git kept tangling
+# between machines and rolling back (articles "vanished" from memory even though
+# their text was safe). Each machine now builds its own DB from the transcripts,
+# so the active memory can never drift or roll back — worst case, it just rebuilds.
+data/knowledge.db
 data/questions.log
 data/thought.json
 data/push-subs.json
