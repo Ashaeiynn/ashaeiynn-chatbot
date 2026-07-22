@@ -15,6 +15,37 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-22 (MacBook Pro session, with the owner)
 
+- **ROOT FIX: knowledge.db no longer syncs over git — each machine rebuilds it from transcripts.**
+  The recurring "articles vanished from memory" scare (owner saw many 19-Jul articles flagged
+  "study failed / NOT in the bot's memory") was caused by the big binary knowledge.db syncing over
+  git: when two machines changed it, the binary tangled/rolled back to an older build, dropping
+  recently-taught sources from ACTIVE memory even though their transcript text was safe. (This time
+  the articles were also transiently out because a full re-embed for a session53 teach was mid-run;
+  once it finished, all 8 flagged articles were back — verified via knownTitles().)
+  Permanent fix (commit e7a844f): `data/knowledge.db` is now GITIGNORED + `git rm --cached`d — it is
+  a rebuildable artifact. data/transcripts/ stay in git (small, mergeable, the precious source text).
+  The VPS `/opt/chatbot/update.sh` (VPS-only, NOT in the repo; old one backed up as update.sh.bak-*)
+  was rewritten: after a pull it runs `npm run ingest` if data/transcripts changed OR knowledge.db is
+  missing, THEN restarts — the running bot serves its in-memory copy until the fresh DB swaps in (no
+  blank window); added an flock so a 7-min ingest never overlaps the 5-min timer; still skips while a
+  teach job studies. Rollout was done by hand with the timer paused: backed up the live DB → cleaned
+  churn → pulled e7a844f (which deletes the tracked DB) → restored the DB as a now-gitignored local
+  file → set deployed-rev → resumed timer. NO restart, no downtime; verified 151 sources/59 articles
+  still in memory, service active, git clean. auto-sync.sh conflict message updated (DB no longer
+  synced). NOTE for other machines: the iMac's first pull of e7a844f will DELETE its local
+  knowledge.db — rebuild it with `npm run ingest` (its transcripts are intact). See [[knowledge-db-local]].
+
+- **Bot polish batch (5 owner fixes from live screenshots), deployed (via VPS auto-sync, at 179259b).**
+  (1) Everyone is an Ashaeiynn member now — server `seekerMember` defaults true, registry no longer
+  downgrades. (2) Removed the "Allow reminders / Not now" phone-push opt-in prompt (maybeOfferBell) —
+  notices are in-bot, mandatory, no acceptance needed. (3) Credit 🪙 coin element deleted from the
+  header markup entirely (it kept showing despite CREDITS_ON=false on cached widgets). (4) English
+  mode i18n: feedback buttons (सुनिए→Listen, सहायक→Helpful, नहीं→Not this, Share), the feedback
+  thank-you, and the "watch next / आपकी यात्रा" suggestion labels now follow the UI toggle. (5) Studio-
+  source leak fixed: `/api/next-step` (the "आपकी यात्रा" suggestion) was returning raw studio filenames
+  (session43_guru_tattva_pitru_post_complete) with no link — now only a PUBLIC Pathshala article (with
+  its ashaeiynn.com link) or a YouTube video; widget also refuses any suggestion without a real link.
+
 - **Daily question limit (the "credit" allowance) turned OFF on the live app (owner — "remove for
   now, will update when required").** Flipped `CREDITS_ON = false` in BOTH server/server.mjs (line 69)
   and widget/widget.js (line 1209) — the code was already built to toggle this cleanly (every
