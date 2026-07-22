@@ -530,16 +530,16 @@ async function handleChat(req, res) {
   // the app). Used once for this answer, never stored — the server keeps no
   // per-person memory by design.
   const profile = payload.profile && typeof payload.profile === "object" ? payload.profile : null;
-  // Membership decides the invitation path: an admin-marked ⭐ member already
-  // belongs (has their own mentor — never pitch screening/joining); everyone
-  // else may be warmly invited toward a screening when the moment is natural.
-  let seekerMember = false;
+  // Everyone who uses the bot is an Ashaeiynn member now (owner, 2026-07-22) — so
+  // the guide always treats them as family: it never pitches a screening or
+  // "join Ashaeiynn", and points to their own mentor/contact instead of a sign-up.
+  let seekerMember = true;
   let seekerWho = ""; // who asked — shown beside the question in the admin
   const seekerUid = typeof profile?.uid === "string" ? profile.uid.slice(0, 30) : "";
   let seekerCredits = null; // null = anonymous/test caller (never charged)
   try {
     const u = users.touch(seekerUid);
-    seekerMember = !!u?.member;
+    // membership is universal now — the registry no longer downgrades anyone
     // Prefer the registry's name (it survives a rename on their device); fall
     // back to what the app sent. Recorded per question so the admin can see who
     // asked what — the log already holds the question and the answer, and it
@@ -1525,11 +1525,20 @@ async function handleNextStep(req, res) {
   for (const c of chunks) {
     const t = c.title.toLowerCase();
     if (seenSet.has(t) || c.title.startsWith("Bhaiya's approved answer")) continue;
+    // Owner's rule: a seeker may ONLY be pointed to a PUBLIC source — a Pathshala
+    // article (ashaeiynn.com) or a YouTube video. Studio session files have no
+    // public URL and must NEVER surface here (they were leaking raw filenames like
+    // "session43_guru_tattva_pitru_post_complete" as the "यात्रा" suggestion —
+    // owner, 2026-07-22). Prefer a readable article shown with its website link.
+    if (!c.url || !publicUrl(c.url)) continue;
+    const isArticle = /^\s*Article:/i.test(c.title);
+    const isYouTube = /youtu\.?be|youtube\.com/i.test(c.url);
+    if (!isArticle && !isYouTube) continue;
     return json(res, 200, {
       suggest: {
-        title: c.title,
-        timestamp: formatTimestamp(c.start_seconds),
-        url: c.url ? `${c.url}#t=${Math.floor(c.start_seconds)}s` : null,
+        title: c.title.replace(/^\s*Article:\s*/i, ""), // the article name, not the "Article:" prefix
+        timestamp: isYouTube ? formatTimestamp(c.start_seconds) : "",
+        url: isYouTube ? `${c.url}#t=${Math.floor(c.start_seconds)}s` : c.url,
       },
     });
   }

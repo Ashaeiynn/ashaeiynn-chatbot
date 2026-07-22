@@ -831,7 +831,6 @@
       </div>
       <div class="vcb-head-right">
         <div class="vcb-head-btns"><button class="vcb-bell" aria-label="Reminders" title="Reminders on special occasions">🔔</button><button class="vcb-voice" aria-label="Voice replies" title="Voice replies">🔇</button></div>
-        <span class="vcb-credit" title="आज के बचे प्रश्न · questions left today" hidden>🪙 <b>0</b></span>
       </div>
     </div>
     <div class="vcb-bless"><span>${SPLASH}</span></div>
@@ -2798,21 +2797,18 @@
       });
       el.appendChild(wrap);
     }
-    if (data.suggest) {
+    if (data.suggest?.url) {
       const sug = document.createElement("div");
       sug.className = "vcb-src";
-      sug.append("🌱 आगे देखिए: ");
-      if (data.suggest.url) {
-        const a = document.createElement("a");
-        a.href = data.suggest.url;
-        a.target = "_blank";
-        a.rel = "noopener";
-        a.textContent = data.suggest.timestamp && data.suggest.timestamp !== "0:00" ? `${data.suggest.title} (${data.suggest.timestamp})` : data.suggest.title;
-        a.addEventListener("click", () => recoOpened(data.suggest.title));
-        sug.appendChild(a);
-      } else {
-        sug.append(data.suggest.timestamp && data.suggest.timestamp !== "0:00" ? `${data.suggest.title} (${data.suggest.timestamp})` : data.suggest.title);
-      }
+      sug.append(uiLang === "en" ? "🌱 Watch next: " : "🌱 आगे देखिए: ");
+      const a = document.createElement("a");
+      a.href = data.suggest.url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      const ts = data.suggest.timestamp && data.suggest.timestamp !== "0:00" ? ` (${data.suggest.timestamp})` : "";
+      a.textContent = `${data.suggest.title}${ts}`;
+      a.addEventListener("click", () => recoOpened(data.suggest.title));
+      sug.appendChild(a);
       el.appendChild(sug);
     }
     if (data.answer && questionText) {
@@ -2829,13 +2825,13 @@
         b.append(i, t);
         return b;
       };
-      const listen = mk("🔊", "सुनिए");
+      const listen = mk("🔊", uiLang === "en" ? "Listen" : "सुनिए");
       listen.addEventListener("click", () => {
         stopSpeaking();
         speak(data.answer, () => {});
       });
-      const up = mk("👍", "सहायक");
-      const down = mk("👎", "नहीं");
+      const up = mk("👍", uiLang === "en" ? "Helpful" : "सहायक");
+      const down = mk("👎", uiLang === "en" ? "Not this" : "नहीं");
       const vote = (helpful, btn) => {
         up.disabled = down.disabled = true;
         btn.classList.add("on");
@@ -2853,7 +2849,7 @@
       });
       fb.append(listen, up, down);
       if (navigator.share) {
-        const share = mk("↗", "share");
+        const share = mk("↗", uiLang === "en" ? "Share" : "साझा");
         share.addEventListener("click", () => {
           navigator
             .share({
@@ -2905,8 +2901,12 @@
           box.innerHTML = "";
           const done = document.createElement("p");
           done.textContent = d?.ok
-            ? "🙏 धन्यवाद — आपका सुझाव team तक पहुँच गया। स्वीकृति के बाद guide इसे सीख लेगा।"
-            : "अभी भेजा नहीं जा सका — थोड़ी देर बाद फिर कोशिश कीजिए।";
+            ? (uiLang === "en"
+                ? "🙏 Thank you — your suggestion has reached the team. Once approved, the guide will learn it."
+                : "🙏 धन्यवाद — आपका सुझाव team तक पहुँच गया। स्वीकृति के बाद guide इसे सीख लेगा।")
+            : (uiLang === "en"
+                ? "Couldn't send it just now — please try again in a little while."
+                : "अभी भेजा नहीं जा सका — थोड़ी देर बाद फिर कोशिश कीजिए।");
           box.appendChild(done);
         })
         .catch(() => { send.disabled = false; });
@@ -3008,44 +3008,10 @@
       return;
     }
     if (panel.querySelector(".vcb-namecard")) return; // let the name moment breathe first
-    bellOfferedThisOpen = true;
-    const card = document.createElement("div");
-    card.className = "vcb-ans vcb-bellask";
-    const p = document.createElement("p");
-    p.textContent =
-      "🔔 Would you like gentle reminders from your guide? Sunday's new teaching and Purnima/Navratri alerts — that's all, never daily noise.";
-    const row = document.createElement("div");
-    row.className = "vcb-bellrow";
-    const yes = document.createElement("button");
-    yes.className = "vcb-bellyes";
-    yes.textContent = "Allow reminders 🙏";
-    const no = document.createElement("button");
-    no.className = "vcb-bellno";
-    no.textContent = "Not now";
-    yes.addEventListener("click", () => {
-      yes.disabled = true;
-      pushSubscribe()
-        .then((ok) => {
-          if (ok) return card.remove();
-          if (Notification.permission === "denied") {
-            p.textContent =
-              "🔕 Notifications are blocked for this app on your phone. Open Settings → Notifications → Ask Your Guide, allow them, then tap the 🔔 at the top.";
-            row.remove();
-          } else {
-            card.remove();
-          }
-        })
-        .catch(() => card.remove());
-    });
-    no.addEventListener("click", () => card.remove());
-    row.append(yes, no);
-    card.append(p, row);
-    if (panel.dataset.mode === "text") {
-      msgs.appendChild(card);
-      msgs.scrollTop = msgs.scrollHeight;
-    } else {
-      capAdd(card);
-    }
+    // The "Allow reminders" opt-in prompt was REMOVED (owner, 2026-07-22):
+    // notifications reach seekers as in-bot notices on open (no OS permission
+    // needed — mandatory for all), so the guide never asks anyone to accept push.
+    // The silent re-link of already-granted subscriptions above is kept.
   }
 
   let greeted = false;
@@ -3356,22 +3322,22 @@
     })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (!d?.suggest) return;
+        // Only ever surface a real PUBLIC link (a Pathshala article / YouTube) —
+        // never a raw studio source with no url. The server already filters these
+        // out; this is a belt-and-braces guard so a filename can never show.
+        if (!d?.suggest || !d.suggest.url) return;
         recordSeen([d.suggest.title]);
         const box = document.createElement("div");
         box.className = "vcb-ans";
-        box.append("🌱 आपकी यात्रा के लिए एक सुझाव: ");
-        if (d.suggest.url) {
-          const a = document.createElement("a");
-          a.href = d.suggest.url;
-          a.target = "_blank";
-          a.rel = "noopener";
-          a.textContent = `${d.suggest.title} (${d.suggest.timestamp})`;
-          a.addEventListener("click", () => recoOpened(d.suggest.title));
-          box.appendChild(a);
-        } else {
-          box.append(`${d.suggest.title} (${d.suggest.timestamp})`);
-        }
+        box.append(uiLang === "en" ? "🌱 A suggestion for your journey: " : "🌱 आपकी यात्रा के लिए एक सुझाव: ");
+        const a = document.createElement("a");
+        a.href = d.suggest.url;
+        a.target = "_blank";
+        a.rel = "noopener";
+        const ts = d.suggest.timestamp && d.suggest.timestamp !== "0:00" ? ` (${d.suggest.timestamp})` : "";
+        a.textContent = `${d.suggest.title}${ts}`;
+        a.addEventListener("click", () => recoOpened(d.suggest.title));
+        box.appendChild(a);
         capAdd(box);
       })
       .catch(() => {});
