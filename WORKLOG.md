@@ -15,6 +15,16 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-22 (MacBook Pro session, with the owner)
 
+- **Daily question limit (the "credit" allowance) turned OFF on the live app (owner — "remove for
+  now, will update when required").** Flipped `CREDITS_ON = false` in BOTH server/server.mjs (line 69)
+  and widget/widget.js (line 1209) — the code was already built to toggle this cleanly (every
+  touchpoint is gated on CREDITS_ON or the null credits value, so `seekerCredits` stays null →
+  no gate, no spend, no balance-in-response, no 🪙 coin). Seekers now ask FREELY: no 25/day cap,
+  no counting, no blocking. This is the free DAILY-ALLOWANCE limit, NOT the paid monetization plan
+  (that's still parked separately). Fully reversible: set both flags back to true. Deployed 353ed73;
+  verified live — a chat answered normally with no `credits` field and `noCredits:false`. The admin
+  Users-tab "grant extra questions" mechanism still exists in code, just dormant while the limit is off.
+
 - **Groq Whisper is now the SOLE ear for EVERY device — iOS + Android, browser + app (owner).**
   Fixes the "one phone hears well, another doesn't" inconsistency: iOS used Groq, but Android/Safari
   used their own weaker on-device recognizer. Now everyone records a clip → /api/stt → Groq.
