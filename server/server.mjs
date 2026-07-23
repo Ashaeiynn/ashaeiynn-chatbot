@@ -830,8 +830,8 @@ async function handleChat(req, res) {
   }
 
   const langInstruction = wantsHindi
-    ? "उत्तर पूरी तरह हिंदी (देवनागरी) में दीजिए — एक भी वाक्य English में नहीं।"
-    : "Answer entirely in English — every sentence in English (keep Hindi terms like hawan, jaap, drishti in Latin script). Do not write any Devanagari.";
+    ? "उत्तर पूरी तरह हिंदी (देवनागरी) में दीजिए — एक भी वाक्य English में नहीं। अंतिम सुझाव और वापसी पंक्तियों के प्रश्न भी हिंदी में ही लिखिए।"
+    : "Answer entirely in English — every sentence in English (keep Hindi terms like hawan, jaap, drishti in Latin script). Do not write any Devanagari. This INCLUDES the final marker lines: the questions on the सुझाव line and the वापसी line MUST be written in English too (only the labels सुझाव:/वापसी: themselves stay as they are). Example — सुझाव: How do I start jaap? | What is the third eye?";
 
   const logEntry = {
     at: new Date().toISOString(),
@@ -1040,6 +1040,42 @@ async function handleChat(req, res) {
       }
     }
     if (sourceLine) answer = `${answer}\n\n${sourceLine}`;
+
+    // LANGUAGE SEATBELT for the tap-chips (owner, 2026-07-23): an English asker
+    // got an English answer but HINDI सुझाव chips — the model treats the marker
+    // lines as exempt from the language pin (their examples are Hindi). The pin
+    // above now covers them, but prompts can be disobeyed; code cannot. If the
+    // asker's language is English and chips/check-in still came back Devanagari,
+    // translate them in ONE quick light call — and if that fails, drop the
+    // mismatched ones: a missing chip beats a wrong-language chip.
+    const deva = (s) => /[ऀ-ॿ]/.test(s);
+    if (!wantsHindi && (followups.some(deva) || deva(checkin))) {
+      const items = [...followups, ...(checkin ? [checkin] : [])];
+      try {
+        const line = await Promise.race([
+          complete({
+            system:
+              "Translate each Hindi question into short natural English, as a seeker would ask it. Keep Hindi practice terms (jaap, hawan, sadhana, dhyan) in Latin script. Input questions are separated by \" | \". Output ONLY the translated questions in the same order, separated by \" | \" — nothing else.",
+            messages: [{ role: "user", content: items.join(" | ") }],
+            maxTokens: 200,
+            light: true,
+            retry: false,
+          }),
+          new Promise((resolve) => setTimeout(() => resolve(""), 2600)),
+        ]);
+        const out = (line || "").split("\n")[0].split("|").map((s) => s.trim()).filter(Boolean);
+        if (out.length === items.length && !out.some(deva)) {
+          followups = out.slice(0, followups.length);
+          if (checkin) checkin = out[out.length - 1].slice(0, 200);
+        } else {
+          followups = followups.filter((f) => !deva(f));
+          if (deva(checkin)) checkin = "";
+        }
+      } catch {
+        followups = followups.filter((f) => !deva(f));
+        if (deva(checkin)) checkin = "";
+      }
+    }
 
     // FIGURE FIDELITY — seekers act on the numbers in a साधना rule (3 बजे, 6 बजे),
     // so a drifted digit is a real-world error, not a wording nit. Asking the model
