@@ -1990,6 +1990,8 @@
       [/गुरुवार/g, "गुरुदेव"],
       [/\bguru\s?[vw]aa?r\b/gi, "Gurudev"],
       [/[अआ]शा\s?[ईइय]{1,2}न/g, "Ashaeiynn"],
+      [/आशाई(?![नयी])/g, "Ashaeiynn"], // seen live 2026-07-24 evening
+      [/महुत\s*सब|महुत्सव|महोत्सब|महोत\s+सव/g, "महोत्सव"],
       [/\basha\s?[eiy]{1,3}nn?\b/gi, "Ashaeiynn"],
       [/\b(?:aa?shaa?ny?|aa?shaa?y|ash[iy]am)\b/gi, "Ashaeiynn"], // seen live 2026-07-24
       [/\bbog\b/gi, "bhog"],

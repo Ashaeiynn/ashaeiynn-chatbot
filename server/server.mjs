@@ -89,6 +89,12 @@ const MISHEARD = [
   [/\bg[iu]r[uo]\s?dev\b/gi, "Gurudev"],
   [/गिरुदेव|गीरुदेव/g, "गुरुदेव"],
   [/[अआ]शा\s?[ईइय]{1,2}न/g, "Ashaeiynn"],
+  // Hindi-mode inventions, seen live 2026-07-24 evening: "आशाई के महुत सब" for
+  // "Ashaeiynn के महोत्सव". आशाई only when NOT the start of आशाईन (that longer
+  // form is handled above first). NOTE: JS \b doesn't work on Devanagari — these
+  // patterns rely on explicit context, not word boundaries.
+  [/आशाई(?![नयी])/g, "Ashaeiynn"],
+  [/महुत\s*सब|महुत्सव|महोत्सब|महोत\s+सव/g, "महोत्सव"],
   [/\basha\s?[eiy]{1,3}nn?\b/gi, "Ashaeiynn"],
   // Whisper-in-English inventions for the brand name, all seen live 2026-07-24:
   // "Aashany", "Ashaan", "Aashay", "Ashyam". Word-bounded, explicit alternations
@@ -1430,7 +1436,7 @@ async function handleStt(req, res) {
         fd.append(
           "prompt",
           forceHi
-            ? "जय सिया राम। Ashaeiynn, साधना, जाप, ध्यान, गुरुदेव, पाठशाला।"
+            ? "जय सिया राम। Ashaeiynn, महोत्सव, साधना, जाप, ध्यान, गुरुदेव, पाठशाला।"
             : "Jai Siya Ram. Ashaeiynn, Parikshit Bhaiya, Pathshala, hawan, bhog, samagri, jaap, sadhana, Mahotsav.",
         );
         if (forceHi) fd.append("language", "hi");
