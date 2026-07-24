@@ -90,6 +90,13 @@ const MISHEARD = [
   [/गिरुदेव|गीरुदेव/g, "गुरुदेव"],
   [/[अआ]शा\s?[ईइय]{1,2}न/g, "Ashaeiynn"],
   [/\basha\s?[eiy]{1,3}nn?\b/gi, "Ashaeiynn"],
+  // Whisper-in-English inventions for the brand name, all seen live 2026-07-24:
+  // "Aashany", "Ashaan", "Aashay", "Ashyam". Word-bounded, explicit alternations
+  // only — ordinary English words must never be touched.
+  [/\b(?:aa?shaa?ny?|aa?shaa?y|ash[iy]am)\b/gi, "Ashaeiynn"],
+  [/\bbog\b/gi, "bhog"], // "offer bog and hawan" — no seeker asks this bot about swamps
+  [/\b(in|offer|perform|during)\s+haven\b/gi, "$1 hawan"], // "offer in haven" (ritual context only)
+  [/\bmah[ao]tsa[vw]\b/gi, "Mahotsav"],
   [/पाठ\s+शाला/g, "पाठशाला"],
   [/\bpath\s+shala\b/gi, "Pathshala"],
   [/\bpar[ie]{0,2}ksh[ie]+t\b/gi, "Parikshit"],
@@ -1380,7 +1387,17 @@ async function handleStt(req, res) {
         fd.append("model", model);
         fd.append("temperature", "0");
         fd.append("response_format", "verbose_json"); // gives detected language + duration for diagnostics
-        fd.append("prompt", "जय सिया राम। साधना, जाप, ध्यान, गुरुदेव।");
+        // The spelling hint must match the clip's language: English clips got the
+        // Devanagari hint (useless there) and Whisper invented spellings for the
+        // brand words — "Aashany/Ashaan/Ashyam" for Ashaeiynn, "bog" for bhog
+        // (owner, 2026-07-24). Kept SHORT on purpose: a long prompt makes Whisper
+        // echo it back on quiet or very short clips.
+        fd.append(
+          "prompt",
+          forceHi
+            ? "जय सिया राम। Ashaeiynn, साधना, जाप, ध्यान, गुरुदेव, पाठशाला।"
+            : "Jai Siya Ram. Ashaeiynn, Parikshit Bhaiya, Pathshala, hawan, bhog, samagri, jaap, sadhana, Mahotsav.",
+        );
         if (forceHi) fd.append("language", "hi");
         else if (l.startsWith("en")) fd.append("language", "en");
         const r = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {

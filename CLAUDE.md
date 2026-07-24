@@ -109,11 +109,15 @@ Knowledge: 577 sources / 8,112 chunks in data/knowledge.db (91 original Vimeo/Yo
 videos ~64h + articles + site pages + everything taught via the admin portal through
 2026-07-16). 3 Vimeo videos remain password-locked (skipped).
 Suite 22/22. Anthropic key funded (~$5, hard cap). ElevenLabs key NOT yet added.
-Done: GitHub repo (private) — transferred 2026-07-22 from `Ashaeiynn` to the owner's new
-account `ashaeiynnadmin-design/ashaeiynn-chatbot` (now sole owner; old `Ashaeiynn` account
-removed & locked out). MacBook auto-syncs via SSH (`~/.ssh/id_ed25519`); iMac still auths as
-old Ashaeiynn so its sync is BROKEN until reconnected via SSH (see WORKLOG 2026-07-22). VPS
-deploy key `hostinger-vps-chatbot-rw` survived the transfer → live site keeps auto-deploying.
+Done: GitHub repo RECREATED 2026-07-25 at `https://github.com/Ashaeiynn/ashaeiynn-chatbot`
+(private, owner's ORIGINAL account — the 2026-07-22 transfer to `ashaeiynnadmin-design` was
+reversed at the owner's request; that fork is a dead end, do not push there). ⚠️ MACHINES
+(owner, 2026-07-25): the chatbot is THIS MacBook (Sirshas-MacBook-Pro) + the VPS, nothing
+else — all other Macs are RETIRED from the bot (see WORKLOG 2026-07-25). VPS deploy key is
+`hostinger-vps-chatbot-rw-2` (= ~chatbot/.ssh/id_ed25519_hub); the original key is stale.
+NOTE the retirement gap: audio/video teaching needed mlx_whisper (Apple-Silicon, studio Mac)
+— this MacBook is Intel and has none, so audio/video teach currently has NO machine; owner
+knows. Docs/PDF/text/links teach fine on the VPS portal.
 Live: https://guide.ashaeiynn.com — owner's Hostinger VPS (root@200.97.172.186,
 Ubuntu 24.04, shared with the OMS: chatbot in /opt/chatbot, own Node 24, own
 chatbot.service, Caddy site /etc/caddy/sites/chatbot.caddy; OMS untouched).

@@ -13,6 +13,19 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-25 (Sirshas-MacBook-Pro session, with the owner)
 
+- **The ear mangles the BRAND WORDS in English mode — fixed (owner: "bot not understanding
+  properly started again").** Diagnosis from the live stt logs (Jul-24, all `lang=en-in`): Whisper
+  heard the sentences fine but invented spellings for our own names — "Aashany/Ashaan/Aashay/
+  Ashyam" for Ashaeiynn, "bog" for bhog, "offer in haven" for hawan, "Mahatsav" for Mahotsav.
+  Root cause: the Groq spelling-hint prompt was Devanagari-only (useless on English clips), and
+  the server's MISHEARD map didn't know these variants. Fixed both layers: (1) the Whisper prompt
+  is now language-aware — English clips get "Jai Siya Ram. Ashaeiynn, Parikshit Bhaiya, Pathshala,
+  hawan, bhog, samagri, jaap, sadhana, Mahotsav." (kept SHORT — long prompts echo on quiet clips);
+  (2) MISHEARD (server + widget twin) gained word-bounded explicit patterns for the seen variants
+  (+ contextual "in/offer/perform/during haven"→hawan so the English word 'haven' is never touched).
+  Unit-tested against all 7 real mishearings (all corrected) + 5 ordinary-English safety cases
+  (all untouched: "safe haven", "bogus", "ashamed", "Shaan", "shiny").
+
 - **CHATBOT REPO RECREATED under the owner's ORIGINAL account: `Ashaeiynn/ashaeiynn-chatbot` is
   the hub again (owner's decision — "I want the repositories in my same github account", chose
   move-back over keeping ashaeiynnadmin-design; recreated fresh from this Mac rather than a
@@ -24,15 +37,14 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
   this Mac lacked (doc_session61-kalyan-lok, doc_session62-science-of-mantra, doc_guide-asha) +
   its newer WORKLOG (transfer story + Jul-24 entries) + style-notes.json. Kept this Mac's newer
   server.mjs (the followup-language fix 4aa6350, still unpushed at the time).
-  ⚠️ **FOR THE OTHER MACBOOK's Claude (read this on your next session):** your origin
-  (git@github.com:ashaeiynnadmin-design/ashaeiynn-chatbot.git) is now a STALE fork — the live hub
-  is `https://github.com/Ashaeiynn/ashaeiynn-chatbot.git` (recreating at the old name KILLED the
-  old→new redirect, so the VPS/this Mac no longer see your pushes). To reconnect: commit local
-  work, `git remote set-url origin https://github.com/Ashaeiynn/ashaeiynn-chatbot.git` (that Mac's
-  keychain still holds the working Ashaeiynn HTTPS credential; or ask the owner to add your SSH key
-  to the Ashaeiynn account), then `git pull --rebase origin main` keeping BOTH sides, push. Your
-  Jul 22-24 commit history (7abf616 era) isn't in the recreated hub's history — its CONTENT is
-  (via the zip merge), so the rebase should be near-empty; don't force-push your old lineage.
+  ⚠️ **THE OTHER MACBOOK IS RETIRED FROM THE CHATBOT (owner, 2026-07-25: "Remove the other Mac,
+  only this mac will now work in the bot").** If a Claude session ever opens this repo on that
+  machine: do NOT reconnect, do NOT push — its origin (ashaeiynnadmin-design fork) is a dead end
+  and the machine is out of the chatbot workflow; stop and check with the owner. The chatbot is
+  now: THIS MacBook (Sirshas-MacBook-Pro) + the VPS, nothing else. The other MacBook's unique
+  chatbot content (sessions 61/62 + guide doc) was already merged into the hub via the Jul-24 zip,
+  so nothing of the bot's is stranded there. (Its APP work — repo + uncommitted Moments module —
+  is unaffected by this retirement and still lives only there.)
   **APP repo note:** `ashaeiynnadmin-design/ashaeiynn` (the main app) was NOT recreated — this Mac
   has no copy of the app. It still lives under the new account; move it back via GitHub transfer,
   or push it fresh to an `Ashaeiynn` repo from the other MacBook (it holds the full clone + the

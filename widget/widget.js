@@ -1991,6 +1991,10 @@
       [/\bguru\s?[vw]aa?r\b/gi, "Gurudev"],
       [/[अआ]शा\s?[ईइय]{1,2}न/g, "Ashaeiynn"],
       [/\basha\s?[eiy]{1,3}nn?\b/gi, "Ashaeiynn"],
+      [/\b(?:aa?shaa?ny?|aa?shaa?y|ash[iy]am)\b/gi, "Ashaeiynn"], // seen live 2026-07-24
+      [/\bbog\b/gi, "bhog"],
+      [/\b(in|offer|perform|during)\s+haven\b/gi, "$1 hawan"],
+      [/\bmah[ao]tsa[vw]\b/gi, "Mahotsav"],
       [/पाठ\s+शाला/g, "पाठशाला"],
       [/\bpath\s+shala\b/gi, "Pathshala"],
       [/\bpar[ie]{0,2}ksh[ie]+t\b/gi, "Parikshit"],
