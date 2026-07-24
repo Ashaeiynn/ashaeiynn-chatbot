@@ -13,6 +13,22 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-25 (Sirshas-MacBook-Pro session, with the owner)
 
+- **'guide asha' FAQ repaired + HINDI-mode ear fixed (owner's live Mahotsav test failed).** The
+  Mahotsav visitor-FAQ transcript arrived with paragraph breaks stripped (11 fused mega-blocks,
+  longest 11k chars, "Mahotsav?A Celebration…") — rebuilt as 30 clean Q&A passages, each piece
+  carrying its question (long answers split WITH the question repeated). Separately the owner's
+  live Hindi voice test exposed Hindi-mode brand mangling: "आशाई के महुत सब" for "Ashaeiynn के
+  महोत्सव" — added महोत्सव to the Hindi Whisper hint + Devanagari MISHEARD variants (आशाई→
+  Ashaeiynn with lookahead so आशाईन isn't double-hit; महुत सब/महुत्सव/महोत्सब→महोत्सव; NB JS \b
+  is useless on Devanagari). Verified live end-to-end: "महोत्सव कब है? उसके बारे में बताओ" now
+  heard perfectly and answered with real FAQ content (was total failure before). KNOWN QUIRK:
+  "महोत्सव कब है?" alone answers with the owner's Jul-24 taught correction (4 बार/5वां वर्ष 2026)
+  — the correction outranks the FAQ passage that holds the real date ("bright fortnight of
+  Bhadrapada — 12th September this year"); offered the owner a one-line approved answer for the
+  date. Also of note: one combined Hindi question got an ENGLISH answer once (language pin
+  slipped on English-source excerpts) — watch; the single-topic retry answered in Hindi.
+
+
 - **The ear mangles the BRAND WORDS in English mode — fixed (owner: "bot not understanding
   properly started again").** Diagnosis from the live stt logs (Jul-24, all `lang=en-in`): Whisper
   heard the sentences fine but invented spellings for our own names — "Aashany/Ashaan/Aashay/
