@@ -11,9 +11,85 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ---
 
+## 2026-07-25 (Sirshas-MacBook-Pro session, with the owner)
+
+- **CHATBOT REPO RECREATED under the owner's ORIGINAL account: `Ashaeiynn/ashaeiynn-chatbot` is
+  the hub again (owner's decision — "I want the repositories in my same github account", chose
+  move-back over keeping ashaeiynnadmin-design; recreated fresh from this Mac rather than a
+  GitHub transfer).** Timeline understood first: the Jul-22 "deletion" this Mac saw was actually
+  the owner's own TRANSFER to `ashaeiynnadmin-design` (done on the other MacBook for security) —
+  the old-account 404 was the deliberate lockout. Owner then WhatsApp'd `chatbot-SHARE-2026-07-24.zip`
+  (this machine, Downloads) — a clean snapshot of the other MacBook's working tree (no .git/.env/
+  seeker data). Before recreating, merged its unique content into this Mac's clone: 3 transcripts
+  this Mac lacked (doc_session61-kalyan-lok, doc_session62-science-of-mantra, doc_guide-asha) +
+  its newer WORKLOG (transfer story + Jul-24 entries) + style-notes.json. Kept this Mac's newer
+  server.mjs (the followup-language fix 4aa6350, still unpushed at the time).
+  ⚠️ **FOR THE OTHER MACBOOK's Claude (read this on your next session):** your origin
+  (git@github.com:ashaeiynnadmin-design/ashaeiynn-chatbot.git) is now a STALE fork — the live hub
+  is `https://github.com/Ashaeiynn/ashaeiynn-chatbot.git` (recreating at the old name KILLED the
+  old→new redirect, so the VPS/this Mac no longer see your pushes). To reconnect: commit local
+  work, `git remote set-url origin https://github.com/Ashaeiynn/ashaeiynn-chatbot.git` (that Mac's
+  keychain still holds the working Ashaeiynn HTTPS credential; or ask the owner to add your SSH key
+  to the Ashaeiynn account), then `git pull --rebase origin main` keeping BOTH sides, push. Your
+  Jul 22-24 commit history (7abf616 era) isn't in the recreated hub's history — its CONTENT is
+  (via the zip merge), so the rebase should be near-empty; don't force-push your old lineage.
+  **APP repo note:** `ashaeiynnadmin-design/ashaeiynn` (the main app) was NOT recreated — this Mac
+  has no copy of the app. It still lives under the new account; move it back via GitHub transfer,
+  or push it fresh to an `Ashaeiynn` repo from the other MacBook (it holds the full clone + the
+  441 MB backup zip).
+  VPS re-pointed the same session: new deploy key generated on the VPS (old key stays attached to
+  the stale ashaeiynnadmin-design repo — GitHub allows one repo per deploy key), added to the
+  recreated repo (read/write), remote set-url back to Ashaeiynn/ashaeiynn-chatbot, pull+service
+  verified. Owner's earlier worry that the old Ashaeiynn account might be accessible to someone
+  else remains UNADDRESSED by choice (picked "move back as-is" over securing first) — advised
+  changing that password + enabling 2FA; it now guards everything again.
+
+## 2026-07-24 (MacBook Pro session, with the owner)
+
+- **~19:35 IST — Full local backup of the APP repo (`ashaeiynnadmin-design/ashaeiynn`) made on owner's request:**
+  `~/Desktop/ashaeiynn-app-backup-2026-07-24.zip` (441 MB, app+panel+full .git history,
+  node_modules excluded, integrity-tested — 1,282 files OK). WHY: the app repo has
+  UNCOMMITTED work-in-progress on this MacBook (new Moments module in app+panel, 4 new
+  dashboard images, 14 modified files since the Wallet commit `4f59359`) that exists
+  nowhere else — GitHub doesn't have it yet. Also re-verified the chatbot repo is live
+  and in sync on GitHub (`ashaeiynn-chatbot`, HEAD `7abf616` local == remote).
+- **~19:40 IST — CHATBOT repo backup too (owner's request):** `~/Desktop/ashaeiynn-chatbot-backup-2026-07-24.zip`
+  (8.8 MB, integrity-tested). Includes code + data/ (knowledge.db, questions.log mirror,
+  corrections, transcripts, inventory) + .env (⚠️ real keys inside — owner told not to share
+  the zip). Excluded as rebuildable/already-safe: node_modules, models/ (e5 auto-redownloads),
+  .git (640 MB — full history verified in sync on GitHub minutes earlier).
+- **⚠️ ~19:40 IST — LIVE VPS DOWN / UNREACHABLE (200.97.172.186):** guide.ashaeiynn.com dead —
+  DNS resolves fine but ping 100% loss, ports 80 AND 443 both time out from this MacBook
+  (own internet verified OK: google + ashaeiynn.com + GitHub all fine, so it's the VPS, not us).
+  The OMS shares that VPS so it's presumably down too. Told owner: restart the VPS from the
+  Hostinger dashboard — chatbot.service + Caddy auto-start on boot, VPS disk is permanent so
+  no data loss expected. NOT yet resolved as of this entry — next session, check
+  https://guide.ashaeiynn.com/health first.
+
 ## 2026-07-21 (MacBook Pro session, with the owner)
 
 ## 2026-07-22 (MacBook Pro session, with the owner)
+
+- **GitHub repo OWNERSHIP MOVED: `Ashaeiynn` → `ashaeiynnadmin-design` (owner's new account, now SOLE owner).**
+  WHY: owner created a brand-new GitHub account (`ashaeiynnadmin-design`) to hold the project under an
+  account only they control — was worried the old `Ashaeiynn` account might be accessible to someone else.
+  Did a real GitHub **transfer** (not a copy): repo is now
+  https://github.com/ashaeiynnadmin-design/ashaeiynn-chatbot (name unchanged; GitHub keeps an
+  `Ashaeiynn/…` → new-URL redirect). After a transfer GitHub auto-keeps the old owner as a *push*
+  collaborator — that was **removed**; verified the old Ashaeiynn token now gets HTTP 404 on the repo
+  (fully locked out).
+  **This MacBook reconnected via SSH** (no more HTTPS token): generated `~/.ssh/id_ed25519`, added its
+  PUBLIC key to `ashaeiynnadmin-design` (titled "MacBook (chatbot auto-sync)"), then
+  `git remote set-url origin git@github.com:ashaeiynnadmin-design/ashaeiynn-chatbot.git`. fetch+push
+  verified working. The stale Ashaeiynn HTTPS cred still sitting in the Mac keychain is now unused/harmless.
+  **VPS / live site: SAFE, no downtime** — the deploy key `hostinger-vps-chatbot-rw` transferred WITH the
+  repo (still Read/write, recently used) and the old→new URL redirect keeps `git pull` working, so
+  guide.ashaeiynn.com keeps auto-deploying from the new owner.
+  ⚠️ **iMac (studio) git sync is now BROKEN** — it still auths as old `Ashaeiynn` (HTTPS token), which is
+  locked out. When the iMac is next used, reconnect it the SAME way: `ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N ""`,
+  add the `.pub` to `ashaeiynnadmin-design` at github.com → Settings → SSH keys, then
+  `git remote set-url origin git@github.com:ashaeiynnadmin-design/ashaeiynn-chatbot.git`. Its local commits
+  are safe until then.
 
 - **ROOT FIX: knowledge.db no longer syncs over git — each machine rebuilds it from transcripts.**
   The recurring "articles vanished from memory" scare (owner saw many 19-Jul articles flagged
