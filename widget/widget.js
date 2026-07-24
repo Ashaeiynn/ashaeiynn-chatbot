@@ -2122,6 +2122,11 @@
     if (lastGreetAt && performance.now() - lastGreetAt < 8000) return; // cooldown (not the first call)
     const firstThisLoad = lastGreetAt === 0;
     lastGreetAt = performance.now();
+    // The guide's hands fold the INSTANT the panel opens (owner, 2026-07-25 —
+    // "greeting should feel instant"): the pose acknowledges the seeker now,
+    // the voice joins as the splash docks, and the timed block below extends
+    // the hold for as long as the spoken welcome lasts.
+    namasteHold(firstThisLoad ? 2400 : 1600);
     if (journey.name && !journey.gender) {
       fetch(`${API}/api/gender?name=${encodeURIComponent(journey.name.split(" ")[0])}`)
         .then((r) => r.json())
@@ -2159,7 +2164,7 @@
           if (!speechSynthesis.speaking && !speechSynthesis.pending) greetPending = { blessDeva, opener, holdMs };
         }, 1300);
       }
-    }, firstThisLoad ? 1900 : 500); // wait for the जय सिया राम splash only the first time
+    }, firstThisLoad ? 900 : 150); // voice joins AS the splash docks — near-instant (owner, 2026-07-25)
   }
   // The seeker's first touch anywhere plays a welcome that iOS blocked on open.
   // Capture phase so it runs before the guide's own tap handler; greetSpeaking then
@@ -2589,7 +2594,7 @@
         s.classList.add("dock"); // text floats up toward the strip
         bless.classList.add("show"); // …and the golden strip receives it
         splashTimers.push(setTimeout(() => s.remove(), 800));
-      }, 2100),
+      }, 1200), // was 2100 — the blessing shows, then the guide takes over quickly (owner, 2026-07-25: greeting must feel instant)
     );
   }
 

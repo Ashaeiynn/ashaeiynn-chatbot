@@ -36,3 +36,4 @@ data/teach-queue.json
 models/**/model_quantized.onnx
 data/server-agent.log
 data/titling.log
+data/stt-usage.json

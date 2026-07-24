@@ -103,6 +103,41 @@ const MISHEARD = [
 ];
 const fixMishearings = (t) => MISHEARD.reduce((s, [re, ok]) => s.replace(re, ok), t);
 
+// ——— the ear's daily meter (owner, 2026-07-25) ———
+// Groq's free tier allows ~2,000 transcription REQUESTS per day (IST reset for
+// our purposes). Count every request we actually send so /health (and the admin)
+// can show how close the bot is to the cap — the TTS quota once ran out silently
+// and broke voice mid-answer; the ear must never surprise us the same way.
+// Persisted to disk (gitignored) so restarts don't reset the day's count.
+const STT_USAGE_FILE = path.join(ROOT, "data", "stt-usage.json");
+const STT_FREE_LIMIT = 2000;
+let sttUsage = { day: "", count: 0, days: {} };
+try {
+  const saved = JSON.parse(readFileSync(STT_USAGE_FILE, "utf8"));
+  if (saved && typeof saved === "object") sttUsage = { day: "", count: 0, days: {}, ...saved };
+} catch {
+  /* first run — starts fresh */
+}
+const istDayStr = () => new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(0, 10);
+function bumpSttUsage() {
+  const d = istDayStr();
+  if (sttUsage.day !== d) {
+    if (sttUsage.day) sttUsage.days[sttUsage.day] = sttUsage.count;
+    for (const k of Object.keys(sttUsage.days).sort().slice(0, -14)) delete sttUsage.days[k]; // keep 2 weeks
+    sttUsage.day = d;
+    sttUsage.count = 0;
+  }
+  sttUsage.count++;
+  if (sttUsage.count === Math.floor(STT_FREE_LIMIT * 0.75))
+    console.warn(`ear usage: ${sttUsage.count} transcriptions today — 75% of Groq's free ${STT_FREE_LIMIT}/day. Time to move Groq to paid (≈1 paisa/question).`);
+  try {
+    writeFileSync(STT_USAGE_FILE, JSON.stringify(sttUsage));
+  } catch {
+    /* disk is best-effort — the in-memory count still serves /health */
+  }
+}
+const sttUsedToday = () => (sttUsage.day === istDayStr() ? sttUsage.count : 0);
+
 // Owner's link policy: seekers are only ever sent to OUR public channels —
 // the YouTube channel and ashaeiynn.com (Pathshala articles + site pages).
 // Everything else (Vimeo studio videos, Zoom recordings, raw audio) remains
@@ -1400,6 +1435,7 @@ async function handleStt(req, res) {
         );
         if (forceHi) fd.append("language", "hi");
         else if (l.startsWith("en")) fd.append("language", "en");
+        bumpSttUsage(); // every request sent counts against Groq's daily free quota
         const r = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
           method: "POST",
           headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
@@ -1860,8 +1896,10 @@ const server = createServer(async (req, res) => {
             : GEMINI_TTS_KEY
               ? "gemini"
               : false,
-      // the iOS home-screen app's ONLY ear (Whisper via Groq — never Gemini)
+      // the ONLY ear for every device (Whisper via Groq — never Gemini)
       iosEar: process.env.GROQ_API_KEY ? "groq-whisper" : "not-configured",
+      // how much of Groq's free daily quota today's listening has used
+      earToday: { used: sttUsedToday(), freeLimit: STT_FREE_LIMIT },
       knowledgeBase: existsSync(path.join(ROOT, "data", "knowledge.db")) ? "built" : "missing",
       // so a half-built memory is visible without reading the server log
       ...(lastAudit

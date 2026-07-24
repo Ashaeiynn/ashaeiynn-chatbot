@@ -500,6 +500,17 @@
       <div class="stat warn"><b>${un}</b><span>unanswered</span></div>`;
     $("#sub").textContent = `last ${base.length} knowledge questions · newest first`;
 
+    // The ear's daily meter — how much of Groq's free listening quota today has
+    // used (server counts every transcription request; resets at midnight IST).
+    // Turns amber past 75% — the signal to move Groq to paid (~1 paisa/question).
+    fetch("/health").then((r) => r.json()).then((h) => {
+      if (!h?.earToday || !$("#stats")) return;
+      const d = document.createElement("div");
+      d.className = "stat" + (h.earToday.used >= h.earToday.freeLimit * 0.75 ? " warn" : "");
+      d.innerHTML = `<b>${h.earToday.used.toLocaleString("en-IN")} / ${h.earToday.freeLimit.toLocaleString("en-IN")}</b><span>🎙️ ear today (free quota)</span>`;
+      $("#stats").appendChild(d);
+    }).catch(() => {});
+
     // "Suggestions" — members' proposed corrections, awaiting the admin's blessing
     if (filter === "suggestions") {
       $("#list").innerHTML = suggestions.length ? "" : `<div class="empty">No seeker suggestions right now. When a ⭐ member tells the bot an answer was wrong and shares the correct one, it lands here for your approval.</div>`;
