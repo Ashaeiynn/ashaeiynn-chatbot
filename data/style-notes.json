@@ -1,12 +1,12 @@
 {
-  "updated": "2026-07-23T21:30:14.152Z",
-  "reviewed": 24,
+  "updated": "2026-07-24T21:30:16.098Z",
+  "reviewed": 72,
   "feedback": {
-    "up": 4,
-    "down": 1
+    "up": 32,
+    "down": 10
   },
   "recos": {
-    "followups": 6,
+    "followups": 1,
     "thought": 0,
     "opened": 0
   },
@@ -28,12 +28,5 @@
     "Suggested follow-up questions are tapped infrequently (6 of 24 today)—no trend yet, but monitor if recommendation frequency shifts.",
     "No repeats or contradictions on sankalp/jaap rules today—the clarity from recent core lessons may be holding; watch for regression."
   ],
-  "observations": [
-    "Activity is heavily clustered in afternoon (IST 12–16: 14 questions, 58% of day's total); morning and night are silent.",
-    "One 'not helpful' mark on a practical Mahotsav logistics answer reveals the delivery pattern: the bot answered correctly but led with philosophy ('essential part of practice') instead of the plain fac",
-    "All 24 seekers today are Ashaeiynn members; the community is active and engaged, with no repeating questions or confusion loops.",
-    "Knowledge base is nearly complete: only 1 gap today (weather), answered with a graceful out-of-scope redirect—no friction.",
-    "Small-talk openers (4 instances of 'I am good, how about you?') are currently answered with full teaching paragraphs; a shift to matching brevity (one-line greeting + one real question) could improve ",
-    "Suggested follow-ups and 'आज का विचार' are not being engaged; consider whether recommendations are visible or if seekers' intent is purely transactional (ask once, move on)."
-  ]
+  "observations": []
 }
