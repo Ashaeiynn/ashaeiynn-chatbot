@@ -13,6 +13,21 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-25 (Sirshas-MacBook-Pro session, with the owner)
 
+- **Ear improvement trio built + live (owner approved all 3 with the short-clip guard).**
+  (1) Conversation-aware listening: widget sends the seeker's last 4 questions with each clip
+  (`topics` in /api/stt, used once, never stored); server matches them against a WHITELIST of
+  special Ashaeiynn terms only (SPECIAL_TERMS — गुप्त नवरात्रि, सिया/राम/गुरु तत्व, कल्याण लोक,
+  त्राटक, तीसरी आँख, पितृ, कुलदेवता, हनुमान चालीसा; max 3) and appends them to the Whisper hint —
+  SKIPPED on clips <32KB (~2s) where hint-echo lives. (2) Doubtful-hearings review: Whisper's
+  verbose_json confidence (avg_logprob < -0.75 or no_speech_prob > 0.6) flags unsure transcriptions
+  into data/stt-review.json (text only, last 50, gitignored) → GET /api/admin/stt-review (admin-key)
+  → collapsible "🤔 Doubtful hearings" box in the admin Questions tab; each mangled word spotted
+  there can be taught into MISHEARD permanently. (3) Mic constraints: getUserMedia now asks for
+  noiseSuppression/echoCancellation/autoGainControl/mono (ideal-mode, safe everywhere).
+  Verified: topicHint unit tests (whitelist-only, cap 3, ordinary topics → none), review endpoint
+  401 without key / [] with key, and a live round-trip WITH topics ("गुप्त नवरात्रि में क्या नियम
+  हैं?" → heard perfectly, 128KB clip armed the hints). Deployed d76dcef.
+
 - **'guide asha' FAQ repaired + HINDI-mode ear fixed (owner's live Mahotsav test failed).** The
   Mahotsav visitor-FAQ transcript arrived with paragraph breaks stripped (11 fused mega-blocks,
   longest 11k chars, "Mahotsav?A Celebration…") — rebuilt as 30 clean Q&A passages, each piece
