@@ -1831,7 +1831,13 @@
       recStream?.getTracks?.().forEach((t) => t.stop()); // never hold two mics
     } catch { /* none open */ }
     try {
-      recStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Ask the phone to clean the audio before we hear it: noise suppression,
+      // echo cancellation, auto gain (owner, 2026-07-25 — sharper ear in noisy
+      // rooms). These are "ideal" constraints — a phone that lacks one simply
+      // ignores it, so no device can fail because of this.
+      recStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
+      });
     } catch (err) {
       return micTrouble(target, err, "permission");
     }
@@ -1932,9 +1938,17 @@
     const r = await fetch(`${API}/api/stt`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      // the iOS home-screen app announces itself — the server gives it the
-      // dedicated Whisper ear (Groq); every other caller keeps the Gemini ear
-      body: JSON.stringify({ audio: btoa(bin), mime: blob.type, lang: recLang, src: IOS && navigator.standalone === true ? "ios-app" : "web" }),
+      body: JSON.stringify({
+        audio: btoa(bin),
+        mime: blob.type,
+        lang: recLang,
+        src: IOS && navigator.standalone === true ? "ios-app" : "web",
+        // Conversation-aware listening (owner, 2026-07-25): the seeker's recent
+        // questions travel along so the server can hint the ear with any SPECIAL
+        // Ashaeiynn terms they've been discussing (server-side whitelist decides
+        // which words qualify — raw topics are used once and never stored).
+        topics: journey.asked.slice(-4).map((a) => String(a.q || "").slice(0, 120)),
+      }),
     });
     if (!r.ok) {
       const d = await r.json().catch(() => ({}));

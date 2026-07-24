@@ -511,6 +511,25 @@
       $("#stats").appendChild(d);
     }).catch(() => {});
 
+    // Doubtful hearings — transcriptions the ear itself wasn't sure about.
+    // Spot a mangled word here → tell Claude → it becomes a permanent fix.
+    document.getElementById("earReview")?.remove();
+    fetch("/api/admin/stt-review", { headers: { "x-admin-key": localStorage.getItem("adminKey") || "" } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d?.items?.length || !$("#stats")) return;
+        const box = document.createElement("details");
+        box.id = "earReview";
+        box.style.cssText = "margin:10px 0;border:1px solid rgba(217,169,79,.3);border-radius:10px;padding:8px 12px";
+        const rows = d.items.slice(0, 10).map((e) =>
+          `<div style="padding:5px 0;border-top:1px solid rgba(255,255,255,.06)">
+            <span class="m">${(e.at || "").slice(0, 16).replace("T", " ")} · ${e.lang || ""} · ${e.secs || "?"}s</span><br>
+            🎙️ “${(e.heard || "").replace(/</g, "&lt;")}”
+          </div>`).join("");
+        box.innerHTML = `<summary style="cursor:pointer">🤔 Doubtful hearings — the ear wasn't sure about these ${d.items.length} (tap to review; a mangled word here can be taught as a permanent fix)</summary>${rows}`;
+        $("#stats").after(box);
+      }).catch(() => {});
+
     // "Suggestions" — members' proposed corrections, awaiting the admin's blessing
     if (filter === "suggestions") {
       $("#list").innerHTML = suggestions.length ? "" : `<div class="empty">No seeker suggestions right now. When a ⭐ member tells the bot an answer was wrong and shares the correct one, it lands here for your approval.</div>`;

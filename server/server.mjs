@@ -144,6 +144,59 @@ function bumpSttUsage() {
 }
 const sttUsedToday = () => (sttUsage.day === istDayStr() ? sttUsage.count : 0);
 
+// ——— conversation-aware listening (owner, 2026-07-25) ———
+// The widget sends the seeker's recent questions with each clip. We scan them
+// for SPECIAL Ashaeiynn vocabulary only (whitelist below — never arbitrary
+// conversation words) and hint the ear with up to 3 such terms, so a seeker
+// deep in a गुप्त नवरात्रि conversation gets that spelling recognised. Clear
+// speech always overrides a hint; hints only settle ambiguous sounds. Raw
+// topics are used for this one request and never stored.
+const SPECIAL_TERMS = [
+  ["गुप्त नवरात्रि", /गुप्त\s*नवरात|gupt\s*navrat/i],
+  ["सिया तत्व", /सिया\s*तत्|siya\s*tat/i],
+  ["राम तत्व", /राम\s*तत्|ram\s*tat/i],
+  ["गुरु तत्व", /गुरु\s*तत्|guru\s*tat/i],
+  ["कल्याण लोक", /कल्याण\s*लोक|kalyan\s*lok/i],
+  ["त्राटक", /त्राटक|tratak/i],
+  ["तीसरी आँख", /तीसरी\s*आँख|तीसरी\s*आंख|third\s*eye/i],
+  ["पितृ", /पितृ|पितर|pitru|pitra/i],
+  ["कुलदेवता", /कुलदेव|kuldev/i],
+  ["हनुमान चालीसा", /हनुमान\s*चालीसा|hanuman\s*chalisa/i],
+];
+function topicHint(topics) {
+  const seen = [];
+  for (const t of topics) {
+    for (const [term, re] of SPECIAL_TERMS) {
+      if (!seen.includes(term) && re.test(t)) seen.push(term);
+      if (seen.length >= 3) return seen;
+    }
+  }
+  return seen;
+}
+
+// ——— the doubtful-hearings review list (owner, 2026-07-25) ———
+// Whisper reports how sure it was (avg_logprob / no_speech_prob per segment).
+// Transcriptions it wasn't sure about land here — the admin shows them so every
+// seeker's mishearing can become a taught correction, not just the ones the
+// owner personally hits. Text only, never audio; last 50; gitignored.
+const STT_REVIEW_FILE = path.join(ROOT, "data", "stt-review.json");
+let sttReview = [];
+try {
+  const saved = JSON.parse(readFileSync(STT_REVIEW_FILE, "utf8"));
+  if (Array.isArray(saved)) sttReview = saved;
+} catch {
+  /* starts empty */
+}
+function noteDoubtfulHearing(entry) {
+  sttReview.push(entry);
+  if (sttReview.length > 50) sttReview = sttReview.slice(-50);
+  try {
+    writeFileSync(STT_REVIEW_FILE, JSON.stringify(sttReview));
+  } catch {
+    /* best-effort */
+  }
+}
+
 // Owner's link policy: seekers are only ever sent to OUR public channels —
 // the YouTube channel and ashaeiynn.com (Pathshala articles + site pages).
 // Everything else (Vimeo studio videos, Zoom recordings, raw audio) remains
@@ -1363,13 +1416,17 @@ async function handleStt(req, res) {
     body += part;
     if (body.length > 3_000_000) return json(res, 413, { error: "Recording too long." });
   }
-  let audio = "", mime = "", lang = "", src = "";
+  let audio = "", mime = "", lang = "", src = "", topics = [];
   try {
     const p = JSON.parse(body);
     audio = String(p.audio || "");
     mime = String(p.mime || "audio/mp4").split(";")[0].trim().toLowerCase();
     lang = String(p.lang || "");
     src = String(p.src || "");
+    topics = (Array.isArray(p.topics) ? p.topics : [])
+      .filter((t) => typeof t === "string")
+      .slice(-5)
+      .map((t) => t.slice(0, 120));
   } catch {
     return json(res, 400, { error: "Invalid JSON." });
   }
@@ -1433,11 +1490,16 @@ async function handleStt(req, res) {
         // brand words — "Aashany/Ashaan/Ashyam" for Ashaeiynn, "bog" for bhog
         // (owner, 2026-07-24). Kept SHORT on purpose: a long prompt makes Whisper
         // echo it back on quiet or very short clips.
+        // Conversation terms join the hint ONLY on clips long enough to be real
+        // speech (>~2s): very short clips are where hint-echo lives, so they get
+        // the plain fixed hint alone (owner's guard, 2026-07-25).
+        const convTerms = bytes.length > 32000 ? topicHint(topics) : [];
+        const hintTail = convTerms.length ? ", " + convTerms.join(", ") : "";
         fd.append(
           "prompt",
           forceHi
-            ? "जय सिया राम। Ashaeiynn, महोत्सव, साधना, जाप, ध्यान, गुरुदेव, पाठशाला।"
-            : "Jai Siya Ram. Ashaeiynn, Parikshit Bhaiya, Pathshala, hawan, bhog, samagri, jaap, sadhana, Mahotsav.",
+            ? "जय सिया राम। Ashaeiynn, महोत्सव, साधना, जाप, ध्यान, गुरुदेव, पाठशाला" + hintTail + "।"
+            : "Jai Siya Ram. Ashaeiynn, Parikshit Bhaiya, Pathshala, hawan, bhog, samagri, jaap, sadhana, Mahotsav" + hintTail + ".",
         );
         if (forceHi) fd.append("language", "hi");
         else if (l.startsWith("en")) fd.append("language", "en");
@@ -1453,7 +1515,23 @@ async function handleStt(req, res) {
           // one diagnostic line per transcription — lets us SEE what the phone
           // actually sent (bytes, format) and what Whisper heard, without guessing
           console.log(`stt ok: ${model} · ${(bytes.length / 1024).toFixed(0)}KB ${mime} · lang=${forceHi ? "hi(forced)" : l || "auto"}→${data.language || "?"} · ${Number(data.duration || 0).toFixed(1)}s · "${text.slice(0, 80)}"`);
-          if (text) return json(res, 200, { text: fixMishearings(text.slice(0, 2000)) });
+          // Whisper's own confidence: a transcription it wasn't sure about goes
+          // to the admin's review list, so it can become a taught correction.
+          if (text) {
+            const segs = Array.isArray(data.segments) ? data.segments : [];
+            const avgLp = segs.length ? segs.reduce((n, s) => n + (s.avg_logprob ?? 0), 0) / segs.length : 0;
+            const worstNs = segs.length ? Math.max(...segs.map((s) => s.no_speech_prob ?? 0)) : 0;
+            if (segs.length && (avgLp < -0.75 || worstNs > 0.6)) {
+              noteDoubtfulHearing({
+                at: new Date().toISOString(),
+                heard: fixMishearings(text).slice(0, 160),
+                lang: data.language || (forceHi ? "hi" : l || "auto"),
+                secs: Math.round(Number(data.duration || 0)),
+                conf: Number(avgLp.toFixed(2)),
+              });
+            }
+            return json(res, 200, { text: fixMishearings(text.slice(0, 2000)) });
+          }
           lastDetail = `groq ${model}: empty transcription (${(bytes.length / 1024).toFixed(0)}KB, ${Number(data.duration || 0).toFixed(1)}s)`;
         } else {
           lastDetail = `groq ${model} ${r.status}: ${(await r.text()).slice(0, 60)}`;
@@ -2031,6 +2109,11 @@ const server = createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/admin/corrections") {
     if (!adminOk()) return;
     return json(res, 200, { items: await listCorrections() });
+  }
+  // the ear's doubtful hearings — low-confidence transcriptions for review
+  if (req.method === "GET" && url.pathname === "/api/admin/stt-review") {
+    if (!adminOk()) return;
+    return json(res, 200, { items: [...sttReview].reverse() }); // newest first
   }
   // ——— notifications: status+history, and manual send to everyone ———
   if (req.method === "GET" && url.pathname === "/api/admin/push") {
