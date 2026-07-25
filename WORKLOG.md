@@ -13,6 +13,17 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-25 (Sirshas-MacBook-Pro session, with the owner)
 
+- **SSH is now KEYS-ONLY on the VPS (owner: "let's do it").** Owner confirmed no other machine
+  needs SSH (only this MacBook manages the server; OMS-machine access declined). Applied as
+  `/etc/ssh/sshd_config.d/10-hardening.conf` (outranks 50-cloud-init by lexical first-match):
+  PasswordAuthentication no · KbdInteractiveAuthentication no · PermitRootLogin prohibit-password.
+  Backups in /root/sshd_config*.bak-20260725*; UNDO = remove that drop-in + `systemctl reload ssh`.
+  Verified: fresh key login OK, password attempt → "Permission denied (publickey)", chatbot/
+  fail2ban/OMS all active, live site 200. The 532/day brute-force attempts are now harmless.
+  Emergency door if keys are ever lost: Hostinger hPanel → VPS → Browser terminal (works without
+  SSH). Still on the owner: unique root password (ADMIN_KEY reuse), GitHub 2FA.
+
+
 - **Server hardening (owner: "secure it so no one can hack in").** Audit found: ufw solid
   (22/80/443), .env 600, unattended-upgrades active — but **532 SSH password brute-force
   attempts in 24h** with PasswordAuthentication+PermitRootLogin on and NO guard, and node
