@@ -13,6 +13,26 @@ NEVER paste secrets, API keys, passwords, or raw chat transcripts here.
 
 ## 2026-07-25 (Sirshas-MacBook-Pro session, with the owner)
 
+- **Server hardening (owner: "secure it so no one can hack in").** Audit found: ufw solid
+  (22/80/443), .env 600, unattended-upgrades active — but **532 SSH password brute-force
+  attempts in 24h** with PasswordAuthentication+PermitRootLogin on and NO guard, and node
+  listening on *:3111 (shielded only by ufw). Fixed: (1) **fail2ban installed + active**
+  (default sshd jail — bans brute-forcers; owner's correct password unaffected); (2) bot now
+  binds **127.0.0.1 only** (25d87df; BIND env escape hatch) — verified live: public site 200
+  via Caddy, direct :3111 from outside unreachable. RECOMMENDED to owner (their action, not
+  done): unique root password (currently reused as ADMIN_KEY), eventually key-only SSH
+  (coordinate with OMS who shares the VPS/password), GitHub 2FA.
+
+- **Answer-language seatbelt (cb88b9f): a Hindi asker can never get an English answer again.**
+  Deterministic script-mismatch check on the final answer (>60 chars, <20% expected script,
+  skips greetings + approved-as-is answers) → one time-boxed light-model translation, validated
+  before replacing; original kept on any failure. Unit-tested 6 cases (no false fires on Hindi
+  answers carrying mentor/team/YouTube). Verified live: the exact combined Mahotsav question
+  that slipped to English on 2026-07-25 now returns Hindi. Owner offered to hand-upload Hindi
+  copies of all teachings — declined (double maintenance, duplicate matches, translation drift);
+  the seatbelt closes the gap in code.
+
+
 - **Ear improvement trio built + live (owner approved all 3 with the short-clip guard).**
   (1) Conversation-aware listening: widget sends the seeker's last 4 questions with each clip
   (`topics` in /api/stt, used once, never stored); server matches them against a WHITELIST of
