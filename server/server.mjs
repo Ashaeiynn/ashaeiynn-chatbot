@@ -1361,6 +1361,45 @@ async function handleChat(req, res) {
     // line that is a short Devanagari label followed by a colon is one of ours;
     // real answers are flowing speech and never end in a labelled line.
     shown = shown.replace(/\n\s*[ऀ-ॿ]{2,10}\s*[:：]\s*\S[^\n]*$/u, "").trimEnd();
+
+    // ANSWER-LANGUAGE SEATBELT (owner, 2026-07-25): with all-English excerpts the
+    // model occasionally ignores the language pin and answers a Hindi seeker in
+    // English (seen live). Code catches what instructions cannot: if the answer's
+    // script clearly mismatches the seeker's language, translate it ONCE before
+    // the seeker sees it. Skipped for approved answers delivered as-is (the digit
+    // guard above already vetted that text — a late translation could re-drift it)
+    // and for greetings. On any failure the original stands: a right answer in
+    // the wrong language beats no answer.
+    const scriptShare = (s) => {
+      const lat = (s.match(/[A-Za-z]/g) || []).length;
+      const dev = (s.match(/[ऀ-ॿ]/g) || []).length;
+      return lat + dev > 0 ? dev / (lat + dev) : 0;
+    };
+    const share = scriptShare(shown);
+    const wrongScript = shown.length > 60 && (wantsHindi ? share < 0.2 : share > 0.8);
+    if (wrongScript && !isGreeting && !(approved && approved.score >= DIRECT_MATCH)) {
+      try {
+        const fixed = await Promise.race([
+          complete({
+            system: wantsHindi
+              ? "Translate this spiritual guide's answer into warm, natural spoken Hindi (Devanagari). Keep terms like mentor, team, screening, YouTube, and names (Ashaeiynn, Bhaiya) as they are. Preserve the meaning, numbers, and tone exactly — no additions, no commentary. Output ONLY the translated answer."
+              : "Translate this spiritual guide's answer into warm, natural English. Keep Hindi practice terms (jaap, hawan, sadhana, dhyan) in Latin script. Preserve the meaning, numbers, and tone exactly — no additions, no commentary. Output ONLY the translated answer.",
+            messages: [{ role: "user", content: shown }],
+            maxTokens: 900,
+            light: true,
+            retry: false,
+          }),
+          new Promise((resolve) => setTimeout(() => resolve(""), 5200)),
+        ]);
+        const f = String(fixed || "").trim();
+        if (f && f.length > 30 && (wantsHindi ? scriptShare(f) > 0.5 : scriptShare(f) < 0.2)) {
+          console.log(`answer-language seatbelt: translated a ${wantsHindi ? "English→Hindi" : "Hindi→English"} slip (${shown.length}→${f.length} ch)`);
+          shown = f;
+        }
+      } catch {
+        /* keep the original */
+      }
+    }
     if (inviteFix && seekerMember) writeLog({ at: new Date().toISOString(), q: message, flaggedWrong: true, member: true });
     // Every response costs ONE credit (owner's rule) — teaching answers,
     // handoffs, link replies alike. Only outright errors (the catch below) are free.
