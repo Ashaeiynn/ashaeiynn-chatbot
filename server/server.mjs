@@ -2616,7 +2616,11 @@ function knowledgeAudit() {
 
 let lastAudit = null;
 
-server.listen(PORT, () => {
+// Listen on loopback ONLY (owner's hardening, 2026-07-25): every legitimate
+// visitor arrives through Caddy (which proxies to 127.0.0.1), so the node
+// process itself should be unreachable from the network even if the firewall
+// ever slips. Set BIND=0.0.0.0 in .env only if some future setup needs it.
+server.listen(PORT, process.env.BIND || "127.0.0.1", () => {
   console.log(`Chatbot server running:  http://localhost:${PORT}`);
   console.log(`Provider: ${PROVIDER} (${ACTIVE_MODEL})   |   API key configured: ${apiKeyConfigured ? "yes" : "NO — edit .env"}`);
   // Warm the embedding model so the first question isn't slow.
