@@ -1,12 +1,12 @@
 {
-  "updated": "2026-07-25T21:30:17.002Z",
-  "reviewed": 91,
+  "updated": "2026-07-27T21:30:15.344Z",
+  "reviewed": 26,
   "feedback": {
-    "up": 52,
-    "down": 10
+    "up": 14,
+    "down": 8
   },
   "recos": {
-    "followups": 19,
+    "followups": 7,
     "thought": 0,
     "opened": 0
   },
