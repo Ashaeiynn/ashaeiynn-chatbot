@@ -1,12 +1,12 @@
 {
-  "updated": "2026-07-27T21:30:15.344Z",
-  "reviewed": 26,
+  "updated": "2026-07-28T21:30:15.910Z",
+  "reviewed": 5,
   "feedback": {
-    "up": 14,
-    "down": 8
+    "up": 1,
+    "down": 0
   },
   "recos": {
-    "followups": 7,
+    "followups": 2,
     "thought": 0,
     "opened": 0
   },
@@ -18,15 +18,22 @@
     "Keep sentences short and conversational; break dense ideas into steps or analogies a beginner can follow.",
     "End with a door to continue, not cheerleading; 'What else is on your mind?' works better than 'Keep going, you've got this!'",
     "On repeating questions or 'not helpful' marks: the answer was too abstract, too long, or didn't match what the seeker actually needed—go narrower and more concrete next time.",
-    "For logistical/practical questions (ashram visits, meals, items), lead with the direct answer in one sentence; don't frame it inside teaching or philosophy."
+    "For logistical/practical questions (ashram visits, meals, items), lead with the direct answer in one sentence; don't frame it inside teaching or philosophy.",
+    "When a seeker corrects you mid-conversation ('I didn't ask about X, I asked about Y'), drop the old thread completely and answer the new question fresh—don't defend or loop back."
   ],
   "notes": [
-    "Afternoon cluster (12-16 IST) is peak activity—80% of today's volume; plan content refreshes and monitor queue during these hours.",
-    "Practical questions about Mahotsav logistics (4 asked today) work best when answered as checklists or one-line facts, not explanations of ashram philosophy—seekers marked 'not helpful' on the mala ans",
-    "Small-talk greetings ('I am good, how about you?') are being answered with 5+ sentence replies about jaap and shakti—match brevity: a one-line greeting back ('I'm well, how is your practice?') then as",
-    "The one knowledge gap hit today ('How is the weather?') was correctly handled with a graceful redirect—keep this pattern for out-of-scope questions.",
-    "Suggested follow-up questions are tapped infrequently (6 of 24 today)—no trend yet, but monitor if recommendation frequency shifts.",
-    "No repeats or contradictions on sankalp/jaap rules today—the clarity from recent core lessons may be holding; watch for regression."
+    "Evening cluster (17-21 IST) is now the peak: all 5 conversations today fell in this window, not afternoon. Shift monitoring focus.",
+    "Hindi-dominant day (80% Hindi, 4 of 5 seekers); one seeker code-switched mid-conversation (Q3: switched from Hindi greeting to English correction)—stay ready to pivot register without friction.",
+    "Q2 (Paalya: 'Guru Purnima') was a mid-conversation course correction: bot answered about Pathshala instead. The bot's Q3 response correctly dropped the old thread and answered Guru Purnima directly. P",
+    "Follow-up question taps remain low: 2 of 5 seekers tapped suggestions. No trend yet, but the evening cohort may differ from afternoon in engagement style.",
+    "All 5 conversations were knowledge questions with no logistics/practical elements today—no evidence of the afternoon logistical cluster from yesterday. Watch if this is a one-day shift or ashram-speci",
+    "One marked helpful (20% conversion); zero marked not helpful. Low volume and positive signal, but single-day sample—cannot infer trend yet."
   ],
-  "observations": []
+  "observations": [
+    "Activity time shifted sharply: all 5 conversations fell in evening (17-21 IST), not afternoon. Yesterday's afternoon cluster (12-16) did not repeat—monitor whether this is a weekend/day-of-week patter",
+    "Code-switching observed in Q3 (seeker began in Hindi greeting, switched to English mid-conversation for correction). Bot handled the pivot cleanly by answering the new question in English.",
+    "Follow-up questions tapped only 2 of 5 times; videos/articles opened 0 times. Sample too small to shift strategy, but note for trend if evening cohort consistently underengages with recommendations.",
+    "No knowledge base gaps today (0 unanswered questions without a source). No repeat questions from same seeker. No contradictions on sankalp/jaap rules. Continuity from recent core lessons appears stabl",
+    "80% Hindi speakers today; all 5 from Ashaeiynn members. No mixed-language seekers. Hindi-primary delivery is working; monitor if diversity shifts."
+  ]
 }
