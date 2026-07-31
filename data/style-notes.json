@@ -1,12 +1,12 @@
 {
-  "updated": "2026-07-28T21:30:15.910Z",
-  "reviewed": 5,
+  "updated": "2026-07-31T21:30:15.436Z",
+  "reviewed": 15,
   "feedback": {
-    "up": 1,
-    "down": 0
+    "up": 4,
+    "down": 3
   },
   "recos": {
-    "followups": 2,
+    "followups": 7,
     "thought": 0,
     "opened": 0
   },
@@ -29,11 +29,5 @@
     "All 5 conversations were knowledge questions with no logistics/practical elements today—no evidence of the afternoon logistical cluster from yesterday. Watch if this is a one-day shift or ashram-speci",
     "One marked helpful (20% conversion); zero marked not helpful. Low volume and positive signal, but single-day sample—cannot infer trend yet."
   ],
-  "observations": [
-    "Activity time shifted sharply: all 5 conversations fell in evening (17-21 IST), not afternoon. Yesterday's afternoon cluster (12-16) did not repeat—monitor whether this is a weekend/day-of-week patter",
-    "Code-switching observed in Q3 (seeker began in Hindi greeting, switched to English mid-conversation for correction). Bot handled the pivot cleanly by answering the new question in English.",
-    "Follow-up questions tapped only 2 of 5 times; videos/articles opened 0 times. Sample too small to shift strategy, but note for trend if evening cohort consistently underengages with recommendations.",
-    "No knowledge base gaps today (0 unanswered questions without a source). No repeat questions from same seeker. No contradictions on sankalp/jaap rules. Continuity from recent core lessons appears stabl",
-    "80% Hindi speakers today; all 5 from Ashaeiynn members. No mixed-language seekers. Hindi-primary delivery is working; monitor if diversity shifts."
-  ]
+  "observations": []
 }
