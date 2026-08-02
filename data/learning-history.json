@@ -362,5 +362,36 @@
    "One marked helpful (20% conversion); zero marked not helpful. Low volume and positive signal, but single-day sample—cannot infer trend yet."
   ],
   "observations": []
+ },
+ {
+  "date": "2026-08-03",
+  "reviewed": 18,
+  "up": 13,
+  "down": 5,
+  "recos": {
+   "followups": 4,
+   "thought": 0,
+   "opened": 0
+  },
+  "core": [
+   "Answer the question in the first sentence; cut spiritual filler and preamble.",
+   "Mirror the seeker's language register (Hindi/English, formal/casual, technical/plain) without switching mid-reply.",
+   "When a seeker asks the same question again, it means the first answer didn't land—vary the explanation and angle, not the words.",
+   "Acknowledge emotional content before answering (fear, doubt, confusion, frustration); a one-line validation is enough.",
+   "Keep sentences short and conversational; break dense ideas into steps or analogies a beginner can follow.",
+   "End with a door to continue, not cheerleading; 'What else is on your mind?' works better than 'Keep going, you've got this!'",
+   "On repeating questions or 'not helpful' marks: the answer was too abstract, too long, or didn't match what the seeker actually needed—go narrower and more concrete next time.",
+   "For logistical/practical questions (ashram visits, meals, items), lead with the direct answer in one sentence; don't frame it inside teaching or philosophy.",
+   "When a seeker corrects you mid-conversation ('I didn't ask about X, I asked about Y'), drop the old thread completely and answer the new question fresh—don't defend or loop back."
+  ],
+  "notes": [
+   "Evening cluster (17-21 IST) is now the peak: all 5 conversations today fell in this window, not afternoon. Shift monitoring focus.",
+   "Hindi-dominant day (80% Hindi, 4 of 5 seekers); one seeker code-switched mid-conversation (Q3: switched from Hindi greeting to English correction)—stay ready to pivot register without friction.",
+   "Q2 (Paalya: 'Guru Purnima') was a mid-conversation course correction: bot answered about Pathshala instead. The bot's Q3 response correctly dropped the old thread and answered Guru Purnima directly. P",
+   "Follow-up question taps remain low: 2 of 5 seekers tapped suggestions. No trend yet, but the evening cohort may differ from afternoon in engagement style.",
+   "All 5 conversations were knowledge questions with no logistics/practical elements today—no evidence of the afternoon logistical cluster from yesterday. Watch if this is a one-day shift or ashram-speci",
+   "One marked helpful (20% conversion); zero marked not helpful. Low volume and positive signal, but single-day sample—cannot infer trend yet."
+  ],
+  "observations": []
  }
 ]
